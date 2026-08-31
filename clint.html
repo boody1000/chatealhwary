@@ -94,7 +94,9 @@
             </button>
         </div>
     </div>
+
     <audio id="remoteAudio" autoplay></audio>
+    <audio id="ringtone" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" loop></audio>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -126,6 +128,7 @@
         const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
         
         const messagesContainer = document.getElementById("chatMessages");
+        const ringtone = document.getElementById("ringtone");
 
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById("nameModal").style.display = "flex";
@@ -222,7 +225,8 @@
         }
 
         window.startCall = async function() {
-            showCallScreen("جارِ الاتصال بالموظف...");
+            showCallScreen("جارِ الاتصال بخدمة العملاء...");
+            ringtone.play().catch(e => console.log("Autoplay blocked:", e));
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 createPeerConnection();
@@ -249,13 +253,14 @@
             onValue(callRef, async (snapshot) => {
                 const data = snapshot.val();
                 
-                // إذا تم حذف بيانات المكالمة من قاعدة البيانات، قم بغلق الشاشة فوراً عند الطرفين
                 if (!data) {
                     closeCallUI();
                     return;
                 }
 
                 if (data.answer && peerConnection && !peerConnection.currentRemoteDescription) {
+                    ringtone.pause();
+                    ringtone.currentTime = 0;
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
                     startTimer();
                     document.getElementById("callStatusText").innerText = "المكالمة جارية...";
@@ -307,7 +312,6 @@
             }, 1000);
         }
 
-        // زر إنهاء المكالمة الخاص بالعميل (يقوم بحذف العقد من قاعدة البيانات ليغلق عند الموظف أيضاً)
         window.endCall = function() {
             if (currentClientKey) {
                 remove(ref(db, `single_chat_room/${currentClientKey}/call`));
@@ -315,8 +319,10 @@
             closeCallUI();
         }
 
-        // دالة مساعدة لإغلاق الواجهة وإيقاف الأجهزة محلياً
         function closeCallUI() {
+            ringtone.pause();
+            ringtone.currentTime = 0;
+
             const callScreen = document.getElementById("callScreen");
             callScreen.classList.remove("flex");
             callScreen.classList.add("hidden");
