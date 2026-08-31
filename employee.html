@@ -118,6 +118,7 @@
     </div>
   </div>
   <audio id="empRemoteAudio" autoplay></audio>
+  <audio id="empRingAudio" src="ran.mp3" preload="auto" loop></audio>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -146,6 +147,11 @@
     let empTimerInterval = null;
     let empSeconds = 0;
     let pendingOffer = null;
+    const empRingAudio = document.getElementById("empRingAudio");
+
+    // متغيرات لتسجيل المكالمة
+    let mediaRecorder = null;
+    let recordedAudioChunks = [];
 
     window.addEventListener('DOMContentLoaded', () => {
       const loggedUser = localStorage.getItem('loggedUsername');
@@ -220,6 +226,9 @@
             pendingOffer = { roomKey, displayName, offer: callData.offer };
             document.getElementById("incomingCallerName").innerText = `العميل: ${displayName} يتصل بك...`;
             document.getElementById("incomingCallModal").style.display = "flex";
+            if (empRingAudio.paused) {
+              empRingAudio.play().catch(e => {});
+            }
           }
         }
       }
@@ -273,6 +282,10 @@
 
     window.acceptIncomingCall = async function() {
       if (!pendingOffer) return;
+      if (!empRingAudio.paused) {
+        empRingAudio.pause();
+        empRingAudio.currentTime = 0;
+      }
       activeClientKey = pendingOffer.roomKey;
       activeClientDisplayName = pendingOffer.displayName;
 
@@ -296,6 +309,10 @@
     };
 
     window.rejectIncomingCall = function() {
+      if (!empRingAudio.paused) {
+        empRingAudio.pause();
+        empRingAudio.currentTime = 0;
+      }
       if(pendingOffer) {
         const roomKey = pendingOffer.roomKey;
         const onlineEmpRef = ref(db, 'online_employees');
@@ -349,10 +366,48 @@
 
     function createPeerConnection(roomKey) {
       peerConnection = new RTCPeerConnection(servers);
-      peerConnection.ontrack = (event) => { document.getElementById("empRemoteAudio").srcObject = event.streams[0]; };
+      peerConnection.ontrack = (event) => { 
+        if (!empRingAudio.paused) {
+          empRingAudio.pause();
+          empRingAudio.currentTime = 0;
+        }
+        const remoteAudio = document.getElementById("empRemoteAudio");
+        remoteAudio.srcObject = event.streams[0]; 
+
+        // بدء تسجيل المكالمة فور دمج صوت الطرف الآخر مع الصوت المحلي
+        startCallRecording(localStream, event.streams[0]);
+      };
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) push(ref(db, `single_chat_room/${roomKey}/call/candidates`), event.candidate.toJSON());
       };
+    }
+
+    // دالة دمج وتسجيل أصوات المكالمة
+    function startCallRecording(localStm, remoteStm) {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const destination = audioCtx.createMediaStreamDestination();
+
+        if (localStm && localStm.getAudioTracks().length > 0) {
+          const localSource = audioCtx.createMediaStreamSource(localStm);
+          localSource.connect(destination);
+        }
+        if (remoteStm && remoteStm.getAudioTracks().length > 0) {
+          const remoteSource = audioCtx.createMediaStreamSource(remoteStm);
+          remoteSource.connect(destination);
+        }
+
+        recordedAudioChunks = [];
+        mediaRecorder = new MediaRecorder(destination.stream);
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            recordedAudioChunks.push(event.data);
+          }
+        };
+        mediaRecorder.start();
+      } catch (e) {
+        console.error("خطأ في بدء تسجيل المكالمة: ", e);
+      }
     }
 
     function listenForCandidates(roomKey) {
@@ -365,6 +420,10 @@
     }
 
     function showEmployeeCallScreen() {
+      if (!empRingAudio.paused) {
+        empRingAudio.pause();
+        empRingAudio.currentTime = 0;
+      }
       const screen = document.getElementById("employeeCallScreen");
       screen.classList.remove("hidden"); screen.classList.add("flex");
       empSeconds = 0;
@@ -382,11 +441,49 @@
     }
 
     window.employeeEndCall = function() {
+      if (!empRingAudio.paused) {
+        empRingAudio.pause();
+        empRingAudio.currentTime = 0;
+      }
       if (activeClientKey) remove(ref(db, `single_chat_room/${activeClientKey}/call`));
+      
+      // إيقاف التسجيل وتخزينه في الداتابيز عند الإغلاق
+      stopAndSaveRecording();
       closeEmpCallUI();
     };
 
+    function stopAndSaveRecording() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(recordedAudioChunks, { type: 'audio/webm' });
+          const reader = new FileReader();
+          reader.readAsDataURL(blob);
+          reader.onloadend = async function () {
+            const base64AudioMessage = reader.result;
+            const recordingsRef = ref(db, 'call_recordings');
+            try {
+              await push(recordingsRef, {
+                employee: currentEmpName,
+                client: activeClientDisplayName || (activeClientKey ? activeClientKey.replace(/_/g, ' ') : "غير معروف"),
+                audioData: base64AudioMessage,
+                durationSeconds: empSeconds,
+                timestamp: Date.now()
+              });
+              console.log("تم تخزين تسجيل المكالمة بنجاح في collection منفصل (call_recordings)");
+            } catch (err) {
+              console.error("فشل حفظ تسجيل المكالمة في الداتابيز: ", err);
+            }
+          };
+        };
+        mediaRecorder.stop();
+      }
+    }
+
     function closeEmpCallUI() {
+      if (!empRingAudio.paused) {
+        empRingAudio.pause();
+        empRingAudio.currentTime = 0;
+      }
       const screen = document.getElementById("employeeCallScreen");
       screen.classList.remove("flex"); screen.classList.add("hidden");
       document.getElementById("incomingCallModal").style.display = "none";
