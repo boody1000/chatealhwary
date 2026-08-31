@@ -105,6 +105,7 @@
         </div>
     </div>
     <audio id="remoteAudio" autoplay></audio>
+    <audio id="ringAudio" src="ran.mp3" preload="auto" loop></audio>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -134,6 +135,7 @@
         let localStream = null;
         const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
         const messagesContainer = document.getElementById("chatMessages");
+        const ringAudio = document.getElementById("ringAudio");
 
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById("nameModal").style.display = "flex";
@@ -216,8 +218,24 @@
             const callRef = ref(db, `single_chat_room/${clientKey}/call`);
             onValue(callRef, async (snapshot) => {
                 const data = snapshot.val();
-                if (!data) { closeCallUI(); return; }
+                if (!data) { 
+                    closeCallUI(); 
+                    return; 
+                }
+                
+                // تشغيل النغمة عند وجود اتصال وارد من الموظف (عرض عرض الاتصال أو تلقي عرض)
+                if (data.caller === 'employee' && !data.answer) {
+                    showCallScreen("مكالمة واردة من شركة الهواري...");
+                    if (ringAudio.paused) {
+                        ringAudio.play().catch(e => {});
+                    }
+                }
+
                 if (data.answer && peerConnection && !peerConnection.currentRemoteDescription) {
+                    if (!ringAudio.paused) {
+                        ringAudio.pause();
+                        ringAudio.currentTime = 0;
+                    }
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
                     startTimer();
                     document.getElementById("callStatusText").innerText = "المكالمة جارية...";
@@ -233,7 +251,13 @@
 
         function createPeerConnection() {
             peerConnection = new RTCPeerConnection(servers);
-            peerConnection.ontrack = (event) => { document.getElementById("remoteAudio").srcObject = event.streams[0]; };
+            peerConnection.ontrack = (event) => { 
+                if (!ringAudio.paused) {
+                    ringAudio.pause();
+                    ringAudio.currentTime = 0;
+                }
+                document.getElementById("remoteAudio").srcObject = event.streams[0]; 
+            };
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) push(ref(db, `single_chat_room/${currentClientKey}/call/candidates`), event.candidate.toJSON());
             };
@@ -259,11 +283,19 @@
         }
 
         window.endCall = function() {
+            if (!ringAudio.paused) {
+                ringAudio.pause();
+                ringAudio.currentTime = 0;
+            }
             if (currentClientKey) remove(ref(db, `single_chat_room/${currentClientKey}/call`));
             closeCallUI();
         }
 
         function closeCallUI() {
+            if (!ringAudio.paused) {
+                ringAudio.pause();
+                ringAudio.currentTime = 0;
+            }
             const callScreen = document.getElementById("callScreen");
             callScreen.classList.remove("flex"); callScreen.classList.add("hidden");
             if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
@@ -306,4 +338,4 @@
         }
     </script>
 </body>
-</html>
+</html>[cite: 5]
