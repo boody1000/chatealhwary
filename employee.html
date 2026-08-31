@@ -6,6 +6,25 @@
   <title>لوحة تحكم خدمة العملاء - متعددة المحادثات ومكالمات صوتية</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- كود الـ CSS المخصص لصفحة الموظف -->
+  <style>
+    /* تخصيص شريط التمرير (Scrollbar) للقوائم وصناديق المحادثة */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a; /* slate-900 */
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155; /* slate-700 */
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569; /* slate-600 */
+    }
+  </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans h-screen overflow-hidden">
 
@@ -32,7 +51,6 @@
             <span class="absolute bottom-0 left-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></span>
           </div>
           <div>
-            <!-- تم ربط هذا العنصر لعرض اسم الموظف المسجل دخوله تلقائياً -->
             <h3 id="loggedInUsername" class="text-sm font-bold text-blue-400">موظف الدعم</h3>
             <span class="text-xs text-green-400">متصل الآن</span>
           </div>
@@ -119,7 +137,6 @@
     let activeClientKey = null;
     let activeClientDisplayName = null;
     let currentEmpName = "موظف الدعم";
-    
     let peerConnection = null;
     let localStream = null;
     const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -127,7 +144,6 @@
     let empSeconds = 0;
     let pendingOffer = null;
 
-    // جلب اسم الموظف المسجل دخوله وتفعيل حالة التواجد (Online) في قاعدة البيانات
     window.addEventListener('DOMContentLoaded', () => {
       const loggedUser = localStorage.getItem('loggedUsername');
       if (loggedUser) {
@@ -135,16 +151,14 @@
         document.getElementById('loggedInUsername').innerText = currentEmpName;
       }
 
-      // تسجيل تواجد الموظف الحالي كـ online
       if (currentEmpName) {
         const empCleanId = currentEmpName.replace(/\s+/g, '_');
         const empStatusRef = ref(db, 'online_employees/' + empCleanId);
         set(empStatusRef, { name: currentEmpName, inCall: false, lastActive: Date.now() });
-        onDisconnect(empStatusRef).remove(); // إزالته تلقائياً عند غلق المتصفح
+        onDisconnect(empStatusRef).remove();
       }
 
       const chatRoomsRef = ref(db, 'single_chat_room');
-      
       onValue(chatRoomsRef, (snapshot) => {
         const chatsListEl = document.getElementById('chatsList');
         chatsListEl.innerHTML = '';
@@ -153,7 +167,6 @@
           snapshot.forEach((roomSnapshot) => {
             const roomKey = roomSnapshot.key; 
             const originalName = roomKey.replace(/_/g, ' ');
-
             let hasActiveCall = false;
             let lastMessageText = "انقر لعرض المحادثة";
             
@@ -195,19 +208,12 @@
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
-        // التحقق مما إذا كانت المكالمة موجهة لهذا الموظف أو عامة ولم يرد عليها أحد
         const targetEmp = callData.targetEmployee;
-        
-        // إذا لم يتم تحديد موظف بعد، أو إذا كان هذا الموظف هو المقصود بالمكالمة
         if (!targetEmp || targetEmp === currentEmpName) {
-          // إذا لم يكن الموظف الحالي في مكالمة حالية
           if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
-            
-            // تخصيص هذه المكالمة لهذا الموظف في قاعدة البيانات لتجنب تداخل الردود
             if (!targetEmp) {
               set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), currentEmpName);
             }
-
             pendingOffer = { roomKey, displayName, offer: callData.offer };
             document.getElementById("incomingCallerName").innerText = `العميل: ${displayName} يتصل بك...`;
             document.getElementById("incomingCallModal").style.display = "flex";
@@ -226,7 +232,6 @@
       container.innerHTML = '<div class="text-slate-500 text-center my-auto">جاري تحميل الرسائل...</div>'; 
 
       const chatRef = ref(db, 'single_chat_room/' + roomKey);
-
       onValue(chatRef, (snapshot) => {
         container.innerHTML = '';
         if (snapshot.exists()) {
@@ -239,7 +244,6 @@
             }
             const msg = childSnapshot.val();
             if(!msg) return;
-
             const isClientMsg = (msg.sender === displayName || msg.sender === roomKey || msg.senderRole === 'client');
             appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClientMsg);
           });
@@ -254,7 +258,6 @@
       event.preventDefault();
       const input = document.getElementById('messageInput');
       const text = input.value.trim();
-      
       if(text === '') return;
       if(!activeClientKey) {
         alert("الرجاء اختيار عميل من القائمة الجانبية أولاً!");
@@ -262,7 +265,6 @@
       }
 
       const chatRef = ref(db, 'single_chat_room/' + activeClientKey);
-
       try {
         await push(chatRef, {
           text: text,
@@ -284,59 +286,46 @@
       document.getElementById("incomingCallModal").style.display = "none";
       showEmployeeCallScreen();
 
-      // تحديث حالة الموظف بأنه أصبح في مكالمة الآن
       const empCleanId = currentEmpName.replace(/\s+/g, '_');
       set(ref(db, `online_employees/${empCleanId}/inCall`), true);
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         createPeerConnection(activeClientKey);
-
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
-
         await set(ref(db, `single_chat_room/${activeClientKey}/call/answer`), { type: answer.type, sdp: answer.sdp });
         listenForCandidates(activeClientKey);
         startEmpTimer();
-
       } catch(err) {
         console.error("خطأ قبول المكالمة:", err);
         employeeEndCall();
       }
     };
 
-    // رفض المكالمة أو تجاهلها لتوجيهها لموظف آخر online
     window.rejectIncomingCall = function() {
       if(pendingOffer) {
         const roomKey = pendingOffer.roomKey;
-        
-        // البحث عن موظف آخر متصل (Online) وليس في مكالمة لتوجيه المكالمة إليه
         const onlineEmpRef = ref(db, 'online_employees');
         onValue(onlineEmpRef, (snapshot) => {
           if (snapshot.exists()) {
             let nextAvailableEmp = null;
             snapshot.forEach((child) => {
               const empData = child.val();
-              // اختيار موظف آخر غير الموظف الحالي ويكون غير مشغّل بمكالمة
               if (empData && empData.name !== currentEmpName && !empData.inCall) {
                 nextAvailableEmp = empData.name;
               }
             });
-
             if (nextAvailableEmp) {
-              // إعادة تعيين الموظف المستهدف في المكالمة لكي تظهر عند الموظف الجديد الآخر
               set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), nextAvailableEmp);
             } else {
-              // إذا لم يوجد موظف آخر متاح، يتم مسح الطلب أو تركها متاحة للجميع
               remove(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`));
             }
           }
         }, { onlyOnce: true });
       }
-
       document.getElementById("incomingCallModal").style.display = "none";
       pendingOffer = null;
     };
@@ -352,7 +341,6 @@
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
 
@@ -364,18 +352,13 @@
 
         onValue(ref(db, `single_chat_room/${activeClientKey}/call`), async (snapshot) => {
           const callData = snapshot.val();
-          if (!callData) {
-            closeEmpCallUI();
-            return;
-          }
+          if (!callData) { closeEmpCallUI(); return; }
           if (callData.answer && peerConnection && !peerConnection.currentRemoteDescription) {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(callData.answer));
             startEmpTimer();
           }
         });
-
         listenForCandidates(activeClientKey);
-
       } catch (err) {
         console.error("خطأ اتصال الموظف:", err);
         employeeEndCall();
@@ -384,12 +367,9 @@
 
     function createPeerConnection(roomKey) {
       peerConnection = new RTCPeerConnection(servers);
-
       peerConnection.ontrack = (event) => {
-        const remoteAudio = document.getElementById("empRemoteAudio");
-        remoteAudio.srcObject = event.streams[0];
+        document.getElementById("empRemoteAudio").srcObject = event.streams[0];
       };
-
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
           push(ref(db, `single_chat_room/${roomKey}/call/candidates`), event.candidate.toJSON());
@@ -427,9 +407,7 @@
     }
 
     window.employeeEndCall = function() {
-      if (activeClientKey) {
-        remove(ref(db, `single_chat_room/${activeClientKey}/call`));
-      }
+      if (activeClientKey) remove(ref(db, `single_chat_room/${activeClientKey}/call`));
       closeEmpCallUI();
     };
 
@@ -437,57 +415,27 @@
       const screen = document.getElementById("employeeCallScreen");
       screen.classList.remove("flex");
       screen.classList.add("hidden");
-
       document.getElementById("incomingCallModal").style.display = "none";
       pendingOffer = null;
 
-      // إرجاع حالة الموظف إلى متاح (inCall: false) لكي يتمكن من استقبال مكالمات جديدة لاحقاً
       if (currentEmpName) {
         const empCleanId = currentEmpName.replace(/\s+/g, '_');
         set(ref(db, `online_employees/${empCleanId}/inCall`), false);
       }
 
-      if (empTimerInterval) {
-        clearInterval(empTimerInterval);
-        empTimerInterval = null;
-      }
-
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
-      }
-
-      if (peerConnection) {
-        peerConnection.close();
-        peerConnection = null;
-      }
+      if (empTimerInterval) { clearInterval(empTimerInterval); empTimerInterval = null; }
+      if (localStream) { localStream.getTracks().forEach(track => track.stop()); localStream = null; }
+      if (peerConnection) { peerConnection.close(); peerConnection = null; }
     }
 
     function appendMessageToUI(text, sender, timestamp, isClientMsg) {
       const container = document.getElementById('messageContainer');
       const timeNow = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'الآن';
-      
       let messageHTML = '';
       if (!isClientMsg) {
-        messageHTML = `
-          <div class="flex flex-col items-end w-full">
-            <div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tl-none max-w-md text-sm shadow-md">
-              <span class="block text-[10px] text-blue-200 font-bold mb-1">${escapeHtml(sender)} (أنت)</span>
-              ${escapeHtml(text)}
-              <span class="block text-[10px] text-blue-200 mt-1 text-left">${timeNow}</span>
-            </div>
-          </div>
-        `;
+        messageHTML = `<div class="flex flex-col items-end w-full"><div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tl-none max-w-md text-sm shadow-md"><span class="block text-[10px] text-blue-200 font-bold mb-1">${escapeHtml(sender)} (أنت)</span>${escapeHtml(text)}<span class="block text-[10px] text-blue-200 mt-1 text-left">${timeNow}</span></div></div>`;
       } else {
-        messageHTML = `
-          <div class="flex flex-col items-start w-full">
-            <div class="bg-slate-800 text-slate-100 border border-slate-700 p-3 rounded-2xl rounded-tr-none max-w-md text-sm shadow-md">
-              <span class="block text-[10px] text-blue-400 font-bold mb-1">${escapeHtml(sender)} (عميل)</span>
-              ${escapeHtml(text)}
-              <span class="block text-[10px] text-slate-400 mt-1 text-left">${timeNow}</span>
-            </div>
-          </div>
-        `;
+        messageHTML = `<div class="flex flex-col items-start w-full"><div class="bg-slate-800 text-slate-100 border border-slate-700 p-3 rounded-2xl rounded-tr-none max-w-md text-sm shadow-md"><span class="block text-[10px] text-blue-400 font-bold mb-1">${escapeHtml(sender)} (عميل)</span>${escapeHtml(text)}<span class="block text-[10px] text-slate-400 mt-1 text-left">${timeNow}</span></div></div>`;
       }
       container.insertAdjacentHTML('beforeend', messageHTML);
       container.scrollTop = container.scrollHeight;
