@@ -95,7 +95,9 @@
       </button>
     </div>
   </div>
+
   <audio id="empRemoteAudio" autoplay></audio>
+  <audio id="empRingtone" src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" loop></audio>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -125,7 +127,14 @@
     let empSeconds = 0;
     let pendingOffer = null;
 
+    const empRingtone = document.getElementById("empRingtone");
+
     window.addEventListener('DOMContentLoaded', () => {
+      const loggedUser = localStorage.getItem('loggedUsername');
+      if (loggedUser) {
+        document.getElementById('loggedInUsername').innerText = loggedUser;
+      }
+
       const chatRoomsRef = ref(db, 'single_chat_room');
       
       onValue(chatRoomsRef, (snapshot) => {
@@ -152,7 +161,6 @@
               if (msg && msg.text) lastMessageText = msg.text;
             });
 
-            // مراقبة إنهاء المكالمة خصيصاً للغرفة النشطة حالياً عند الموظف
             if (activeClientKey === roomKey && !hasActiveCall) {
               closeEmpCallUI();
             }
@@ -179,11 +187,11 @@
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
-        // إذا لم تكن هناك مكالمة نشطة بالفعل
         if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
           pendingOffer = { roomKey, displayName, offer: callData.offer };
           document.getElementById("incomingCallerName").innerText = `العميل: ${displayName} يتصل بك...`;
           document.getElementById("incomingCallModal").style.display = "flex";
+          empRingtone.play().catch(e => console.log("Autoplay blocked:", e));
         }
       }
     }
@@ -204,7 +212,6 @@
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
             if(childSnapshot.key === 'call') {
-              // مراقبة فورية لإنهاء المكالمة إذا قام العميل بإغلاقها
               if (!childSnapshot.val() && !document.getElementById("employeeCallScreen").classList.contains("hidden")) {
                 closeEmpCallUI();
               }
@@ -234,12 +241,13 @@
         return;
       }
 
+      const currentEmpName = localStorage.getItem('loggedUsername') || "موظف الدعم";
       const chatRef = ref(db, 'single_chat_room/' + activeClientKey);
 
       try {
         await push(chatRef, {
           text: text,
-          sender: "موظف الدعم",
+          sender: currentEmpName,
           senderRole: "employee",
           timestamp: Date.now()
         });
@@ -250,6 +258,8 @@
     };
 
     window.acceptIncomingCall = async function() {
+      empRingtone.pause();
+      empRingtone.currentTime = 0;
       if (!pendingOffer) return;
       activeClientKey = pendingOffer.roomKey;
       activeClientDisplayName = pendingOffer.displayName;
@@ -278,6 +288,8 @@
     };
 
     window.rejectIncomingCall = function() {
+      empRingtone.pause();
+      empRingtone.currentTime = 0;
       if(pendingOffer) {
         remove(ref(db, `single_chat_room/${pendingOffer.roomKey}/call`));
       }
@@ -288,6 +300,7 @@
     window.employeeStartCall = async function() {
       if (!activeClientKey) return;
       showEmployeeCallScreen();
+      empRingtone.play().catch(e => console.log("Autoplay blocked:", e));
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -309,6 +322,8 @@
             return;
           }
           if (callData.answer && peerConnection && !peerConnection.currentRemoteDescription) {
+            empRingtone.pause();
+            empRingtone.currentTime = 0;
             await peerConnection.setRemoteDescription(new RTCSessionDescription(callData.answer));
             startEmpTimer();
           }
@@ -366,7 +381,6 @@
       }, 1000);
     }
 
-    // زر إنهاء المكالمة الخاص بالموظف (يحذف العقد من قاعدة البيانات ليغلق عند العميل فوراً)
     window.employeeEndCall = function() {
       if (activeClientKey) {
         remove(ref(db, `single_chat_room/${activeClientKey}/call`));
@@ -374,8 +388,10 @@
       closeEmpCallUI();
     };
 
-    // دالة مساعدة لإغلاق شاشة الاتصال محلياً للموظف
     function closeEmpCallUI() {
+      empRingtone.pause();
+      empRingtone.currentTime = 0;
+
       const screen = document.getElementById("employeeCallScreen");
       screen.classList.remove("flex");
       screen.classList.add("hidden");
