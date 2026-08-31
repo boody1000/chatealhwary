@@ -96,7 +96,9 @@
         </div>
     </div>
     
+    <!-- عناصر الصوت (الصوت الوارد وصوت الرنين) -->
     <audio id="remoteAudio" autoplay playsinline></audio>
+    <audio id="ringAudio" src="rnn.mp3" loop preload="auto"></audio>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -234,6 +236,7 @@
 
         window.startCall = async function() {
             showCallScreen("جارِ الاتصال بالموظف...");
+            playRingSound(); // تشغيل صوت الرنين عند بدء الاتصال
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 createPeerConnection();
@@ -266,6 +269,7 @@
 
                 if (data.answer && peerConnection && !peerConnection.currentRemoteDescription) {
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    stopRingSound(); // إيقاف صوت الرنين عند رد الموظف
                     startTimer();
                     document.getElementById("callStatusText").innerText = "المكالمة جارية...";
                 }
@@ -309,9 +313,20 @@
             secondsElapsed = 0;
             document.getElementById("callTimer").innerText = "00:00";
             
-            // إعادة تعيين مكبر الصوت ليعمل على الأذن افتراضياً مع كل مكالمة جديدة
             isSpeakerOn = false;
             updateSpeakerUI();
+        }
+
+        function playRingSound() {
+            const ringAudio = document.getElementById("ringAudio");
+            ringAudio.currentTime = 0;
+            ringAudio.play().catch(e => console.log("تعذر تشغيل صوت الرنين تلقائياً:", e));
+        }
+
+        function stopRingSound() {
+            const ringAudio = document.getElementById("ringAudio");
+            ringAudio.pause();
+            ringAudio.currentTime = 0;
         }
 
         function startTimer() {
@@ -332,6 +347,7 @@
         }
 
         function closeCallUI() {
+            stopRingSound(); // إيقاف صوت الرنين فوراً عند إغلاق المكالمة
             const callScreen = document.getElementById("callScreen");
             callScreen.classList.remove("flex");
             callScreen.classList.add("hidden");
@@ -371,7 +387,7 @@
 
         // دالة تبديل مكبر الصوت بضغطة واحدة (Toggle)
         window.toggleSpeaker = function() {
-            isSpeakerOn = !isSpeakerOn; // قلب الحالة (لو مفرود يتقفل، ولو مقفول يتفرد)
+            isSpeakerOn = !isSpeakerOn; 
             applyAudioRouting();
             updateSpeakerUI();
         }
@@ -400,11 +416,9 @@
             const speakerIcon = document.getElementById("speakerIcon");
             
             if (isSpeakerOn) {
-                // شكل الزر عند تشغيل السماعة الخارجية (لون أزرق مميز)
                 speakerBtn.className = "w-12 h-12 sm:w-14 sm:h-14 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center text-base sm:text-lg shadow-lg transition";
                 speakerIcon.className = "fa-solid fa-volume-high text-white";
             } else {
-                // شكل الزر عند العودة للسماعة الداخلية للأذن (لون رمادي غامق)
                 speakerBtn.className = "w-12 h-12 sm:w-14 sm:h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-base sm:text-lg shadow-lg transition";
                 speakerIcon.className = "fa-solid fa-volume-high text-slate-300";
             }
