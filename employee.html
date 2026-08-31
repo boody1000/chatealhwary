@@ -28,7 +28,9 @@
       <header class="h-16 border-b border-slate-800 px-6 flex items-center justify-between bg-slate-950/40">
         <div class="flex items-center space-x-3 space-x-reverse">
           <div class="relative">
-            <img id="currentAvatar" src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full" alt="User">
+            <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                <i class="fa-solid fa-user"></i>
+            </div>
             <span class="absolute bottom-0 left-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></span>
           </div>
           <div>
@@ -96,7 +98,7 @@
     </div>
   </div>
 
-  <!-- عنصر استقبال الصوت للموظف -->
+  <!-- عناصر الصوت -->
   <audio id="empRemoteAudio" autoplay playsinline></audio>
   <audio id="empRingtone" src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" loop></audio>
 
@@ -124,21 +126,32 @@
     let peerConnection = null;
     let localStream = null;
     
-    // خوادم الاتصال المدعومة للواي فاي والموبايل داتا
+    // خوادم Metered TURN الرسمية لتجاوز حظر شبكات المحمول والواي فاي
     const servers = {
         iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { 
-                urls: 'turn:openrelay.metered.ca:80',
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
+            {
+                urls: "stun:stun.relay.metered.ca:80",
             },
-            { 
-                urls: 'turn:openrelay.metered.ca:443',
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            }
+            {
+                urls: "turn:standard.relay.metered.ca:80",
+                username: "2a87406f32f8d0e5cb30b846",
+                credential: "7KsW7ZWWa15vlk94",
+            },
+            {
+                urls: "turn:standard.relay.metered.ca:80?transport=tcp",
+                username: "2a87406f32f8d0e5cb30b846",
+                credential: "7KsW7ZWWa15vlk94",
+            },
+            {
+                urls: "turn:standard.relay.metered.ca:443",
+                username: "2a87406f32f8d0e5cb30b846",
+                credential: "7KsW7ZWWa15vlk94",
+            },
+            {
+                urls: "turns:standard.relay.metered.ca:443?transport=tcp",
+                username: "2a87406f32f8d0e5cb30b846",
+                credential: "7KsW7ZWWa15vlk94",
+            },
         ]
     };
 
@@ -187,7 +200,9 @@
             const chatItemHTML = `
               <div onclick="switchChat('${escapeHtml(roomKey)}', '${escapeHtml(originalName)}')" class="p-3 hover:bg-slate-800/60 cursor-pointer transition flex items-center space-x-3 space-x-reverse border-b border-slate-800/40">
                 <div class="relative">
-                  <img src="https://via.placeholder.com/40" class="w-10 h-10 rounded-full" alt="User">
+                  <div class="w-10 h-10 bg-slate-800 text-slate-300 rounded-full flex items-center justify-center font-bold text-sm">
+                      <i class="fa-solid fa-user"></i>
+                  </div>
                   <span class="absolute bottom-0 left-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></span>
                 </div>
                 <div class="flex-1 min-w-0">
@@ -359,7 +374,6 @@
     function createPeerConnection(roomKey) {
       peerConnection = new RTCPeerConnection(servers);
 
-      // ربط تدفق الصوت الوارد للموظف
       peerConnection.ontrack = (event) => {
         const remoteAudio = document.getElementById("empRemoteAudio");
         if (remoteAudio.srcObject !== event.streams[0]) {
