@@ -95,7 +95,8 @@
         </div>
     </div>
 
-    <audio id="remoteAudio" autoplay></audio>
+    <!-- عنصر الصوت مع خصائص التشغيل الإجباري للموبايل -->
+    <audio id="remoteAudio" autoplay playsinline></audio>
     <audio id="ringtone" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" loop></audio>
 
     <script type="module">
@@ -126,7 +127,7 @@
         let peerConnection = null;
         let localStream = null;
         
-        // خوادم STUN و TURN لدعم الواي فاي وبيانات خط الهاتف (Mobile Data)
+        // خوادم الاتصال المدعومة للواي فاي والموبايل داتا
         const servers = {
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
@@ -298,9 +299,13 @@
         function createPeerConnection() {
             peerConnection = new RTCPeerConnection(servers);
 
+            // إصلاح وتأكيد التقاط الصوت الوارد وتغذيته لعنصر الصوت
             peerConnection.ontrack = (event) => {
                 const remoteAudio = document.getElementById("remoteAudio");
-                remoteAudio.srcObject = event.streams[0];
+                if (remoteAudio.srcObject !== event.streams[0]) {
+                    remoteAudio.srcObject = event.streams[0];
+                    remoteAudio.play().catch(e => console.log("Audio play blocked by browser:", e));
+                }
             };
 
             peerConnection.onicecandidate = (event) => {
