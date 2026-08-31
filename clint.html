@@ -137,6 +137,16 @@
         const messagesContainer = document.getElementById("chatMessages");
         const ringAudio = document.getElementById("ringAudio");
 
+        // إلغاء حظر الصوت بواسطة تفاعل المستخدم الأول
+        document.addEventListener('click', () => {
+            if (ringAudio.paused) {
+                ringAudio.play().then(() => {
+                    ringAudio.pause();
+                    ringAudio.currentTime = 0;
+                }).catch(e => {});
+            }
+        }, { once: true });
+
         window.addEventListener('DOMContentLoaded', () => {
             document.getElementById("nameModal").style.display = "flex";
         });
@@ -223,7 +233,6 @@
                     return; 
                 }
                 
-                // تشغيل النغمة عند وجود اتصال وارد من الموظف (عرض عرض الاتصال أو تلقي عرض)
                 if (data.caller === 'employee' && !data.answer) {
                     showCallScreen("مكالمة واردة من شركة الهواري...");
                     if (ringAudio.paused) {
@@ -338,4 +347,4 @@
         }
     </script>
 </body>
-</html>[cite: 5]
+</html>
