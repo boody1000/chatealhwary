@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محادثة ومكالمة مباشرة مع خدمة العملاء</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-slate-100 h-[100dvh] flex flex-col font-sans relative overflow-hidden">
+
+    <!-- رأس المحادثة -->
+    <header class="bg-slate-950/60 border-b border-slate-800 px-4 py-3 flex items-center justify-between z-10 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shrink-0">
+                    <i class="fa-solid fa-headset"></i>
+                </div>
+                <span class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
+            </div>
+            <div>
+                <h3 class="font-bold text-slate-100 text-sm">خدمة العملاء</h3>
+                <span class="text-xs text-emerald-400 font-medium">متصل الآن</span>
+            </div>
+        </div>
+        
+        <!-- أزرار التحكم العلوي -->
+        <div class="flex items-center gap-3">
+            <button onclick="startCall()" class="w-10 h-10 bg-blue-600/25 hover:bg-blue-600 text-blue-400 hover:text-white rounded-full flex items-center justify-center transition shadow-md" title="بدء مكالمة صوتية">
+                <i class="fa-solid fa-phone text-sm"></i>
+            </button>
+            <span id="clientDisplayHeader" class="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full text-slate-300 hidden sm:inline-block"></span>
+        </div>
+    </header>
+
+    <!-- صندوق عرض الرسائل -->
+    <div id="chatMessages" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 flex flex-col bg-slate-900 max-w-4xl w-full mx-auto">
+        <div class="text-center text-slate-500 my-auto text-sm">
+            <p>أهلاً بك، اكتب رسالتك للبدء في التحدث مع الدعم الفني</p>
+        </div>
+    </div>
+
+    <!-- شريط الإرسال -->
+    <footer class="bg-slate-950/60 border-t border-slate-800 p-3 sm:p-4 z-10 shrink-0">
+        <form id="messageForm" onsubmit="sendMessage(event)" class="max-w-4xl mx-auto flex items-center gap-2 sm:gap-3">
+            <input id="messageInput" type="text" placeholder="اكتب رسالتك هنا..." 
+                   class="flex-1 bg-slate-800 border border-slate-700 text-slate-100 px-4 py-3 rounded-xl text-sm focus:outline-none focus:border-blue-500 transition" autocomplete="off">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl text-sm font-semibold transition shrink-0 shadow-md">
+                إرسال
+            </button>
+        </form>
+    </footer>
+
+    <!-- نافذة إدخال الاسم -->
+    <div id="nameModal" class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center">
+            <div class="w-12 h-12 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center text-xl mb-3">
+                <i class="fa-solid fa-user-pen"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-100 mb-1">أدخل اسمك الكريم</h3>
+            <p class="text-xs text-slate-400 mb-4 text-center">لبدء المحادثة وربطك بخدمة العملاء</p>
+            
+            <input id="userNameInput" type="text" placeholder="مثال: أحمد محمود" 
+                   class="w-full bg-slate-800 border border-slate-700 text-slate-100 px-4 py-3 rounded-xl text-sm focus:outline-none focus:border-blue-500 mb-4 text-center" autocomplete="off">
+            
+            <button onclick="saveUserName()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl text-sm font-semibold transition shadow-md">
+                دخول المحادثة
+            </button>
+        </div>
+    </div>
+
+    <!-- شاشة المكالمات الصوتية -->
+    <div id="callScreen" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col items-center justify-between p-8 text-white">
+        <div class="flex flex-col items-center mt-12">
+            <div class="w-28 h-28 bg-slate-800 rounded-full flex items-center justify-center text-4xl font-bold mb-4 shadow-xl border border-slate-700 animate-pulse">
+                <i class="fa-solid fa-headset text-blue-400"></i>
+            </div>
+            <h2 id="callStatusText" class="text-xl font-bold mb-1">جارِ الاتصال بخدمة العملاء...</h2>
+            <p class="text-xs text-slate-400 mt-1" id="callTimer">00:00</p>
+        </div>
+        
+        <!-- أزرار التحكم بالمكالمة -->
+        <div class="flex items-center gap-6 mb-12">
+            <button id="muteBtn" onclick="toggleMute()" class="w-14 h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-lg shadow-lg transition" title="كتم الصوت">
+                <i id="muteIcon" class="fa-solid fa-microphone"></i>
+            </button>
+
+            <button onclick="endCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-xl shadow-lg transition" title="إنهاء المكالمة">
+                <i class="fa-solid fa-phone-slash"></i>
+            </button>
+
+            <button id="speakerBtn" onclick="toggleSpeaker()" class="w-14 h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-lg shadow-lg transition" title="مكبر الصوت">
+                <i id="speakerIcon" class="fa-solid fa-volume-high"></i>
+            </button>
+        </div>
+    </div>
+    <audio id="remoteAudio" autoplay></audio>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+        import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
+            authDomain: "marry-55604.firebaseapp.com",
+            databaseURL: "https://marry-55604-default-rtdb.firebaseio.com",
+            projectId: "marry-55604",
+            storageBucket: "marry-55604.firebasestorage.app",
+            messagingSenderId: "524067560260",
+            appId: "1:524067560260:web:adc87a02eadf098d5a5511",
+            measurementId: "G-0QW3CXTSM3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let currentClientKey = null;
+        let originalDisplayName = null;
+        let isMuted = false;
+        let isSpeakerOn = true;
+        let callTimerInterval = null;
+        let secondsElapsed = 0;
+
+        let peerConnection = null;
+        let localStream = null;
+        const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        
+        const messagesContainer = document.getElementById("chatMessages");
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById("nameModal").style.display = "flex";
+        });
+
+        window.saveUserName = function() {
+            const inputVal = document.getElementById("userNameInput").value.trim();
+            if (!inputVal) {
+                alert("يرجى كتابة اسمك للمتابعة");
+                return;
+            }
+
+            originalDisplayName = inputVal;
+            const uniqueId = Math.floor(Math.random() * 9000) + 1000;
+            currentClientKey = inputVal.replace(/\s+/g, '_') + '_' + uniqueId;
+            
+            document.getElementById("nameModal").style.display = "none";
+            document.getElementById("clientDisplayHeader").innerText = "العميل: " + originalDisplayName;
+
+            initChatSession(currentClientKey, originalDisplayName);
+            listenForIncomingCalls(currentClientKey);
+        };
+
+        function initChatSession(clientKey, displayName) {
+            const roomRef = ref(db, 'single_chat_room/' + clientKey);
+
+            onValue(roomRef, (snapshot) => {
+                messagesContainer.innerHTML = '';
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnapshot) => {
+                        if(childSnapshot.key === 'call') return;
+                        const msg = childSnapshot.val();
+                        if(!msg || !msg.text) return;
+
+                        const isClientMsg = (msg.sender === displayName || msg.senderRole === 'client');
+                        appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClientMsg);
+                    });
+                } else {
+                    messagesContainer.innerHTML = '<div class="text-slate-500 text-center my-auto text-sm">مرحباً بك ' + escapeHtml(displayName) + '، يمكنك إرسال رسالتك الآن للبدء</div>';
+                }
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            });
+        }
+
+        window.sendMessage = async function(event) {
+            event.preventDefault();
+            if (!currentClientKey) return;
+
+            const inputField = document.getElementById("messageInput");
+            const messageText = inputField.value.trim();
+            if (!messageText) return;
+
+            const roomRef = ref(db, 'single_chat_room/' + currentClientKey);
+
+            try {
+                await push(roomRef, {
+                  text: messageText,
+                  sender: originalDisplayName,
+                  senderRole: "client",
+                  timestamp: Date.now()
+                });
+                inputField.value = "";
+            } catch (error) {
+                console.error("خطأ أثناء الإرسال:", error);
+            }
+        };
+
+        function appendMessageToUI(text, sender, timestamp, isClientMsg) {
+            const timeNow = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'الآن';
+            let messageHTML = '';
+
+            if (isClientMsg) {
+                messageHTML = `
+                    <div class="flex flex-col items-end w-full mb-2">
+                        <div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tl-none max-w-md text-sm shadow-md">
+                            <span class="block text-[10px] text-blue-200 font-bold mb-1">أنت</span>
+                            ${escapeHtml(text)}
+                            <span class="block text-[10px] text-blue-200 mt-1 text-left">${timeNow}</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                messageHTML = `
+                    <div class="flex flex-col items-start w-full mb-2">
+                        <div class="bg-slate-800 text-slate-100 border border-slate-700 p-3 rounded-2xl rounded-tr-none max-w-md text-sm shadow-md">
+                            <span class="block text-[10px] text-blue-400 font-bold mb-1">${escapeHtml(sender)} (الدعم)</span>
+                            ${escapeHtml(text)}
+                            <span class="block text-[10px] text-slate-400 mt-1 text-left">${timeNow}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            messagesContainer.insertAdjacentHTML('beforeend', messageHTML);
+        }
+
+        window.startCall = async function() {
+            showCallScreen("جارِ الاتصال بالموظف...");
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                createPeerConnection();
+
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                await set(ref(db, `single_chat_room/${currentClientKey}/call`), {
+                    offer: { type: offer.type, sdp: offer.sdp },
+                    caller: 'client'
+                });
+
+            } catch (err) {
+                console.error("خطأ في السماح بالميكروفون:", err);
+                alert("يرجى السماح بالوصول للميكروفون لبدء المكالمة.");
+                closeCallUI();
+            }
+        }
+
+        function listenForIncomingCalls(clientKey) {
+            const callRef = ref(db, `single_chat_room/${clientKey}/call`);
+            onValue(callRef, async (snapshot) => {
+                const data = snapshot.val();
+                
+                // إذا تم حذف بيانات المكالمة من قاعدة البيانات، قم بغلق الشاشة فوراً عند الطرفين
+                if (!data) {
+                    closeCallUI();
+                    return;
+                }
+
+                if (data.answer && peerConnection && !peerConnection.currentRemoteDescription) {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    startTimer();
+                    document.getElementById("callStatusText").innerText = "المكالمة جارية...";
+                }
+            });
+
+            const candidatesRef = ref(db, `single_chat_room/${clientKey}/call/candidates`);
+            onValue(candidatesRef, (snapshot) => {
+                snapshot.forEach((child) => {
+                    const candidateData = child.val();
+                    if (peerConnection && candidateData) {
+                        peerConnection.addIceCandidate(new RTCIceCandidate(candidateData)).catch(e => console.error(e));
+                    }
+                });
+            });
+        }
+
+        function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(servers);
+
+            peerConnection.ontrack = (event) => {
+                const remoteAudio = document.getElementById("remoteAudio");
+                remoteAudio.srcObject = event.streams[0];
+            };
+
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    push(ref(db, `single_chat_room/${currentClientKey}/call/candidates`), event.candidate.toJSON());
+                }
+            };
+        }
+
+        function showCallScreen(statusText) {
+            const callScreen = document.getElementById("callScreen");
+            callScreen.classList.remove("hidden");
+            callScreen.classList.add("flex");
+            document.getElementById("callStatusText").innerText = statusText;
+            secondsElapsed = 0;
+            document.getElementById("callTimer").innerText = "00:00";
+        }
+
+        function startTimer() {
+            if (callTimerInterval) clearInterval(callTimerInterval);
+            callTimerInterval = setInterval(() => {
+                secondsElapsed++;
+                const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+                const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+                document.getElementById("callTimer").innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        // زر إنهاء المكالمة الخاص بالعميل (يقوم بحذف العقد من قاعدة البيانات ليغلق عند الموظف أيضاً)
+        window.endCall = function() {
+            if (currentClientKey) {
+                remove(ref(db, `single_chat_room/${currentClientKey}/call`));
+            }
+            closeCallUI();
+        }
+
+        // دالة مساعدة لإغلاق الواجهة وإيقاف الأجهزة محلياً
+        function closeCallUI() {
+            const callScreen = document.getElementById("callScreen");
+            callScreen.classList.remove("flex");
+            callScreen.classList.add("hidden");
+
+            if (callTimerInterval) {
+                clearInterval(callTimerInterval);
+                callTimerInterval = null;
+            }
+
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+        }
+
+        window.toggleMute = function() {
+            isMuted = !isMuted;
+            if (localStream) {
+                localStream.getAudioTracks()[0].enabled = !isMuted;
+            }
+            const muteBtn = document.getElementById("muteBtn");
+            const muteIcon = document.getElementById("muteIcon");
+            
+            if (isMuted) {
+                muteBtn.className = "w-14 h-14 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-lg shadow-lg transition";
+                muteIcon.className = "fa-solid fa-microphone-slash";
+            } else {
+                muteBtn.className = "w-14 h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-lg shadow-lg transition";
+                muteIcon.className = "fa-solid fa-microphone";
+            }
+        }
+
+        window.toggleSpeaker = function() {
+            isSpeakerOn = !isSpeakerOn;
+            const audioTag = document.getElementById("remoteAudio");
+            audioTag.muted = !isSpeakerOn;
+
+            const speakerBtn = document.getElementById("speakerBtn");
+            const speakerIcon = document.getElementById("speakerIcon");
+            
+            if (isSpeakerOn) {
+                speakerBtn.className = "w-14 h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-lg shadow-lg transition";
+                speakerIcon.className = "fa-solid fa-volume-high";
+            } else {
+                speakerBtn.className = "w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center text-lg shadow-lg transition";
+                speakerIcon.className = "fa-solid fa-volume-xmark";
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.toString().replace(/[&<>"']/g, m => map[m]);
+        }
+    </script>
+</body>
+</html>

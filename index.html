@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - الموظفين</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .login-card { background: #ffffff; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); width: 100%; max-width: 400px; }
+        .login-card h2 { text-align: center; margin-bottom: 25px; color: #333; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; color: #555; font-size: 14px; }
+        .input-group input { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; outline: none; transition: border-color 0.3s; }
+        .input-group input:focus { border-color: #667eea; }
+        .options { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 14px; }
+        .options a { color: #667eea; text-decoration: none; }
+        .options a:hover { text-decoration: underline; }
+        .btn-submit { width: 100%; padding: 12px; background: #667eea; border: none; border-radius: 8px; color: white; font-size: 16px; cursor: pointer; transition: background 0.3s; }
+        .btn-submit:hover { background: #5a6fd6; }
+        .signup-link { text-align: center; margin-top: 20px; font-size: 14px; color: #666; }
+        .signup-link a { color: #667eea; text-decoration: none; font-weight: bold; }
+        #message { text-align: center; margin-top: 15px; font-size: 14px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h2>تسجيل الدخول</h2>
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="username">اسم المستخدم</label>
+                <input type="text" id="username" placeholder="أدخل اسم المستخدم" required>
+            </div>
+            
+            <div class="input-group">
+                <label for="password">كلمة المرور</label>
+                <input type="password" id="password" placeholder="أدخل كلمة المرور" required>
+            </div>
+
+            <div class="options">
+                <label><input type="checkbox"> تذكرني</label>
+                <a href="#">نسيت كلمة المرور؟</a>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn">دخول</button>
+            
+            <p id="message"></p>
+
+            <div class="signup-link">
+                ليس لديك حساب؟ <a href="#">إنشاء حساب جديد</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- كود تهيئة Firebase والتحقق -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js";
+        import { getDatabase, ref, get, update, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
+            authDomain: "marry-55604.firebaseapp.com",
+            databaseURL: "https://marry-55604-default-rtdb.firebaseio.com",
+            projectId: "marry-55604",
+            storageBucket: "marry-55604.firebasestorage.app",
+            messagingSenderId: "524067560260",
+            appId: "1:524067560260:web:adc87a02eadf098d5a5511",
+            measurementId: "G-0QW3CXTSM3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getDatabase(app);
+
+        const loginForm = document.getElementById('loginForm');
+        const messageEl = document.getElementById('message');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const inputUsername = document.getElementById('username').value.trim();
+            const inputPassword = document.getElementById('password').value;
+
+            messageEl.style.display = "block";
+            messageEl.style.color = "#667eea";
+            messageEl.innerText = "جاري التحقق من الحساب...";
+
+            try {
+                const employeesRef = ref(db, 'employees');
+                const snapshot = await get(employeesRef);
+
+                if (!snapshot.exists()) {
+                    throw new Error("لا توجد أي بيانات داخل جدول employees.");
+                }
+
+                let empFound = false;
+                let empCorrectPassword = false;
+                let targetEmpRef = null;
+
+                snapshot.forEach((childSnapshot) => {
+                    const empData = childSnapshot.val();
+                    if (childSnapshot.key === inputUsername || (empData && empData.username === inputUsername)) {
+                        empFound = true;
+                        targetEmpRef = ref(db, 'employees/' + childSnapshot.key);
+                        
+                        if (empData.password === inputPassword) {
+                            empCorrectPassword = true;
+                        }
+                    }
+                });
+
+                if (!empFound) {
+                    throw new Error("اسم المستخدم غير موجود في قاعدة البيانات.");
+                }
+
+                if (!empCorrectPassword) {
+                    throw new Error("كلمة المرور غير صحيحة.");
+                }
+
+                // 1. تحديث الحالة في الداتابيز إلى online
+                await update(targetEmpRef, {
+                    status: "online",
+                    lastLogin: serverTimestamp()
+                });
+
+                // 2. ضبط الحالة لتصبح offline عند قطع الاتصال
+                onDisconnect(targetEmpRef).update({
+                    status: "offline"
+                });
+
+                // 3. تخزين اسم المستخدم محلياً لكي تقرأه صفحة clint.html
+                localStorage.setItem('loggedUsername', inputUsername);
+
+                messageEl.style.color = "green";
+                messageEl.innerText = "تم تسجيل الدخول بنجاح! جاري التوجيه...";
+
+                // 4. التوجيه التلقائي إلى صفحة clint.html بعد ثانية واحدة
+                setTimeout(() => {
+                    window.location.href = "clint.html";
+                }, 1000);
+
+            } catch (error) {
+                messageEl.style.color = "red";
+                messageEl.innerText = error.message;
+            }
+        });
+    </script>
+
+</body>
+</html>
