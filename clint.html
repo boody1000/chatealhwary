@@ -6,6 +6,29 @@
     <title>محادثة ومكالمة مباشرة مع خدمة العملاء</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- كود الـ CSS المخصص لصفحة العميل -->
+    <style>
+      /* تخصيص شريط التمرير (Scrollbar) ليكون أنحف وأكثر جمالاً */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0f172a; /* slate-900 */
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #334155; /* slate-700 */
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #475569; /* slate-600 */
+      }
+      
+      /* تأثير انتقال ناعم للعناصر */
+      .transition-custom {
+        transition: all 0.25s ease-in-out;
+      }
+    </style>
 </head>
 <body class="bg-slate-900 text-slate-100 h-[100dvh] flex flex-col font-sans relative overflow-hidden">
 
@@ -13,39 +36,38 @@
     <header class="bg-slate-950/60 border-b border-slate-800 px-4 py-3 flex items-center justify-between z-10 shrink-0">
         <div class="flex items-center gap-3">
             <div class="relative">
-                <div class="w-9 h-9 sm:w-10 sm:h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shrink-0">
+                <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shrink-0">
                     <i class="fa-solid fa-headset"></i>
                 </div>
-                <span class="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
+                <span class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
             </div>
             <div>
-                <h3 class="font-bold text-slate-100 text-xs sm:text-sm"> خدمة العملاء الهواري </h3>
-                <span class="text-[10px] sm:text-xs text-emerald-400 font-medium">متصل الآن</span>
+                <h3 class="font-bold text-slate-100 text-sm">خدمة العملاء</h3>
+                <span class="text-xs text-emerald-400 font-medium">متصل الآن</span>
             </div>
         </div>
         
-        <!-- أزرار التحكم العلوي -->
-        <div class="flex items-center gap-2 sm:gap-3">
-            <button onclick="startCall()" class="w-9 h-9 sm:w-10 sm:h-10 bg-blue-600/25 hover:bg-blue-600 text-blue-400 hover:text-white rounded-full flex items-center justify-center transition shadow-md" title="بدء مكالمة صوتية">
-                <i class="fa-solid fa-phone text-xs sm:text-sm"></i>
+        <div class="flex items-center gap-3">
+            <button onclick="startCall()" class="w-10 h-10 bg-blue-600/25 hover:bg-blue-600 text-blue-400 hover:text-white rounded-full flex items-center justify-center transition shadow-md" title="بدء مكالمة صوتية">
+                <i class="fa-solid fa-phone text-sm"></i>
             </button>
-            <span id="clientDisplayHeader" class="text-[11px] sm:text-xs bg-slate-800 border border-slate-700 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-slate-300 truncate max-w-[100px] sm:max-w-xs"></span>
+            <span id="clientDisplayHeader" class="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full text-slate-300 hidden sm:inline-block"></span>
         </div>
     </header>
 
     <!-- صندوق عرض الرسائل -->
-    <div id="chatMessages" class="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 flex flex-col bg-slate-900 max-w-4xl w-full mx-auto">
-        <div class="text-center text-slate-500 my-auto text-xs sm:text-sm">
+    <div id="chatMessages" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 flex flex-col bg-slate-900 max-w-4xl w-full mx-auto">
+        <div class="text-center text-slate-500 my-auto text-sm">
             <p>أهلاً بك، اكتب رسالتك للبدء في التحدث مع الدعم الفني</p>
         </div>
     </div>
 
     <!-- شريط الإرسال -->
-    <footer class="bg-slate-950/60 border-t border-slate-800 p-2.5 sm:p-4 z-10 shrink-0">
-        <form id="messageForm" onsubmit="sendMessage(event)" class="max-w-4xl mx-auto flex items-center gap-2">
+    <footer class="bg-slate-950/60 border-t border-slate-800 p-3 sm:p-4 z-10 shrink-0">
+        <form id="messageForm" onsubmit="sendMessage(event)" class="max-w-4xl mx-auto flex items-center gap-2 sm:gap-3">
             <input id="messageInput" type="text" placeholder="اكتب رسالتك هنا..." 
-                   class="flex-1 bg-slate-800 border border-slate-700 text-slate-100 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-blue-500 transition" autocomplete="off">
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition shrink-0 shadow-md">
+                   class="flex-1 bg-slate-800 border border-slate-700 text-slate-100 px-4 py-3 rounded-xl text-sm focus:outline-none focus:border-blue-500 transition" autocomplete="off">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl text-sm font-semibold transition shrink-0 shadow-md">
                 إرسال
             </button>
         </form>
@@ -53,11 +75,11 @@
 
     <!-- نافذة إدخال الاسم -->
     <div id="nameModal" class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 sm:p-6 shadow-2xl flex flex-col items-center">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center">
             <div class="w-12 h-12 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center text-xl mb-3">
                 <i class="fa-solid fa-user-pen"></i>
             </div>
-            <h3 class="text-base sm:text-lg font-bold text-slate-100 mb-1">أدخل اسمك الكريم</h3>
+            <h3 class="text-lg font-bold text-slate-100 mb-1">أدخل اسمك الكريم</h3>
             <p class="text-xs text-slate-400 mb-4 text-center">لبدء المحادثة وربطك بخدمة العملاء</p>
             
             <input id="userNameInput" type="text" placeholder="مثال: أحمد محمود" 
@@ -70,35 +92,28 @@
     </div>
 
     <!-- شاشة المكالمات الصوتية -->
-    <div id="callScreen" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col items-center justify-between p-6 sm:p-8 text-white">
+    <div id="callScreen" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col items-center justify-between p-8 text-white">
         <div class="flex flex-col items-center mt-12">
-            <div class="w-24 h-24 sm:w-28 sm:h-28 bg-slate-800 rounded-full flex items-center justify-center text-3xl sm:text-4xl font-bold mb-4 shadow-xl border border-slate-700 animate-pulse">
+            <div class="w-28 h-28 bg-slate-800 rounded-full flex items-center justify-center text-4xl font-bold mb-4 shadow-xl border border-slate-700 animate-pulse">
                 <i class="fa-solid fa-headset text-blue-400"></i>
             </div>
-            <h2 id="callStatusText" class="text-lg sm:text-xl font-bold mb-1 text-center">جارِ الاتصال بخدمة العملاء...</h2>
+            <h2 id="callStatusText" class="text-xl font-bold mb-1">جارِ الاتصال بخدمة العملاء...</h2>
             <p class="text-xs text-slate-400 mt-1" id="callTimer">00:00</p>
         </div>
         
-        <!-- أزرار التحكم بالمكالمة -->
-        <div class="flex items-center gap-4 sm:gap-6 mb-8 sm:mb-12">
-            <button id="muteBtn" onclick="toggleMute()" class="w-12 h-12 sm:w-14 sm:h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-base sm:text-lg shadow-lg transition" title="كتم الصوت">
+        <div class="flex items-center gap-6 mb-12">
+            <button id="muteBtn" onclick="toggleMute()" class="w-14 h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-lg shadow-lg transition" title="كتم الصوت">
                 <i id="muteIcon" class="fa-solid fa-microphone"></i>
             </button>
-
-            <button onclick="endCall()" class="w-14 h-14 sm:w-16 sm:h-16 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-lg sm:text-xl shadow-lg transition" title="إنهاء المكالمة">
+            <button onclick="endCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-xl shadow-lg transition" title="إنهاء المكالمة">
                 <i class="fa-solid fa-phone-slash"></i>
             </button>
-
-            <!-- زر مكبر الصوت (التبديل بين السماعة الداخلية والخارجية) -->
-            <button id="speakerBtn" onclick="toggleSpeaker()" class="w-12 h-12 sm:w-14 sm:h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-base sm:text-lg shadow-lg transition" title="مكبر الصوت">
+            <button id="speakerBtn" onclick="toggleSpeaker()" class="w-14 h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-lg shadow-lg transition" title="مكبر الصوت">
                 <i id="speakerIcon" class="fa-solid fa-volume-high"></i>
             </button>
         </div>
     </div>
-    
-    <!-- عناصر الصوت -->
-    <audio id="remoteAudio" autoplay playsinline></audio>
-    <audio id="ringAudio" src="ran.mp3" loop preload="auto"></audio>
+    <audio id="remoteAudio" autoplay></audio>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -121,23 +136,12 @@
         let currentClientKey = null;
         let originalDisplayName = null;
         let isMuted = false;
-        let isSpeakerOn = false; 
+        let isSpeakerOn = true;
         let callTimerInterval = null;
         let secondsElapsed = 0;
-
         let peerConnection = null;
         let localStream = null;
-        
-        const servers = {
-            iceServers: [
-                { urls: "stun:stun.relay.metered.ca:80" },
-                { urls: "turn:standard.relay.metered.ca:80", username: "2a87406f32f8d0e5cb30b846", credential: "7KsW7ZWWa15vlk94" },
-                { urls: "turn:standard.relay.metered.ca:80?transport=tcp", username: "2a87406f32f8d0e5cb30b846", credential: "7KsW7ZWWa15vlk94" },
-                { urls: "turn:standard.relay.metered.ca:443", username: "2a87406f32f8d0e5cb30b846", credential: "7KsW7ZWWa15vlk94" },
-                { urls: "turns:standard.relay.metered.ca:443?transport=tcp", username: "2a87406f32f8d0e5cb30b846", credential: "7KsW7ZWWa15vlk94" },
-            ]
-        };
-        
+        const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
         const messagesContainer = document.getElementById("chatMessages");
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -150,7 +154,6 @@
                 alert("يرجى كتابة اسمك للمتابعة");
                 return;
             }
-
             originalDisplayName = inputVal;
             const uniqueId = Math.floor(Math.random() * 9000) + 1000;
             currentClientKey = inputVal.replace(/\s+/g, '_') + '_' + uniqueId;
@@ -164,7 +167,6 @@
 
         function initChatSession(clientKey, displayName) {
             const roomRef = ref(db, 'single_chat_room/' + clientKey);
-
             onValue(roomRef, (snapshot) => {
                 messagesContainer.innerHTML = '';
                 if (snapshot.exists()) {
@@ -172,12 +174,11 @@
                         if(childSnapshot.key === 'call') return;
                         const msg = childSnapshot.val();
                         if(!msg || !msg.text) return;
-
                         const isClientMsg = (msg.sender === displayName || msg.senderRole === 'client');
                         appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClientMsg);
                     });
                 } else {
-                    messagesContainer.innerHTML = '<div class="text-slate-500 text-center my-auto text-xs sm:text-sm">مرحباً بك ' + escapeHtml(displayName) + '، يمكنك إرسال رسالتك الآن للبدء</div>';
+                    messagesContainer.innerHTML = '<div class="text-slate-500 text-center my-auto text-sm">مرحباً بك ' + escapeHtml(displayName) + '، يمكنك إرسال رسالتك الآن للبدء</div>';
                 }
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             });
@@ -186,13 +187,11 @@
         window.sendMessage = async function(event) {
             event.preventDefault();
             if (!currentClientKey) return;
-
             const inputField = document.getElementById("messageInput");
             const messageText = inputField.value.trim();
             if (!messageText) return;
 
             const roomRef = ref(db, 'single_chat_room/' + currentClientKey);
-
             try {
                 await push(roomRef, {
                   text: messageText,
@@ -209,52 +208,28 @@
         function appendMessageToUI(text, sender, timestamp, isClientMsg) {
             const timeNow = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'الآن';
             let messageHTML = '';
-
             if (isClientMsg) {
-                messageHTML = `
-                    <div class="flex flex-col items-end w-full mb-2">
-                        <div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tl-none max-w-[85%] sm:max-w-md text-xs sm:text-sm shadow-md">
-                            <span class="block text-[10px] text-blue-200 font-bold mb-1">أنت</span>
-                            ${escapeHtml(text)}
-                            <span class="block text-[10px] text-blue-200 mt-1 text-left">${timeNow}</span>
-                        </div>
-                    </div>
-                `;
+                messageHTML = `<div class="flex flex-col items-end w-full mb-2"><div class="bg-blue-600 text-white p-3 rounded-2xl rounded-tl-none max-w-md text-sm shadow-md"><span class="block text-[10px] text-blue-200 font-bold mb-1">أنت</span>${escapeHtml(text)}<span class="block text-[10px] text-blue-200 mt-1 text-left">${timeNow}</span></div></div>`;
             } else {
-                messageHTML = `
-                    <div class="flex flex-col items-start w-full mb-2">
-                        <div class="bg-slate-800 text-slate-100 border border-slate-700 p-3 rounded-2xl rounded-tr-none max-w-[85%] sm:max-w-md text-xs sm:text-sm shadow-md">
-                            <span class="block text-[10px] text-blue-400 font-bold mb-1">${escapeHtml(sender)} (الدعم)</span>
-                            ${escapeHtml(text)}
-                            <span class="block text-[10px] text-slate-400 mt-1 text-left">${timeNow}</span>
-                        </div>
-                    </div>
-                `;
+                messageHTML = `<div class="flex flex-col items-start w-full mb-2"><div class="bg-slate-800 text-slate-100 border border-slate-700 p-3 rounded-2xl rounded-tr-none max-w-md text-sm shadow-md"><span class="block text-[10px] text-blue-400 font-bold mb-1">${escapeHtml(sender)} (الدعم)</span>${escapeHtml(text)}<span class="block text-[10px] text-slate-400 mt-1 text-left">${timeNow}</span></div></div>`;
             }
             messagesContainer.insertAdjacentHTML('beforeend', messageHTML);
         }
 
         window.startCall = async function() {
             showCallScreen("جارِ الاتصال بالموظف...");
-            playRingSound(); // تشغيل صوت الرنين فوراً عند ضغط زر الاتصال (تجاوز حظر المتصفح)
-            
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 createPeerConnection();
-
                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
-
                 await set(ref(db, `single_chat_room/${currentClientKey}/call`), {
                     offer: { type: offer.type, sdp: offer.sdp },
                     caller: 'client'
                 });
-
             } catch (err) {
                 console.error("خطأ في السماح بالميكروفون:", err);
-                stopRingSound();
                 alert("يرجى السماح بالوصول للميكروفون لبدء المكالمة.");
                 closeCallUI();
             }
@@ -264,19 +239,13 @@
             const callRef = ref(db, `single_chat_room/${clientKey}/call`);
             onValue(callRef, async (snapshot) => {
                 const data = snapshot.val();
-                if (!data) {
-                    closeCallUI();
-                    return;
-                }
-
+                if (!data) { closeCallUI(); return; }
                 if (data.answer && peerConnection && !peerConnection.currentRemoteDescription) {
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-                    stopRingSound(); // إيقاف صوت الرنين فور رد الموظف
                     startTimer();
                     document.getElementById("callStatusText").innerText = "المكالمة جارية...";
                 }
             });
-
             const candidatesRef = ref(db, `single_chat_room/${clientKey}/call/candidates`);
             onValue(candidatesRef, (snapshot) => {
                 snapshot.forEach((child) => {
@@ -290,16 +259,9 @@
 
         function createPeerConnection() {
             peerConnection = new RTCPeerConnection(servers);
-
             peerConnection.ontrack = (event) => {
-                const remoteAudio = document.getElementById("remoteAudio");
-                if (remoteAudio.srcObject !== event.streams[0]) {
-                    remoteAudio.srcObject = event.streams[0];
-                    applyAudioRouting(); 
-                    remoteAudio.play().catch(e => console.log(e));
-                }
+                document.getElementById("remoteAudio").srcObject = event.streams[0];
             };
-
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
                     push(ref(db, `single_chat_room/${currentClientKey}/call/candidates`), event.candidate.toJSON());
@@ -314,27 +276,6 @@
             document.getElementById("callStatusText").innerText = statusText;
             secondsElapsed = 0;
             document.getElementById("callTimer").innerText = "00:00";
-            
-            isSpeakerOn = false;
-            updateSpeakerUI();
-        }
-
-        // دالة محسنة لتشغيل صوت الرنين مع ضمان التجاوز
-        function playRingSound() {
-            const ringAudio = document.getElementById("ringAudio");
-            ringAudio.currentTime = 0;
-            ringAudio.load();
-            ringAudio.play().catch(e => {
-                console.log("فشل تشغيل الرنين التلقائي، إعادة المحاولة:", e);
-                // محاولة ثانية إضافية لضمان عمله على بعض متصفحات الهواتف الصعبة
-                setTimeout(() => { ringAudio.play().catch(err => console.log(err)); }, 200);
-            });
-        }
-
-        function stopRingSound() {
-            const ringAudio = document.getElementById("ringAudio");
-            ringAudio.pause();
-            ringAudio.currentTime = 0;
         }
 
         function startTimer() {
@@ -348,84 +289,44 @@
         }
 
         window.endCall = function() {
-            if (currentClientKey) {
-                remove(ref(db, `single_chat_room/${currentClientKey}/call`));
-            }
+            if (currentClientKey) remove(ref(db, `single_chat_room/${currentClientKey}/call`));
             closeCallUI();
         }
 
         function closeCallUI() {
-            stopRingSound(); 
             const callScreen = document.getElementById("callScreen");
             callScreen.classList.remove("flex");
             callScreen.classList.add("hidden");
-
-            if (callTimerInterval) {
-                clearInterval(callTimerInterval);
-                callTimerInterval = null;
-            }
-
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-                localStream = null;
-            }
-
-            if (peerConnection) {
-                peerConnection.close();
-                peerConnection = null;
-            }
+            if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
+            if (localStream) { localStream.getTracks().forEach(track => track.stop()); localStream = null; }
+            if (peerConnection) { peerConnection.close(); peerConnection = null; }
         }
 
         window.toggleMute = function() {
             isMuted = !isMuted;
-            if (localStream) {
-                localStream.getAudioTracks()[0].enabled = !isMuted;
-            }
+            if (localStream) localStream.getAudioTracks()[0].enabled = !isMuted;
             const muteBtn = document.getElementById("muteBtn");
             const muteIcon = document.getElementById("muteIcon");
-            
             if (isMuted) {
-                muteBtn.className = "w-12 h-12 sm:w-14 sm:h-14 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-base sm:text-lg shadow-lg transition";
+                muteBtn.className = "w-14 h-14 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-lg shadow-lg transition";
                 muteIcon.className = "fa-solid fa-microphone-slash";
             } else {
-                muteBtn.className = "w-12 h-12 sm:w-14 sm:h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-base sm:text-lg shadow-lg transition";
+                muteBtn.className = "w-14 h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-lg shadow-lg transition";
                 muteIcon.className = "fa-solid fa-microphone";
             }
         }
 
         window.toggleSpeaker = function() {
-            isSpeakerOn = !isSpeakerOn; 
-            applyAudioRouting();
-            updateSpeakerUI();
-        }
-
-        function applyAudioRouting() {
-            const audioTag = document.getElementById("remoteAudio");
-            
-            if (typeof audioTag.setSinkId === 'function') {
-                navigator.mediaDevices.enumerateDevices().then(devices => {
-                    const audioOutputs = devices.filter(device => device.kind === 'audiooutput');
-                    const targetDevice = audioOutputs.find(d => isSpeakerOn ? d.label.toLowerCase().includes('speaker') : !d.label.toLowerCase().includes('speaker'));
-                    if (targetDevice) {
-                        audioTag.setSinkId(targetDevice.deviceId).catch(e => console.log(e));
-                    }
-                }).catch(e => console.log(e));
-            }
-
-            audioTag.volume = 1.0;
-            audioTag.muted = false;
-        }
-
-        function updateSpeakerUI() {
+            isSpeakerOn = !isSpeakerOn;
+            document.getElementById("remoteAudio").muted = !isSpeakerOn;
             const speakerBtn = document.getElementById("speakerBtn");
             const speakerIcon = document.getElementById("speakerIcon");
-            
             if (isSpeakerOn) {
-                speakerBtn.className = "w-12 h-12 sm:w-14 sm:h-14 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center text-base sm:text-lg shadow-lg transition";
-                speakerIcon.className = "fa-solid fa-volume-high text-white";
+                speakerBtn.className = "w-14 h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-lg shadow-lg transition";
+                speakerIcon.className = "fa-solid fa-volume-high";
             } else {
-                speakerBtn.className = "w-12 h-12 sm:w-14 sm:h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-base sm:text-lg shadow-lg transition";
-                speakerIcon.className = "fa-solid fa-volume-high text-slate-300";
+                speakerBtn.className = "w-14 h-14 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center text-lg shadow-lg transition";
+                speakerIcon.className = "fa-solid fa-volume-xmark";
             }
         }
 
