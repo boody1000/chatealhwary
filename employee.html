@@ -127,34 +127,31 @@
     let localStream = null;
     
     // خوادم Metered TURN الرسمية لتجاوز حظر شبكات المحمول والواي فاي
-    const servers = {
-        iceServers: [
-            {
-                urls: "stun:stun.relay.metered.ca:80",
-            },
-            {
-                urls: "turn:standard.relay.metered.ca:80",
-                username: "2a87406f32f8d0e5cb30b846",
-                credential: "7KsW7ZWWa15vlk94",
-            },
-            {
-                urls: "turn:standard.relay.metered.ca:80?transport=tcp",
-                username: "2a87406f32f8d0e5cb30b846",
-                credential: "7KsW7ZWWa15vlk94",
-            },
-            {
-                urls: "turn:standard.relay.metered.ca:443",
-                username: "2a87406f32f8d0e5cb30b846",
-                credential: "7KsW7ZWWa15vlk94",
-            },
-            {
-                urls: "turns:standard.relay.metered.ca:443?transport=tcp",
-                username: "2a87406f32f8d0e5cb30b846",
-                credential: "7KsW7ZWWa15vlk94",
-            },
-        ]
-    };
-
+ const servers = {
+    iceServers: [
+        { urls: "stun:stun.relay.metered.ca:80" },
+        {
+            urls: "turn:standard.relay.metered.ca:80",
+            username: "2a87406f32f8d0e5cb30b846",
+            credential: "7KsW7ZWWa15vlk94",
+        },
+        {
+            urls: "turn:standard.relay.metered.ca:80?transport=tcp",
+            username: "2a87406f32f8d0e5cb30b846",
+            credential: "7KsW7ZWWa15vlk94",
+        },
+        {
+            urls: "turn:standard.relay.metered.ca:443",
+            username: "2a87406f32f8d0e5cb30b846",
+            credential: "7KsW7ZWWa15vlk94",
+        },
+        {
+            urls: "turns:standard.relay.metered.ca:443?transport=tcp",
+            username: "2a87406f32f8d0e5cb30b846",
+            credential: "7KsW7ZWWa15vlk94",
+        },
+    ]
+};
     let empTimerInterval = null;
     let empSeconds = 0;
     let pendingOffer = null;
