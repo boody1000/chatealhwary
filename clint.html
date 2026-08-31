@@ -89,11 +89,14 @@
                 <i class="fa-solid fa-phone-slash"></i>
             </button>
 
+            <!-- زر مكبر الصوت (افتراضياً مغلق ليعمل على السماعة الداخلية) -->
             <button id="speakerBtn" onclick="toggleSpeaker()" class="w-12 h-12 sm:w-14 sm:h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-base sm:text-lg shadow-lg transition" title="مكبر الصوت">
                 <i id="speakerIcon" class="fa-solid fa-volume-high"></i>
             </button>
         </div>
     </div>
+    
+    <!-- عنصر الصوت مع خصائص التشغيل على الموبايل -->
     <audio id="remoteAudio" autoplay playsinline></audio>
 
     <script type="module">
@@ -117,14 +120,13 @@
         let currentClientKey = null;
         let originalDisplayName = null;
         let isMuted = false;
-        let isSpeakerOn = true;
+        let isSpeakerOn = false; // افتراضياً مغلق ليعمل الصوت على السماعة الداخلية للأذن
         let callTimerInterval = null;
         let secondsElapsed = 0;
 
         let peerConnection = null;
         let localStream = null;
         
-        // خوادم TURN الرسمية لضمان عمل الاتصال على داتا الموبايل والواي فاي
         const servers = {
             iceServers: [
                 { urls: "stun:stun.relay.metered.ca:80" },
@@ -288,6 +290,10 @@
                 const remoteAudio = document.getElementById("remoteAudio");
                 if (remoteAudio.srcObject !== event.streams[0]) {
                     remoteAudio.srcObject = event.streams[0];
+                    
+                    // ضبط وضع الصوت الافتراضي (سماعة الأذن الداخلية) عند بدء الاستماع
+                    applyAudioRouting();
+                    
                     remoteAudio.play().catch(e => console.log(e));
                 }
             };
@@ -306,6 +312,10 @@
             document.getElementById("callStatusText").innerText = statusText;
             secondsElapsed = 0;
             document.getElementById("callTimer").innerText = "00:00";
+            
+            // إعادة ضبط حالة مكبر الصوت ليقفل افتراضياً عند بدء كل مكالمة جديدة
+            isSpeakerOn = false;
+            updateSpeakerUI();
         }
 
         function startTimer() {
@@ -363,20 +373,49 @@
             }
         }
 
+        // دالة تبديل مكبر الصوت
         window.toggleSpeaker = function() {
             isSpeakerOn = !isSpeakerOn;
-            const audioTag = document.getElementById("remoteAudio");
-            audioTag.muted = !isSpeakerOn;
+            applyAudioRouting();
+            updateSpeakerUI();
+        }
 
+        // تطبيق مسار الصوت (سماعة داخلية أو مكبر صوت خارجي)
+        function applyAudioRouting() {
+            const audioTag = document.getElementById("remoteAudio");
+            
+            // محاولة استخدام خاصية setSinkId الحديثة إذا توفرت في متصفح الهاتف لتوجيه الصوت بدقة
+            if (typeof audioTag.setSinkId === 'function') {
+                navigator.mediaDevices.enumerateDevices().then(devices => {
+                    const audioOutputs = devices.filter(device => device.kind === 'audiooutput');
+                    // البحث عن سماعة خارجية أو سماعة الأذن بناءً على حالة الزر
+                    const targetDevice = audioOutputs.find(d => isSpeakerOn ? d.label.toLowerCase().includes('speaker') : !d.label.toLowerCase().includes('speaker'));
+                    if (targetDevice) {
+                        audioTag.setSinkId(targetDevice.deviceId).catch(e => console.log(e));
+                    }
+                }).catch(e => console.log(e));
+            }
+
+            // الطريقة المساعدة القياسية لمتصفحات الجوال (فرض إلغاء كتم السماعة أو تغيير الخصائص)
+            audioTag.volume = 1.0;
+            // بعض متصفحات أندرويد تستجيب لتغيير خاصية الإرسال المباشر أو الـ element properties
+            if ('mozCaptureStream' in audioTag || navigator.userAgent.includes('Mobile')) {
+                audioTag.muted = false;
+            }
+        }
+
+        function updateSpeakerUI() {
             const speakerBtn = document.getElementById("speakerBtn");
             const speakerIcon = document.getElementById("speakerIcon");
             
             if (isSpeakerOn) {
+                // شكل الزر عند تشغيل مكبر الصوت (لون أزرق نشط)
+                speakerBtn.className = "w-12 h-12 sm:w-14 sm:h-14 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center text-base sm:text-lg shadow-lg transition";
+                speakerIcon.className = "fa-solid fa-volume-high text-white";
+            } else {
+                // شكل الزر عند الإغلاق (يعود للسماعة الداخلية العادية)
                 speakerBtn.className = "w-12 h-12 sm:w-14 sm:h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-base sm:text-lg shadow-lg transition";
                 speakerIcon.className = "fa-solid fa-volume-high";
-            } else {
-                speakerBtn.className = "w-12 h-12 sm:w-14 sm:h-14 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center text-base sm:text-lg shadow-lg transition";
-                speakerIcon.className = "fa-solid fa-volume-xmark";
             }
         }
 
