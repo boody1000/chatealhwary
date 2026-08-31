@@ -153,6 +153,16 @@
     let mediaRecorder = null;
     let recordedAudioChunks = [];
 
+    // إلغاء حظر الصوت بواسطة تفاعل المستخدم الأول
+    document.addEventListener('click', () => {
+        if (empRingAudio.paused) {
+            empRingAudio.play().then(() => {
+                empRingAudio.pause();
+                empRingAudio.currentTime = 0;
+            }).catch(e => {});
+        }
+    }, { once: true });
+
     window.addEventListener('DOMContentLoaded', () => {
       const loggedUser = localStorage.getItem('loggedUsername');
       if (loggedUser) {
