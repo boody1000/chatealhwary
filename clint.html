@@ -95,7 +95,7 @@
         </div>
     </div>
 
-    <!-- عنصر الصوت مع خصائص التشغيل الإجباري للموبايل -->
+    <!-- عناصر الصوت -->
     <audio id="remoteAudio" autoplay playsinline></audio>
     <audio id="ringtone" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" loop></audio>
 
@@ -127,21 +127,32 @@
         let peerConnection = null;
         let localStream = null;
         
-        // خوادم الاتصال المدعومة للواي فاي والموبايل داتا
+        // خوادم Metered TURN الرسمية لتجاوز حظر شبكات المحمول والواي فاي
         const servers = {
             iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { 
-                    urls: 'turn:openrelay.metered.ca:80',
-                    username: 'openrelayproject',
-                    credential: 'openrelayproject'
+                {
+                    urls: "stun:stun.relay.metered.ca:80",
                 },
-                { 
-                    urls: 'turn:openrelay.metered.ca:443',
-                    username: 'openrelayproject',
-                    credential: 'openrelayproject'
-                }
+                {
+                    urls: "turn:standard.relay.metered.ca:80",
+                    username: "2a87406f32f8d0e5cb30b846",
+                    credential: "7KsW7ZWWa15vlk94",
+                },
+                {
+                    urls: "turn:standard.relay.metered.ca:80?transport=tcp",
+                    username: "2a87406f32f8d0e5cb30b846",
+                    credential: "7KsW7ZWWa15vlk94",
+                },
+                {
+                    urls: "turn:standard.relay.metered.ca:443",
+                    username: "2a87406f32f8d0e5cb30b846",
+                    credential: "7KsW7ZWWa15vlk94",
+                },
+                {
+                    urls: "turns:standard.relay.metered.ca:443?transport=tcp",
+                    username: "2a87406f32f8d0e5cb30b846",
+                    credential: "7KsW7ZWWa15vlk94",
+                },
             ]
         };
         
@@ -299,7 +310,6 @@
         function createPeerConnection() {
             peerConnection = new RTCPeerConnection(servers);
 
-            // إصلاح وتأكيد التقاط الصوت الوارد وتغذيته لعنصر الصوت
             peerConnection.ontrack = (event) => {
                 const remoteAudio = document.getElementById("remoteAudio");
                 if (remoteAudio.srcObject !== event.streams[0]) {
