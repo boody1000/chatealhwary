@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - إدارة الموظفين والمحادثات</title>
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --sidebar-bg: #1e1b4b;
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --white: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            color: var(--white);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar-brand {
+            padding: 20px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 20px 0;
+            flex-grow: 1;
+        }
+
+        .sidebar-menu li {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .sidebar-menu li:hover, .sidebar-menu li.active {
+            background-color: var(--primary-color);
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        header {
+            background-color: var(--white);
+            padding: 15px 30px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .container {
+            padding: 30px;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .card {
+            background-color: var(--white);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: var(--white);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--white);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: right;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+
+        .search-box {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-box input {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            flex-grow: 1;
+        }
+
+        /* تنسيق حالات الاتصال */
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .status-online {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .status-offline {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* تنسيق النافذة المنبثقة (Modal) لعرض الشات بالكامل */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0;
+        }
+        .close-modal:hover {
+            color: #000;
+        }
+        .chat-messages-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: 400px;
+            padding: 10px;
+            background-color: #f9fafb;
+            border-radius: 5px;
+            border: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .message-bubble {
+            padding: 10px 14px;
+            border-radius: 8px;
+            max-width: 80%;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        .message-client {
+            background-color: #e0e7ff;
+            align-self: flex-start;
+            color: #1e1b4b;
+        }
+        .message-employee {
+            background-color: #4f46e5;
+            align-self: flex-end;
+            color: #ffffff;
+        }
+        .message-meta {
+            font-size: 0.75rem;
+            margin-top: 4px;
+            opacity: 0.8;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div>
+            <div class="sidebar-brand">لوحة التحكم</div>
+            <ul class="sidebar-menu">
+                <li class="active" onclick="switchSection('add-employee', this)">إضافة موظف</li>
+                <li onclick="switchSection('add-admin', this)">إضافة مدير</li>
+                <li onclick="switchSection('employee-status', this)">استعلام حالة الموظفين</li>
+                <li onclick="switchSection('chat-logs', this)">استعلام الشات والمحادثات</li>
+                <li onclick="switchSection('calls-logs', this)">المكالمات المحفوظة</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <header id="header-title">إضافة موظف جديد</header>
+        
+        <div class="container">
+            
+            <div id="add-employee" class="section active">
+                <div class="card">
+                    <h3>بيانات الموظف</h3>
+                    <br>
+                    <form id="employeeForm">
+                        <div class="form-group">
+                            <label for="empName">اسم المستخدم (Username):</label>
+                            <input type="text" id="empName" required placeholder="أدخل اسم المستخدم">
+                        </div>
+                        <div class="form-group">
+                            <label for="empPass">كلمة المرور (Password):</label>
+                            <input type="password" id="empPass" required placeholder="أدخل كلمة المرور">
+                        </div>
+                        <div class="form-group">
+                            <label for="empRole">الصلاحية:</label>
+                            <select id="empRole">
+                                <option value="خدمة عملاء">خدمة عملاء</option>
+                                <option value="مشرف">مشرف</option>
+                            </select>
+                        </div>
+                        <button type="submit">حفظ الموظف في الداتا بيز</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="add-admin" class="section">
+                <div class="card">
+                    <h3>بيانات المدير الجديد</h3>
+                    <br>
+                    <form id="adminForm">
+                        <div class="form-group">
+                            <label for="adminName">اسم المستخدم (Username):</label>
+                            <input type="text" id="adminName" required placeholder="أدخل اسم المستخدم للمدير">
+                        </div>
+                        <div class="form-group">
+                            <label for="adminPass">كلمة المرور (Password):</label>
+                            <input type="password" id="adminPass" required placeholder="أدخل كلمة المرور للمدير">
+                        </div>
+                        <button type="submit">حفظ المدير في الداتا بيز</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="employee-status" class="section">
+                <h2>استعلام حالة الموظفين (Online / Offline)</h2>
+                <div class="search-box">
+                    <input type="text" id="searchEmployeeStatus" placeholder="ابحث باسم الموظف أو الصلاحية...">
+                </div>
+                <table id="statusTable">
+                    <thead>
+                        <tr>
+                            <th>اسم الموظف</th>
+                            <th>الصلاحية</th>
+                            <th>الحالة</th>
+                            <th>تاريخ الإنشاء / آخر ظهور</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statusTableBody"></tbody>
+                </table>
+            </div>
+
+            <div id="chat-logs" class="section">
+                <h2>سجل المحادثات والشات</h2>
+                <div class="search-box">
+                    <input type="text" id="searchChat" placeholder="ابحث باسم الموظف أو العميل...">
+                </div>
+                <table id="chatTable">
+                    <thead>
+                        <tr>
+                            <th>الموظف المشارك</th>
+                            <th>اسم العميل</th>
+                            <th>الرسالة الأخيرة</th>
+                            <th>الوقت</th>
+                            <th>إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody id="chatTableBody"></tbody>
+                </table>
+            </div>
+
+            <div id="calls-logs" class="section">
+                <h2>سجل المكالمات المحفوظة</h2>
+                <div class="search-box">
+                    <input type="text" id="searchCall" placeholder="ابحث باسم الموظف أو العميل...">
+                </div>
+                <table id="callsTable">
+                    <thead>
+                        <tr>
+                            <th>الموظف</th>
+                            <th>العميل</th>
+                            <th>مدة المكالمة (ثواني)</th>
+                            <th>التسجيل الصوتي</th>
+                        </tr>
+                    </thead>
+                    <tbody id="callsTableBody"></tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- النافذة المنبثقة (Modal) لعرض الشات بالكامل -->
+    <div id="chatModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="modalTitle">تفاصيل المحادثة</span>
+                <button class="close-modal" onclick="closeChatModal()">&times;</button>
+            </div>
+            <div id="modalChatMessages" class="chat-messages-container">
+                <!-- رسائل الشات ستظهر هنا -->
+            </div>
+        </div>
+    </div>
+
+    <!-- كود الـ JavaScript و Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
+            authDomain: "marry-55604.firebaseapp.com",
+            databaseURL: "https://marry-55604-default-rtdb.firebaseio.com",
+            projectId: "marry-55604",
+            storageBucket: "marry-55604.firebasestorage.app",
+            messagingSenderId: "524067560260",
+            appId: "1:524067560260:web:adc87a02eadf098d5a5511",
+            measurementId: "G-0QW3CXTSM3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getDatabase(app);
+
+        // حفظ بيانات الموظف عند الضغط على الزر تحت جدول online_employees
+        document.getElementById('employeeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('empName').value.trim();
+            const password = document.getElementById('empPass').value;
+            const safeUsername = username.replace(/[.#$[\]]/g, "_");
+            const role = document.getElementById('empRole').value;
+
+            const employeeRef = ref(db, 'online_employees/' + safeUsername);
+
+            set(employeeRef, {
+                username: username,
+                password: password,
+                role: role,
+                status: 'offline', // القيمة الافتراضية عند الإنشاء
+                createdAt: new Date().toLocaleString()
+            })
+            .then(() => {
+                alert(`تم حفظ الموظف (${username}) بنجاح في قاعدة البيانات!`);
+                document.getElementById('employeeForm').reset();
+            })
+            .catch((error) => {
+                alert("حدث خطأ أثناء الحفظ: " + error.message);
+                console.error(error);
+            });
+        });
+
+        // حفظ بيانات المدير عند الضغط على زر حفظ المدير
+        document.getElementById('adminForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('adminName').value.trim();
+            const password = document.getElementById('adminPass').value;
+            const safeUsername = username.replace(/[.#$[\]]/g, "_");
+
+            const adminRef = ref(db, 'admins/' + safeUsername);
+
+            set(adminRef, {
+                username: username,
+                password: password,
+                role: 'admin',
+                createdAt: new Date().toLocaleString()
+            })
+            .then(() => {
+                alert(`تم حفظ المدير (${username}) بنجاح في قاعدة البيانات!`);
+                document.getElementById('adminForm').reset();
+            })
+            .catch((error) => {
+                alert("حدث خطأ أثناء حفظ المدير: " + error.message);
+                console.error(error);
+            });
+        });
+
+        // متغيرات عامة لتخزين البيانات للبحث الفوري
+        let allChatRoomsData = {};
+        let allCallRecordingsData = {};
+        let allEmployeesData = {};
+
+        // جلب الموظفين من جدول online_employees وعرضها
+        const employeesRef = ref(db, 'online_employees');
+        onValue(employeesRef, (snapshot) => {
+            allEmployeesData = snapshot.val() || {};
+            renderStatusTable(allEmployeesData);
+        });
+
+        function renderStatusTable(data, filterText = '') {
+            const tbody = document.getElementById('statusTableBody');
+            tbody.innerHTML = '';
+            
+            let hasResults = false;
+            const searchText = filterText.toLowerCase();
+
+            if (data) {
+                Object.entries(data).forEach(([empKey, empVal]) => {
+                    const empName = empVal.username || empKey.replace(/_/g, ' ');
+                    const empRole = empVal.role || 'موظف';
+                    const status = empVal.status || 'offline';
+                    const timeInfo = empVal.createdAt || '-';
+
+                    if (searchText && !empName.toLowerCase().includes(searchText) && !empRole.toLowerCase().includes(searchText)) {
+                        return;
+                    }
+
+                    hasResults = true;
+                    const isOnline = status.toLowerCase() === 'online';
+                    const statusBadgeClass = isOnline ? 'status-online' : 'status-offline';
+                    const statusText = isOnline ? 'متصل (Online)' : 'غير متصل (Offline)';
+
+                    tbody.innerHTML += `<tr>
+                        <td><span style="font-weight: 600;">${escapeHtml(empName)}</span></td>
+                        <td>${escapeHtml(empRole)}</td>
+                        <td><span class="status-badge ${statusBadgeClass}">${statusText}</span></td>
+                        <td>${escapeHtml(timeInfo)}</td>
+                    </tr>`;
+                });
+            }
+
+            if (!hasResults) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center;">لا توجد بيانات موظفين تطابق بحثك</td></tr>`;
+            }
+        }
+
+        document.getElementById('searchEmployeeStatus').addEventListener('input', function(e) {
+            renderStatusTable(allEmployeesData, e.target.value.trim());
+        });
+
+        // جلب المحادثات من single_chat_room وعرضها
+        const singleChatRoomRef = ref(db, 'single_chat_room');
+        onValue(singleChatRoomRef, (snapshot) => {
+            allChatRoomsData = snapshot.val() || {};
+            renderChatTable(allChatRoomsData);
+        });
+
+        function renderChatTable(data, filterText = '') {
+            const tbody = document.getElementById('chatTableBody');
+            tbody.innerHTML = '';
+            
+            let hasResults = false;
+            const searchText = filterText.toLowerCase();
+
+            Object.entries(data).forEach(([roomKey, roomData]) => {
+                let clientName = roomKey.includes('_') ? roomKey.substring(0, roomKey.lastIndexOf('_')).replace(/_/g, ' ') : roomKey.replace(/_/g, ' ');
+                
+                let lastMessageText = 'لا توجد رسائل';
+                let lastMessageTime = '-';
+                let employeeName = 'بانتظار رد موظف';
+
+                if (roomData) {
+                    Object.entries(roomData).forEach(([msgKey, msgVal]) => {
+                        if (msgKey === 'call') return;
+                        if (msgVal && typeof msgVal === 'object') {
+                            if (msgVal.text) {
+                                lastMessageText = msgVal.text;
+                            }
+                            if (msgVal.timestamp) {
+                                lastMessageTime = new Date(msgVal.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            }
+                            if (msgVal.senderRole === 'employee' && msgVal.sender) {
+                                employeeName = msgVal.sender;
+                            }
+                        }
+                    });
+                }
+
+                if (searchText && !employeeName.toLowerCase().includes(searchText) && !clientName.toLowerCase().includes(searchText)) {
+                    return;
+                }
+
+                hasResults = true;
+                const encodedRoomKey = encodeURIComponent(roomKey);
+
+                tbody.innerHTML += `<tr>
+                    <td><span style="color: #4f46e5; font-weight: 600;">${escapeHtml(employeeName)}</span></td>
+                    <td><span style="font-weight: 600;">${escapeHtml(clientName)}</span></td>
+                    <td>${escapeHtml(lastMessageText)}</td>
+                    <td>${escapeHtml(lastMessageTime)}</td>
+                    <td><button onclick="openChatModal('${encodedRoomKey}', '${escapeHtml(clientName)}')" style="padding: 5px 12px; font-size: 0.9rem;">عرض الشات 💬</button></td>
+                </tr>`;
+            });
+
+            if (!hasResults) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">لا توجد محادثات تطابق بحثك</td></tr>`;
+            }
+        }
+
+        document.getElementById('searchChat').addEventListener('input', function(e) {
+            renderChatTable(allChatRoomsData, e.target.value.trim());
+        });
+
+        // دالة فتح الشات بالكامل في النافذة المنبثقة
+        window.openChatModal = function(encodedRoomKey, clientName) {
+            const roomKey = decodeURIComponent(encodedRoomKey);
+            const roomData = allChatRoomsData[roomKey];
+            const messagesContainer = document.getElementById('modalChatMessages');
+            document.getElementById('modalTitle').innerText = `محادثة العميل: ${clientName}`;
+            messagesContainer.innerHTML = '';
+
+            if (roomData) {
+                let messagesFound = false;
+                Object.entries(roomData).forEach(([msgKey, msgVal]) => {
+                    if (msgKey === 'call') return;
+                    if (msgVal && typeof msgVal === 'object' && msgVal.text) {
+                        messagesFound = true;
+                        const isEmployee = msgVal.senderRole === 'employee';
+                        const bubbleClass = isEmployee ? 'message-employee' : 'message-client';
+                        const senderLabel = isEmployee ? (msgVal.sender || 'الموظف') : clientName;
+                        const timeStr = msgVal.timestamp ? new Date(msgVal.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+                        messagesContainer.innerHTML += `
+                            <div class="message-bubble ${bubbleClass}">
+                                <div style="font-weight: bold; font-size: 0.8rem; margin-bottom: 2px; opacity: 0.9;">${escapeHtml(senderLabel)}</div>
+                                <div>${escapeHtml(msgVal.text)}</div>
+                                <div class="message-meta">${escapeHtml(timeStr)}</div>
+                            </div>
+                        `;
+                    }
+                });
+
+                if (!messagesFound) {
+                    messagesContainer.innerHTML = `<div style="text-align: center; color: #6b7280; padding: 20px;">لا توجد رسائل تفصيلية في هذه المحادثة</div>`;
+                }
+            } else {
+                messagesContainer.innerHTML = `<div style="text-align: center; color: #6b7280; padding: 20px;">لا توجد بيانات متاحة</div>`;
+            }
+
+            document.getElementById('chatModal').style.display = 'flex';
+        };
+
+        window.closeChatModal = function() {
+            document.getElementById('chatModal').style.display = 'none';
+        };
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('chatModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+
+        // جلب المكالمات المحفوظة من جدول call_recordings وتفعيل البحث بالاسم
+        const callRecordingsRef = ref(db, 'call_recordings');
+        onValue(callRecordingsRef, (snapshot) => {
+            allCallRecordingsData = snapshot.val() || {};
+            renderCallsTable(allCallRecordingsData);
+        });
+
+        function renderCallsTable(data, filterText = '') {
+            const tbody = document.getElementById('callsTableBody');
+            tbody.innerHTML = '';
+            
+            let hasResults = false;
+            const searchText = filterText.toLowerCase();
+
+            if (data) {
+                Object.values(data).forEach(call => {
+                    const employeeName = call.employee || 'غير معروف';
+                    const clientName = call.client || 'غير معروف';
+
+                    if (searchText && !employeeName.toLowerCase().includes(searchText) && !clientName.toLowerCase().includes(searchText)) {
+                        return;
+                    }
+
+                    hasResults = true;
+                    let audioHtml = '-';
+                    if (call.audioData) {
+                        audioHtml = `<audio controls style="height: 35px; width: 220px;">
+                                        <source src="${call.audioData}" type="audio/webm">
+                                        متصفحك لا يدعم تشغيل الصوت
+                                     </audio>`;
+                    }
+                    
+                    tbody.innerHTML += `<tr>
+                        <td><span style="font-weight: 600;">${escapeHtml(employeeName)}</span></td>
+                        <td><span style="font-weight: 600;">${escapeHtml(clientName)}</span></td>
+                        <td>${call.durationSeconds ? call.durationSeconds + ' ثانية' : '-'}</td>
+                        <td>${audioHtml}</td>
+                    </tr>`;
+                });
+            }
+
+            if (!hasResults) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center;">لا توجد مكالمات تطابق بحثك</td></tr>`;
+            }
+        }
+
+        document.getElementById('searchCall').addEventListener('input', function(e) {
+            renderCallsTable(allCallRecordingsData, e.target.value.trim());
+        });
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.toString().replace(/[&<>"']/g, m => map[m]);
+        }
+    </script>
+
+    <script>
+        function switchSection(sectionId, element) {
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.sidebar-menu li').forEach(li => li.classList.remove('active'));
+
+            document.getElementById(sectionId).classList.add('active');
+            element.classList.add('active');
+
+            const titles = {
+                'add-employee': 'إضافة موظف جديد',
+                'add-admin': 'إضافة مدير جديد',
+                'employee-status': 'استعلام حالة الموظفين',
+                'chat-logs': 'استعلام الشات والمحادثات',
+                'calls-logs': 'سجل المكالمات المحفوظة'
+            };
+            document.getElementById('header-title').innerText = titles[sectionId];
+        }
+    </script>
+</body>
+</html>
