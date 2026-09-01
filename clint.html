@@ -140,7 +140,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // نظام تثبيت الجلسة مثل الماسنجر تماماً
         let currentClientKey = localStorage.getItem('messenger_hawary_key');
         let originalDisplayName = localStorage.getItem('messenger_hawary_name');
         
@@ -164,14 +163,12 @@
         }, { once: true });
 
         window.addEventListener('DOMContentLoaded', () => {
-            // التحقق الدائم من الجلسة (زي الماسنجر لو مسجل دخول مسبقاً)
             if (currentClientKey && originalDisplayName) {
                 document.getElementById("nameModal").classList.add("hidden");
                 document.getElementById("clientDisplayHeader").innerText = "العميل: " + originalDisplayName;
                 initChatSession(currentClientKey, originalDisplayName);
                 listenForIncomingCalls(currentClientKey);
             } else {
-                // تظهر فقط لو أول مرة يدخل خالص
                 document.getElementById("nameModal").classList.remove("hidden");
                 document.getElementById("nameModal").classList.add("flex");
             }
@@ -182,11 +179,9 @@
             if (!inputVal) { alert("يرجى كتابة اسمك للمتابعة"); return; }
             
             originalDisplayName = inputVal;
-            // توليد مفتاح فريد وثائم لا يتغير أبدًا لهذا العميل
             const uniqueId = Math.floor(Math.random() * 900000) + 100000;
             currentClientKey = inputVal.replace(/\s+/g, '_') + '_' + uniqueId;
             
-            // تثبيت الجلسة في المتصفح للأبد (كأن التطبيق مسجل دخول)
             localStorage.setItem('messenger_hawary_key', currentClientKey);
             localStorage.setItem('messenger_hawary_name', originalDisplayName);
 
