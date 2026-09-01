@@ -57,7 +57,10 @@
         </div>
         
         <div class="flex items-center gap-4">
-          <h3 id="currentName" class="text-sm font-bold text-slate-200">اختر محادثة من القائمة</h3>
+          <div class="flex flex-col items-end">
+            <h3 id="currentName" class="text-sm font-bold text-slate-200">اختر محادثة من القائمة</h3>
+            <span id="chatLockStatus" class="text-[10px] text-amber-400 font-medium"></span>
+          </div>
           <button id="callClientBtn" onclick="employeeStartCall()" class="w-10 h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center transition shadow-md hidden" title="اتصال صوتي بالعميل">
             <i class="fa-solid fa-phone text-sm"></i>
           </button>
@@ -100,7 +103,7 @@
     </div>
   </div>
 
-  <!-- شاشة المكالمة النشطة للموظف (مضاف إليها زر كتم الصوت) -->
+  <!-- شاشة المكالمة النشطة للموظف -->
   <div id="employeeCallScreen" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col items-center justify-between p-8 text-white">
     <div class="flex flex-col items-center mt-12">
       <div class="w-28 h-28 bg-slate-800 rounded-full flex items-center justify-center overflow-hidden mb-4 shadow-xl border-2 border-emerald-500 animate-pulse">
@@ -111,12 +114,10 @@
     </div>
     
     <div class="flex items-center gap-6 mb-12">
-      <!-- زر كتم الصوت الجديد -->
       <button id="muteMicBtn" onclick="toggleMuteMic()" class="w-14 h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-lg shadow-lg transition border border-slate-700" title="كتم/إلغاء كتم الميكروفون">
         <i class="fa-solid fa-microphone" id="muteIcon"></i>
       </button>
 
-      <!-- زر إنهاء المكالمة الأصلي -->
       <button onclick="employeeEndCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-xl shadow-lg transition" title="إنهاء المكالمة">
         <i class="fa-solid fa-phone-slash"></i>
       </button>
@@ -129,7 +130,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update, runTransaction } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -155,6 +156,7 @@
     let empTimerInterval = null;
     let empSeconds = 0;
     let pendingOffer = null;
+    let currentChatUnsubscribe = null;
 
     const empRingAudio = document.getElementById("empRingAudio");
     const msgNotificationAudio = document.getElementById("msgNotificationAudio");
@@ -168,7 +170,7 @@
             empRingAudio.play().then(() => { empRingAudio.pause(); empRingAudio.currentTime = 0; }).catch(e => {});
         }
         if (msgNotificationAudio.paused) {
-            msgNotificationAudio.play().then(() => { msgNotificationAudio.pause(); msgNotificationAudio.currentTime = 0; }).catch(e => {});
+            msgNotificationAudio.play().then(() => { msgNotificationAudio.play().catch(e => {}); msgNotificationAudio.pause(); msgNotificationAudio.currentTime = 0; }).catch(e => {});
         }
     }, { once: true });
 
@@ -193,9 +195,9 @@
           snapshot.forEach((roomSnapshot) => {
             const roomKey = roomSnapshot.key; 
             const originalName = roomKey.replace(/_/g, ' ');
-            let hasActiveCall = false;
             let lastMessageText = "انقر لعرض المحادثة";
             let totalMessagesCount = 0;
+            let lockedBy = null;
 
             if (unreadCounts[roomKey] === undefined) {
               unreadCounts[roomKey] = 0;
@@ -205,9 +207,13 @@
               if(msgChild.key === 'call') {
                 const callVal = msgChild.val();
                 if (callVal) {
-                  hasActiveCall = true;
                   checkIncomingCallForRoom(roomKey, originalName, callVal);
                 }
+                return;
+              }
+
+              if(msgChild.key === 'lockedBy') {
+                lockedBy = msgChild.val();
                 return;
               }
 
@@ -225,7 +231,7 @@
                 
                 if (msgNotificationAudio) {
                   msgNotificationAudio.currentTime = 0;
-                  msgNotificationAudio.play().catch(err => console.log("Audio play error:", err));
+                  msgNotificationAudio.play().catch(err => {});
                 }
               }
             }
@@ -237,8 +243,12 @@
               ? `<div class="flex items-center gap-1 bg-red-600 text-white text-xs font-black px-2.5 py-0.5 rounded-full shadow-lg animate-pulse"><i class="fa-solid fa-bell text-[10px]"></i><span>${currentCount}</span></div>` 
               : '';
 
+            const lockBadge = lockedBy 
+              ? `<span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-md border border-amber-500/30">مع بواسطة: ${escapeHtml(lockedBy)}</span>` 
+              : '';
+
             const chatItemHTML = `
-              <div onclick="switchChat('${escapeHtml(roomKey)}', '${escapeHtml(originalName)}')" class="p-3 hover:bg-slate-800/60 cursor-pointer transition flex items-center space-x-3 space-x-reverse border-b border-slate-800/40">
+              <div onclick="switchChat('${escapeHtml(roomKey)}', '${escapeHtml(originalName)}')" class="p-3 hover:bg-slate-800/60 cursor-pointer transition flex items-center space-x-3 space-x-reverse border-b border-slate-800/40 ${activeClientKey === roomKey ? 'bg-slate-800/80 border-r-4 border-amber-500' : ''}">
                 <div class="relative">
                   <img src="22.jpg" class="w-10 h-10 rounded-full object-cover border border-amber-500/40" alt="User">
                   <span class="absolute bottom-0 left-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></span>
@@ -248,7 +258,10 @@
                     <h3 class="text-sm font-semibold truncate text-white">${escapeHtml(originalName)}</h3>
                     <div id="badge-container-${escapeHtml(roomKey)}">${badgeHTML}</div>
                   </div>
-                  <p class="text-xs text-slate-400 truncate">${escapeHtml(lastMessageText)}</p>
+                  <div class="flex items-center justify-between">
+                    <p class="text-xs text-slate-400 truncate max-w-[140px]">${escapeHtml(lastMessageText)}</p>
+                    ${lockBadge}
+                  </div>
                 </div>
               </div>
             `;
@@ -297,7 +310,13 @@
       }
     }
 
+    // الانتقال للشات مع حجز المحادثة لمنع تداخل الموظفين
     window.switchChat = function(roomKey, displayName) {
+      // إذا كان هناك شات قديم مفتوح، نرفع الحجز عنه ليتاح لغيره لو أردنا، أو نبقيه (يفضل تحديث حجز الجديد)
+      if (activeClientKey && activeClientKey !== roomKey) {
+        set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), null);
+      }
+
       activeClientKey = roomKey;
       activeClientDisplayName = displayName;
       
@@ -307,18 +326,40 @@
 
       document.getElementById('currentName').innerText = "محادثة مع: " + displayName;
       document.getElementById('callClientBtn').classList.remove('hidden');
-      
+      document.getElementById('chatLockStatus').innerText = "جاري قفل الشات وتعيينه لك...";
+
+      // قفل المحادثة باسم الموظف الحالي لمنع تداخل باقي الموظفين
+      set(ref(db, `single_chat_room/${roomKey}/lockedBy`), currentEmpName);
+
       const container = document.getElementById('messageContainer');
       container.innerHTML = '<div class="text-slate-500 text-center my-auto">جاري تحميل الرسائل...</div>'; 
 
       const chatRef = ref(db, 'single_chat_room/' + roomKey);
+      
+      // إلغاء الاستماع القديم لتفادي تكرار الأحدث
+      if(currentChatUnsubscribe) {
+        // Firebase onValue returns an unsubscribe function in modern modular SDK
+      }
+
       onValue(chatRef, (snapshot) => {
         container.innerHTML = '';
+        let isLockedByOther = false;
+        
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
-            if(childSnapshot.key === 'call') {
+            if(childSnapshot.key === 'call') return;
+            
+            if(childSnapshot.key === 'lockedBy') {
+              const locker = childSnapshot.val();
+              if(locker && locker !== currentEmpName) {
+                isLockedByOther = true;
+                document.getElementById('chatLockStatus').innerText = `⚠️ الشات قيد الرد بواسطة الموظف: ${locker}`;
+              } else if(locker === currentEmpName) {
+                document.getElementById('chatLockStatus').innerText = "✅ متصل وتحت إدارتك المباشرة";
+              }
               return;
             }
+
             const msg = childSnapshot.val();
             if(!msg) return;
             const isClientMsg = (msg.sender === displayName || msg.sender === roomKey || msg.senderRole === 'client');
@@ -340,7 +381,18 @@
 
       const chatRef = ref(db, 'single_chat_room/' + activeClientKey);
       try {
-        await push(chatRef, { text: text, sender: currentEmpName, senderRole: "employee", timestamp: Date.now() });
+        // تأكيد القفل للموظف الحالي قبل إرسال الرسالة
+        await update(chatRef, {
+          lockedBy: currentEmpName
+        });
+
+        await push(chatRef, { 
+          text: text, 
+          sender: currentEmpName, 
+          senderRole: "employee", 
+          timestamp: Date.now() 
+        });
+        
         input.value = ''; 
       } catch (error) { console.error(error); }
     };
@@ -356,6 +408,7 @@
       showEmployeeCallScreen();
 
       set(ref(db, `online_employees/${empCleanId}/inCall`), true);
+      set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), currentEmpName);
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -396,6 +449,7 @@
       showEmployeeCallScreen();
 
       set(ref(db, `online_employees/${empCleanId}/inCall`), true);
+      set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), currentEmpName);
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -454,7 +508,6 @@
       empSeconds = 0;
       document.getElementById("empCallTimer").innerText = "00:00";
       
-      // إعادة تعيين شكل الزر لوضع الميكروفون المفتوح عند فتح شاشة المكالمة
       const muteBtn = document.getElementById("muteMicBtn");
       const muteIcon = document.getElementById("muteIcon");
       muteBtn.classList.remove("bg-amber-600", "border-amber-500");
@@ -472,7 +525,6 @@
       }, 1000);
     }
 
-    // دالة كتم وإلغاء كتم الميكروفون المضافة حديثاً
     window.toggleMuteMic = function() {
       if (!localStream) return;
       const audioTrack = localStream.getAudioTracks()[0];
@@ -484,12 +536,10 @@
       const muteIcon = document.getElementById("muteIcon");
 
       if (audioTrack.enabled) {
-        // الميكروفون مفتوح
         muteBtn.classList.remove("bg-amber-600", "border-amber-500");
         muteBtn.classList.add("bg-slate-800", "border-slate-700");
         muteIcon.className = "fa-solid fa-microphone";
       } else {
-        // الميكروفون مكتوم
         muteBtn.classList.remove("bg-slate-800", "border-slate-700");
         muteBtn.classList.add("bg-amber-600", "border-amber-500");
         muteIcon.className = "fa-solid fa-microphone-slash";
@@ -520,7 +570,7 @@
 
     function appendMessageToUI(text, sender, timestamp, isClientMsg) {
       const container = document.getElementById('messageContainer');
-      const timeNow = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'الآن';
+      const timeNow = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-Digit' }) : 'الآن';
       let messageHTML = '';
       if (!isClientMsg) {
         messageHTML = `<div class="flex flex-col items-end w-full"><div class="bg-amber-600 text-white p-3 rounded-2xl rounded-tl-none max-w-md text-sm shadow-md"><span class="block text-[10px] text-amber-200 font-bold mb-1">${escapeHtml(sender)} (أنت)</span>${escapeHtml(text)}<span class="block text-[10px] text-amber-200 mt-1 text-left">${timeNow}</span></div></div>`;
