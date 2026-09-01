@@ -84,7 +84,7 @@
 
   </div>
 
-  <!-- شاشة استقبال المكالمات -->
+  <!-- شاشة استقبال المكالمات (للباقين) -->
   <div id="incomingCallModal" class="fixed inset-0 bg-slate-950/90 z-50 hidden flex-col items-center justify-center text-white backdrop-blur-sm">
     <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full text-center">
       <div class="w-24 h-24 bg-amber-600/20 text-amber-400 rounded-full flex items-center justify-center overflow-hidden mb-4 border-2 border-amber-500 animate-bounce">
@@ -261,7 +261,7 @@
     });
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
-      // إذا تم الرد على المكالمة بواسطة أي موظف آخر، نقوم فقط بإخفاء شاشة الرنين وإيقاف الصوت عند باقي الموظفين دون التأثير على المكالمة القائمة
+      // لو المكالمة تم الرد عليها بواسطة أي موظف (سواء أنا أو غيري)، نقفل الشاشة ونوقف الرنين عند باقي الموظفين فقط
       if (callData && callData.status === 'answered') {
         if (pendingOffer && pendingOffer.roomKey === roomKey) {
           if (!empRingAudio.paused) {
@@ -277,7 +277,9 @@
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
         const targetEmp = callData.targetEmployee;
         if (!targetEmp || targetEmp === currentEmpName) {
-          if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
+          // نتأكد أننا لسنا نحن من نقوم بالمكالمة الفعالة حالياً
+          const isMyScreenActive = !document.getElementById("employeeCallScreen").classList.contains("hidden");
+          if (!isMyScreenActive) {
             if (!targetEmp) {
               set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), currentEmpName);
             }
@@ -313,7 +315,6 @@
           snapshot.forEach((childSnapshot) => {
             if(childSnapshot.key === 'call') {
               const callVal = childSnapshot.val();
-              // إذا انتهت المكالمة تماماً ولم تعد موجودة، أغلق شاشة المكالمة الخاصة بالموظف
               if (!callVal && !document.getElementById("employeeCallScreen").classList.contains("hidden")) {
                 closeEmpCallUI();
               }
@@ -361,7 +362,7 @@
       set(ref(db, `online_employees/${empCleanId}/inCall`), true);
 
       try {
-        // تحديث حالة المكالمة إلى answered لإخفاء شاشة الرنين عند باقي الموظفين دون حذف بيانات الاتصال نهائياً
+        // تحديث حالة المكالمة إلى answered لإيقاف الرنين وإخفاء الشاشة عند باقي الموظفين فقط (دون إغلاقها على العميل)
         await update(ref(db, `single_chat_room/${activeClientKey}/call`), {
           status: 'answered',
           answeredBy: currentEmpName
