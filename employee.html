@@ -52,7 +52,7 @@
           </div>
           <div>
             <h3 id="loggedInUsername" class="text-sm font-bold text-amber-400">موظف الدعم</h3>
-            <span class="text-xs text-green-400">متصل بشكل مستقل</span>
+            <span class="text-xs text-green-400">متصل (جلسة مستقلة)</span>
           </div>
         </div>
         
@@ -139,6 +139,9 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    // إنشاء معرف جلسة فريد خاص بهذه الصفحة/التبويب حصرياً لمنع التداخل نهائياً
+    const sessionTabId = 'tab_' + Math.random().toString(36).substring(2, 9);
+
     let activeClientKey = null;
     let activeClientDisplayName = null;
     let currentEmpName = "موظف الدعم";
@@ -170,12 +173,12 @@
       const loggedUser = localStorage.getItem('loggedUsername');
       if (loggedUser) {
         currentEmpName = loggedUser;
-        document.getElementById('loggedInUsername').innerText = currentEmpName;
+        document.getElementById('loggedInUsername').innerText = currentEmpName + " (" + sessionTabId.substring(0,5) + ")";
       }
 
-      empCleanId = currentEmpName.replace(/\s+/g, '_');
+      empCleanId = currentEmpName.replace(/\s+/g, '_') + '_' + sessionTabId;
       const empStatusRef = ref(db, 'online_employees/' + empCleanId);
-      set(empStatusRef, { name: currentEmpName, inCall: false, lastActive: Date.now() });
+      set(empStatusRef, { name: currentEmpName, tabId: sessionTabId, inCall: false, lastActive: Date.now() });
       onDisconnect(empStatusRef).remove();
 
       const chatRoomsRef = ref(db, 'single_chat_room');
@@ -262,6 +265,7 @@
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
+        // إذا تم قبول المكالمة بواسطة أي موظف آخر، قم بإيقاف الرنين وإغلاق الشاشة فوراً عند البقية
         if (callData.status === 'accepted' || callData.status === 'answered') {
           if (pendingOffer && pendingOffer.roomKey === roomKey) {
             stopRinging();
@@ -271,10 +275,11 @@
           return;
         }
 
-        const targetEmp = callData.targetEmployee;
-        if (!targetEmp || targetEmp === currentEmpName) {
+        const targetTab = callData.targetTabId;
+        if (!targetTab || targetTab === sessionTabId) {
           if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
-            if (!targetEmp) {
+            if (!targetTab) {
+              set(ref(db, `single_chat_room/${roomKey}/call/targetTabId`), sessionTabId);
               set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), currentEmpName);
             }
             pendingOffer = { roomKey, displayName, offer: callData.offer };
@@ -362,9 +367,11 @@
 
       document.getElementById("incomingCallModal").style.display = "none";
       
+      // قفل الحالة في الفايربيس وإعلام باقي التبويبات والموظفين بأن هذه الجلسة قامت بالرد
       await update(ref(db, `single_chat_room/${activeClientKey}/call`), {
         status: 'accepted',
-        answeredBy: currentEmpName
+        answeredBy: currentEmpName,
+        answeredTabId: sessionTabId
       });
 
       showEmployeeCallScreen();
@@ -380,7 +387,6 @@
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         
-        // إرسال الرد للعميل دون تدمير الاتصال أو إعادة إنشاءه
         await update(ref(db, `single_chat_room/${activeClientKey}/call`), { 
           answer: { type: answer.type, sdp: answer.sdp },
           status: 'answered'
@@ -401,13 +407,19 @@
         const onlineEmpRef = ref(db, 'online_employees');
         onValue(onlineEmpRef, (snapshot) => {
           if (snapshot.exists()) {
-            let nextAvailableEmp = null;
+            let nextAvailableTab = null;
             snapshot.forEach((child) => {
               const empData = child.val();
-              if (empData && empData.name !== currentEmpName && !empData.inCall) nextAvailableEmp = empData.name;
+              if (empData && empData.tabId !== sessionTabId && !empData.inCall) {
+                nextAvailableTab = empData;
+              }
             });
-            if (nextAvailableEmp) set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), nextAvailableEmp);
-            else remove(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`));
+            if (nextAvailableTab) {
+              set(ref(db, `single_chat_room/${roomKey}/call/targetTabId`), nextAvailableTab.tabId);
+              set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), nextAvailableTab.name);
+            } else {
+              remove(ref(db, `single_chat_room/${roomKey}/call/targetTabId`));
+            }
           }
         }, { onlyOnce: true });
       }
@@ -432,6 +444,7 @@
           offer: { type: offer.type, sdp: offer.sdp },
           caller: 'employee',
           targetEmployee: currentEmpName,
+          targetTabId: sessionTabId,
           status: 'calling'
         });
 
@@ -448,7 +461,7 @@
     };
 
     function createPeerConnection(roomKey) {
-      if (peerConnection) return; // منع إعادة إنشاء الاتصال إذا كان موجوداً مسبقاً
+      if (peerConnection) return;
       peerConnection = new RTCPeerConnection(servers);
       peerConnection.ontrack = (event) => { 
         stopRinging();
