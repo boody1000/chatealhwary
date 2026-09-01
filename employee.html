@@ -24,6 +24,7 @@
 <body class="bg-slate-900 text-slate-100 font-sans h-screen overflow-hidden bg-custom-watermark">
   <div class="flex h-full backdrop-blur-sm">
     
+    <!-- القائمة الجانبية للعملاء -->
     <section class="w-80 bg-slate-950/70 border-r border-slate-800 flex flex-col">
       <div class="p-4 border-b border-slate-800 flex items-center gap-3">
         <img src="22.jpg" alt="Logo" class="w-9 h-9 rounded-full object-cover border border-amber-500/50">
@@ -41,6 +42,7 @@
       </div>
     </section>
 
+    <!-- مساحة الدردشة النشطة -->
     <main class="flex-1 flex flex-col bg-slate-900/60">
       <header class="h-16 border-b border-slate-800 px-6 flex items-center justify-between bg-slate-950/60">
         <div class="flex items-center space-x-3 space-x-reverse">
@@ -62,6 +64,7 @@
         </div>
       </header>
 
+      <!-- صندوق الرسائل -->
       <div id="messageContainer" class="flex-1 p-6 overflow-y-auto flex flex-col space-y-3 text-slate-300">
         <div class="text-center text-slate-500 my-auto bg-slate-950/40 p-6 rounded-2xl border border-slate-800/60 backdrop-blur-sm max-w-md mx-auto">
           <img src="22.jpg" alt="Logo" class="w-16 h-16 mx-auto rounded-full object-cover mb-3 border border-amber-500/40">
@@ -70,6 +73,7 @@
         </div>
       </div>
 
+      <!-- شريط الإرسال -->
       <div class="p-4 border-t border-slate-800 bg-slate-950/60">
         <form id="messageForm" class="flex items-center space-x-2 space-x-reverse" onsubmit="sendMessage(event)">
           <input type="text" id="messageInput" placeholder="اكتب ردك للعميل..." autocomplete="off" class="flex-1 bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-amber-500">
@@ -80,6 +84,7 @@
 
   </div>
 
+  <!-- شاشة استقبال المكالمات -->
   <div id="incomingCallModal" class="fixed inset-0 bg-slate-950/90 z-50 hidden flex-col items-center justify-center text-white backdrop-blur-sm">
     <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full text-center">
       <div class="w-24 h-24 bg-amber-600/20 text-amber-400 rounded-full flex items-center justify-center overflow-hidden mb-4 border-2 border-amber-500 animate-bounce">
@@ -95,6 +100,7 @@
     </div>
   </div>
 
+  <!-- شاشة المكالمة النشطة للموظف -->
   <div id="employeeCallScreen" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col items-center justify-between p-8 text-white">
     <div class="flex flex-col items-center mt-12">
       <div class="w-28 h-28 bg-slate-800 rounded-full flex items-center justify-center overflow-hidden mb-4 shadow-xl border-2 border-emerald-500 animate-pulse">
@@ -151,7 +157,6 @@
     const previousMessagesCounts = {};
     let isFirstLoad = true;
 
-    // تفعيل الصوت في المتصفح عند أول تفاعل
     document.addEventListener('click', () => {
         if (empRingAudio.paused) {
             empRingAudio.play().then(() => { empRingAudio.pause(); empRingAudio.currentTime = 0; }).catch(e => {});
@@ -207,7 +212,6 @@
               }
             });
 
-            // مراقبة الرسائل الجديدة لتشغيل التنبيه
             if (!isFirstLoad && previousMessagesCounts[roomKey] !== undefined && totalMessagesCount > previousMessagesCounts[roomKey]) {
               const diff = totalMessagesCount - previousMessagesCounts[roomKey];
               if (activeClientKey !== roomKey && diff > 0) {
@@ -258,10 +262,8 @@
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
-        // التحقق مما إذا كانت المكالمة موجهة لموظف آخر وقد تم الرد عليها أو تم أخذها
         if (callData.status === 'accepted' || callData.status === 'answered') {
           if (pendingOffer && pendingOffer.roomKey === roomKey) {
-            // إذا كان هذا الموظف يرن لديه، قم بإيقاف الرنين وإغلاق النافذة لأن موظفاً آخر رد
             stopRinging();
             document.getElementById("incomingCallModal").style.display = "none";
             pendingOffer = null;
@@ -270,7 +272,6 @@
         }
 
         const targetEmp = callData.targetEmployee;
-        // إذا لم تُحدد لموظف بعينه أو كانت مخصصة لهذا الموظف بالتحديد
         if (!targetEmp || targetEmp === currentEmpName) {
           if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
             if (!targetEmp) {
@@ -285,7 +286,6 @@
           }
         }
       } else {
-        // إذا انتهت المكالمة أو تغيرت حالتها
         if (pendingOffer && pendingOffer.roomKey === roomKey) {
           stopRinging();
           document.getElementById("incomingCallModal").style.display = "none";
@@ -362,30 +362,36 @@
 
       document.getElementById("incomingCallModal").style.display = "none";
       
-      // تحديث حالة المكالمة في قاعدة البيانات فوراً لكي تتوقف عند باقي الموظفين
       await update(ref(db, `single_chat_room/${activeClientKey}/call`), {
         status: 'accepted',
         answeredBy: currentEmpName
       });
 
       showEmployeeCallScreen();
-
       set(ref(db, `online_employees/${empCleanId}/inCall`), true);
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         createPeerConnection(activeClientKey);
+        
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
+        
+        // إرسال الرد للعميل دون تدمير الاتصال أو إعادة إنشاءه
         await update(ref(db, `single_chat_room/${activeClientKey}/call`), { 
           answer: { type: answer.type, sdp: answer.sdp },
           status: 'answered'
         });
+        
         listenForCandidates(activeClientKey);
         startEmpTimer();
-      } catch(err) { employeeEndCall(); }
+      } catch(err) { 
+        console.error("Call accept error:", err);
+        employeeEndCall(); 
+      }
     };
 
     window.rejectIncomingCall = function() {
@@ -442,6 +448,7 @@
     };
 
     function createPeerConnection(roomKey) {
+      if (peerConnection) return; // منع إعادة إنشاء الاتصال إذا كان موجوداً مسبقاً
       peerConnection = new RTCPeerConnection(servers);
       peerConnection.ontrack = (event) => { 
         stopRinging();
@@ -457,7 +464,9 @@
       onValue(ref(db, `single_chat_room/${roomKey}/call/candidates`), (snapshot) => {
         snapshot.forEach((child) => {
           const cand = child.val();
-          if (peerConnection && cand) peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(e=>{});
+          if (peerConnection && cand) {
+            peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(e => {});
+          }
         });
       });
     }
@@ -518,7 +527,7 @@
     function escapeHtml(text) {
       if (!text) return '';
       const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-      return text.toString().repr(/[&<>"']/g, m => map[m]);
+      return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
   </script>
 </body>
