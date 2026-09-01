@@ -26,17 +26,12 @@
     
     <!-- القائمة الجانبية للعملاء -->
     <section class="w-80 bg-slate-950/70 border-r border-slate-800 flex flex-col">
-      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <img src="22.jpg" alt="Logo" class="w-9 h-9 rounded-full object-cover border border-amber-500/50">
-          <div>
-            <h2 class="text-sm font-bold text-amber-400">الهواري</h2>
-            <span class="text-[11px] text-slate-400">رسائل العملاء الواردة</span>
-          </div>
+      <div class="p-4 border-b border-slate-800 flex items-center gap-3">
+        <img src="22.jpg" alt="Logo" class="w-9 h-9 rounded-full object-cover border border-amber-500/50">
+        <div>
+          <h2 class="text-sm font-bold text-amber-400">الهواري</h2>
+          <span class="text-[11px] text-slate-400">رسائل العملاء الواردة</span>
         </div>
-        <button onclick="changeEmployeeSession()" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 px-2.5 py-1 rounded-lg border border-slate-700 transition" title="تغيير هوية الموظف لهذه الصفحة">
-          <i class="fa-solid fa-user-gear ml-1"></i>هويتي
-        </button>
       </div>
       <div class="p-3 border-b border-slate-800/60">
         <input type="text" id="searchClient" placeholder="بحث عن عميل..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500 text-slate-100">
@@ -57,7 +52,7 @@
           </div>
           <div>
             <h3 id="loggedInUsername" class="text-sm font-bold text-amber-400">موظف الدعم</h3>
-            <span class="text-xs text-green-400">متصل (جلسة مستقلة)</span>
+            <span class="text-xs text-green-400">متصل الآن</span>
           </div>
         </div>
         
@@ -115,12 +110,7 @@
       <p class="text-xs text-slate-400 mt-1" id="empCallTimer">00:00</p>
     </div>
     
-    <!-- أزرار التحكم في المكالمة (كتم الصوت وإنهاء المكالمة) -->
     <div class="flex items-center gap-6 mb-12">
-      <button id="muteBtn" onclick="toggleMuteMic()" class="w-14 h-14 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-lg shadow-lg transition" title="كتم الصوت">
-        <i id="muteIcon" class="fa-solid fa-microphone"></i>
-      </button>
-
       <button onclick="employeeEndCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-xl shadow-lg transition" title="إنهاء المكالمة">
         <i class="fa-solid fa-phone-slash"></i>
       </button>
@@ -151,10 +141,9 @@
 
     let activeClientKey = null;
     let activeClientDisplayName = null;
-    let currentEmpName = "";
+    let currentEmpName = "موظف الدعم";
     let peerConnection = null;
     let localStream = null;
-    let isMuted = false;
     const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
     let empTimerInterval = null;
     let empSeconds = 0;
@@ -167,25 +156,7 @@
     const previousMessagesCounts = {};
     let isFirstLoad = true;
 
-    function initSessionIdentity() {
-      let sessionEmp = sessionStorage.getItem('uniqueEmpSession');
-      if (!sessionEmp) {
-        sessionEmp = prompt("أدخل اسم الموظف أو رقم الحافظة لهذه الصفحة:", "موظف_" + Math.floor(Math.random() * 8999 + 1000));
-        if (!sessionEmp || sessionEmp.trim() === "") sessionEmp = "موظف_" + Math.floor(Math.random() * 8999 + 1000);
-        sessionStorage.setItem('uniqueEmpSession', sessionEmp.trim());
-      }
-      currentEmpName = sessionEmp.trim();
-      document.getElementById('loggedInUsername').innerText = currentEmpName;
-    }
-
-    window.changeEmployeeSession = function() {
-      const newName = prompt("تغيير اسم هوية الموظف في هذه الصفحة:", currentEmpName);
-      if (newName && newName.trim() !== "") {
-        sessionStorage.setItem('uniqueEmpSession', newName.trim());
-        location.reload();
-      }
-    };
-
+    // تفعيل الصوت في المتصفح عند أول تفاعل للمستخدم لتجاوز سياسة المتصفحات الحارسة للصوت
     document.addEventListener('click', () => {
         if (empRingAudio.paused) {
             empRingAudio.play().then(() => { empRingAudio.pause(); empRingAudio.currentTime = 0; }).catch(e => {});
@@ -196,11 +167,15 @@
     }, { once: true });
 
     window.addEventListener('DOMContentLoaded', () => {
-      initSessionIdentity();
+      const loggedUser = localStorage.getItem('loggedUsername');
+      if (loggedUser) {
+        currentEmpName = loggedUser;
+        document.getElementById('loggedInUsername').innerText = currentEmpName;
+      }
 
       if (currentEmpName) {
         const empCleanId = currentEmpName.replace(/\s+/g, '_');
-        const empStatusRef = ref(db, 'online_employees_sessions/' + empCleanId);
+        const empStatusRef = ref(db, 'online_employees/' + empCleanId);
         set(empStatusRef, { name: currentEmpName, inCall: false, lastActive: Date.now() });
         onDisconnect(empStatusRef).remove();
       }
@@ -217,21 +192,17 @@
             let hasActiveCall = false;
             let lastMessageText = "انقر لعرض المحادثة";
             let totalMessagesCount = 0;
-            let assignedEmployee = null;
 
             if (unreadCounts[roomKey] === undefined) {
               unreadCounts[roomKey] = 0;
             }
 
             roomSnapshot.forEach((msgChild) => {
-              if(msgChild.key === 'assignedTo') {
-                assignedEmployee = msgChild.val();
-              }
               if(msgChild.key === 'call') {
                 const callVal = msgChild.val();
                 if (callVal) {
                   hasActiveCall = true;
-                  checkIncomingCallForRoom(roomKey, originalName, callVal, assignedEmployee);
+                  checkIncomingCallForRoom(roomKey, originalName, callVal);
                 }
                 return;
               }
@@ -243,13 +214,16 @@
               }
             });
 
+            // مقارنة عدد الرسائل القديم بالجديد لمعرفة إذا وصلت رسالة عميل جديدة
             if (!isFirstLoad && previousMessagesCounts[roomKey] !== undefined && totalMessagesCount > previousMessagesCounts[roomKey]) {
               const diff = totalMessagesCount - previousMessagesCounts[roomKey];
               if (activeClientKey !== roomKey && diff > 0) {
                 unreadCounts[roomKey] = (unreadCounts[roomKey] || 0) + diff;
+                
+                // تشغيل صوت rnn.mp3 فوراً عند ورود الرسالة الجديدة
                 if (msgNotificationAudio) {
                   msgNotificationAudio.currentTime = 0;
-                  msgNotificationAudio.play().catch(err => {});
+                  msgNotificationAudio.play().catch(err => console.log("Audio play error:", err));
                 }
               }
             }
@@ -265,8 +239,6 @@
               ? `<div class="flex items-center gap-1 bg-red-600 text-white text-xs font-black px-2.5 py-0.5 rounded-full shadow-lg animate-pulse"><i class="fa-solid fa-bell text-[10px]"></i><span>${currentCount}</span></div>` 
               : '';
 
-            const assignedBadge = assignedEmployee ? `<span class="text-[10px] text-amber-400 block mt-0.5"><i class="fa-solid fa-lock text-[9px]"></i> يتابع بواسطة: ${escapeHtml(assignedEmployee)}</span>` : '';
-
             const chatItemHTML = `
               <div onclick="switchChat('${escapeHtml(roomKey)}', '${escapeHtml(originalName)}')" class="p-3 hover:bg-slate-800/60 cursor-pointer transition flex items-center space-x-3 space-x-reverse border-b border-slate-800/40">
                 <div class="relative">
@@ -279,7 +251,6 @@
                     <div id="badge-container-${escapeHtml(roomKey)}">${badgeHTML}</div>
                   </div>
                   <p class="text-xs text-slate-400 truncate">${escapeHtml(lastMessageText)}</p>
-                  ${assignedBadge}
                 </div>
               </div>
             `;
@@ -293,9 +264,9 @@
       });
     });
 
-    function checkIncomingCallForRoom(roomKey, displayName, callData, assignedEmployee) {
+    function checkIncomingCallForRoom(roomKey, displayName, callData) {
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
-        const targetEmp = callData.targetEmployee || assignedEmployee;
+        const targetEmp = callData.targetEmployee;
         if (!targetEmp || targetEmp === currentEmpName) {
           if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
             if (!targetEmp) {
@@ -316,12 +287,10 @@
       activeClientKey = roomKey;
       activeClientDisplayName = displayName;
       
+      // تصفير العداد وإخفاء الشارة فور قراءة المحادثة
       unreadCounts[roomKey] = 0;
       const badgeContainer = document.getElementById(`badge-container-${roomKey}`);
       if (badgeContainer) badgeContainer.innerHTML = '';
-
-      set(ref(db, `single_chat_room/${roomKey}/assignedTo`), currentEmpName);
-      set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), currentEmpName);
 
       document.getElementById('currentName').innerText = "محادثة مع: " + displayName;
       document.getElementById('callClientBtn').classList.remove('hidden');
@@ -331,7 +300,6 @@
 
       const chatRef = ref(db, 'single_chat_room/' + roomKey);
       onValue(chatRef, (snapshot) => {
-        if (activeClientKey !== roomKey) return;
         container.innerHTML = '';
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
@@ -380,13 +348,10 @@
       showEmployeeCallScreen();
 
       const empCleanId = currentEmpName.replace(/\s+/g, '_');
-      set(ref(db, `online_employees_sessions/${empCleanId}/inCall`), true);
+      set(ref(db, `online_employees/${empCleanId}/inCall`), true);
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        isMuted = false;
-        updateMuteButtonUI();
-
         createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
@@ -405,7 +370,18 @@
       }
       if(pendingOffer) {
         const roomKey = pendingOffer.roomKey;
-        remove(ref(db, `single_chat_room/${roomKey}/call`));
+        const onlineEmpRef = ref(db, 'online_employees');
+        onValue(onlineEmpRef, (snapshot) => {
+          if (snapshot.exists()) {
+            let nextAvailableEmp = null;
+            snapshot.forEach((child) => {
+              const empData = child.val();
+              if (empData && empData.name !== currentEmpName && !empData.inCall) nextAvailableEmp = empData.name;
+            });
+            if (nextAvailableEmp) set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), nextAvailableEmp);
+            else remove(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`));
+          }
+        }, { onlyOnce: true });
       }
       document.getElementById("incomingCallModal").style.display = "none";
       pendingOffer = null;
@@ -416,13 +392,10 @@
       showEmployeeCallScreen();
 
       const empCleanId = currentEmpName.replace(/\s+/g, '_');
-      set(ref(db, `online_employees_sessions/${empCleanId}/inCall`), true);
+      set(ref(db, `online_employees/${empCleanId}/inCall`), true);
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        isMuted = false;
-        updateMuteButtonUI();
-
         createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
         const offer = await peerConnection.createOffer();
@@ -445,33 +418,6 @@
         listenForCandidates(activeClientKey);
       } catch (err) { employeeEndCall(); }
     };
-
-    // وظيفة كتم/إلغاء كتم الميكروفون
-    window.toggleMuteMic = function() {
-      if (!localStream) return;
-      const audioTrack = localStream.getAudioTracks()[0];
-      if (!audioTrack) return;
-
-      isMuted = !isMuted;
-      audioTrack.enabled = !isMuted;
-      updateMuteButtonUI();
-    };
-
-    function updateMuteButtonUI() {
-      const btn = document.getElementById("muteBtn");
-      const icon = document.getElementById("muteIcon");
-      if (isMuted) {
-        btn.classList.remove("bg-slate-700", "hover:bg-slate-600");
-        btn.classList.add("bg-amber-600", "hover:bg-amber-700");
-        icon.className = "fa-solid fa-microphone-slash";
-        btn.title = "إلغاء الكتم";
-      } else {
-        btn.classList.remove("bg-amber-600", "hover:bg-amber-700");
-        btn.classList.add("bg-slate-700", "hover:bg-slate-600");
-        icon.className = "fa-solid fa-microphone";
-        btn.title = "كتم الصوت";
-      }
-    }
 
     function createPeerConnection(roomKey) {
       peerConnection = new RTCPeerConnection(servers);
@@ -539,7 +485,7 @@
 
       if (currentEmpName) {
         const empCleanId = currentEmpName.replace(/\s+/g, '_');
-        set(ref(db, `online_employees_sessions/${empCleanId}/inCall`), false);
+        set(ref(db, `online_employees/${empCleanId}/inCall`), false);
       }
 
       if (empTimerInterval) { clearInterval(empTimerInterval); empTimerInterval = null; }
