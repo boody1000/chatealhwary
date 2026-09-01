@@ -139,7 +139,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // إنشاء معرف جلسة فريد خاص بهذه الصفحة/التبويب حصرياً لمنع التداخل نهائياً
+    // معرف جلسة فريد لكل نافذة/تبويب لمنع التداخل نهائياً بين الموظفين
     const sessionTabId = 'tab_' + Math.random().toString(36).substring(2, 9);
 
     let activeClientKey = null;
@@ -173,7 +173,7 @@
       const loggedUser = localStorage.getItem('loggedUsername');
       if (loggedUser) {
         currentEmpName = loggedUser;
-        document.getElementById('loggedInUsername').innerText = currentEmpName + " (" + sessionTabId.substring(0,5) + ")";
+        document.getElementById('loggedInUsername').innerText = currentEmpName;
       }
 
       empCleanId = currentEmpName.replace(/\s+/g, '_') + '_' + sessionTabId;
@@ -265,7 +265,7 @@
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
-        // إذا تم قبول المكالمة بواسطة أي موظف آخر، قم بإيقاف الرنين وإغلاق الشاشة فوراً عند البقية
+        // إذا تم قبول المكالمة من أي نافذة أخرى، يتم إيقاف الرنين وإغلاق الشاشة فوراً عند باقي الموظفين
         if (callData.status === 'accepted' || callData.status === 'answered') {
           if (pendingOffer && pendingOffer.roomKey === roomKey) {
             stopRinging();
@@ -367,7 +367,7 @@
 
       document.getElementById("incomingCallModal").style.display = "none";
       
-      // قفل الحالة في الفايربيس وإعلام باقي التبويبات والموظفين بأن هذه الجلسة قامت بالرد
+      // إخبار الفايربيس أن هذه الجلسة قامت بالرد لقطع الاتصال عن بقية الموظفين
       await update(ref(db, `single_chat_room/${activeClientKey}/call`), {
         status: 'accepted',
         answeredBy: currentEmpName,
@@ -380,9 +380,7 @@
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         createPeerConnection(activeClientKey);
-        
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-        
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
@@ -395,7 +393,6 @@
         listenForCandidates(activeClientKey);
         startEmpTimer();
       } catch(err) { 
-        console.error("Call accept error:", err);
         employeeEndCall(); 
       }
     };
