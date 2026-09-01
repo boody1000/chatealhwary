@@ -100,7 +100,7 @@
     </div>
   </div>
 
-  <!-- شاشة المكالمة النشطة للموظف -->
+  <!-- شاشة المكالمة النشطة للموظف (مضاف إليها زر كتم الصوت) -->
   <div id="employeeCallScreen" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col items-center justify-between p-8 text-white">
     <div class="flex flex-col items-center mt-12">
       <div class="w-28 h-28 bg-slate-800 rounded-full flex items-center justify-center overflow-hidden mb-4 shadow-xl border-2 border-emerald-500 animate-pulse">
@@ -111,6 +111,12 @@
     </div>
     
     <div class="flex items-center gap-6 mb-12">
+      <!-- زر كتم الصوت الجديد -->
+      <button id="muteMicBtn" onclick="toggleMuteMic()" class="w-14 h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-lg shadow-lg transition border border-slate-700" title="كتم/إلغاء كتم الميكروفون">
+        <i class="fa-solid fa-microphone" id="muteIcon"></i>
+      </button>
+
+      <!-- زر إنهاء المكالمة الأصلي -->
       <button onclick="employeeEndCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-xl shadow-lg transition" title="إنهاء المكالمة">
         <i class="fa-solid fa-phone-slash"></i>
       </button>
@@ -258,7 +264,6 @@
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
-        // إذا تم الرد على المكالمة، أو تم رفضها تماماً، يتم إيقاف الرنين وإخفاء الشاشة عند الجميع
         if (callData.status === 'answered' || callData.status === 'accepted' || callData.status === 'rejected') {
           if (pendingOffer && pendingOffer.roomKey === roomKey) {
             stopRinging();
@@ -374,7 +379,6 @@
       }
     };
 
-    // عند الضغط على رفض، يتم إغلاق نافذة الاتصال عند هذا الموظف فقط وتحديث الحالة لكي لا ترن عند غيره وتُغلق المكالمة بشكل صحيح
     window.rejectIncomingCall = async function() {
       stopRinging();
       if (pendingOffer) {
@@ -449,6 +453,13 @@
       screen.classList.remove("hidden"); screen.classList.add("flex");
       empSeconds = 0;
       document.getElementById("empCallTimer").innerText = "00:00";
+      
+      // إعادة تعيين شكل الزر لوضع الميكروفون المفتوح عند فتح شاشة المكالمة
+      const muteBtn = document.getElementById("muteMicBtn");
+      const muteIcon = document.getElementById("muteIcon");
+      muteBtn.classList.remove("bg-amber-600", "border-amber-500");
+      muteBtn.classList.add("bg-slate-800", "border-slate-700");
+      muteIcon.className = "fa-solid fa-microphone";
     }
 
     function startEmpTimer() {
@@ -460,6 +471,30 @@
         document.getElementById("empCallTimer").innerText = `${mins}:${secs}`;
       }, 1000);
     }
+
+    // دالة كتم وإلغاء كتم الميكروفون المضافة حديثاً
+    window.toggleMuteMic = function() {
+      if (!localStream) return;
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (!audioTrack) return;
+
+      audioTrack.enabled = !audioTrack.enabled;
+
+      const muteBtn = document.getElementById("muteMicBtn");
+      const muteIcon = document.getElementById("muteIcon");
+
+      if (audioTrack.enabled) {
+        // الميكروفون مفتوح
+        muteBtn.classList.remove("bg-amber-600", "border-amber-500");
+        muteBtn.classList.add("bg-slate-800", "border-slate-700");
+        muteIcon.className = "fa-solid fa-microphone";
+      } else {
+        // الميكروفون مكتوم
+        muteBtn.classList.remove("bg-slate-800", "border-slate-700");
+        muteBtn.classList.add("bg-amber-600", "border-amber-500");
+        muteIcon.className = "fa-solid fa-microphone-slash";
+      }
+    };
 
     window.employeeEndCall = function() {
       stopRinging();
