@@ -89,7 +89,7 @@
 
   </div>
 
-  <!-- شاشة استقبال المكالمات (تظهر حصرياً للموظف المسؤول عن العميل) -->
+  <!-- شاشة استقبال المكالمات -->
   <div id="incomingCallModal" class="fixed inset-0 bg-slate-950/90 z-50 hidden flex-col items-center justify-center text-white backdrop-blur-sm">
     <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full text-center">
       <div class="w-24 h-24 bg-amber-600/20 text-amber-400 rounded-full flex items-center justify-center overflow-hidden mb-4 border-2 border-amber-500 animate-bounce">
@@ -99,7 +99,7 @@
       <p id="incomingCallerName" class="text-sm text-emerald-400 font-medium mb-6">العميل يتصل بك الآن...</p>
       
       <div class="flex items-center gap-4 w-full">
-        <button onclick="rejectIncomingCall()" class="flex-1 bg-red-600 hover:bg-red-700 py-3 rounded-xl font-semibold transition text-sm">رفض / تخطي</button>
+        <button onclick="rejectIncomingCall()" class="flex-1 bg-red-600 hover:bg-red-700 py-3 rounded-xl font-semibold transition text-sm">رفض</button>
         <button onclick="acceptIncomingCall()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 py-3 rounded-xl font-semibold transition text-sm">رد</button>
       </div>
     </div>
@@ -115,6 +115,7 @@
       <p class="text-xs text-slate-400 mt-1" id="empCallTimer">00:00</p>
     </div>
     
+    <!-- أزرار التحكم في المكالمة (كتم الصوت وإنهاء المكالمة) -->
     <div class="flex items-center gap-6 mb-12">
       <button id="muteBtn" onclick="toggleMuteMic()" class="w-14 h-14 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-lg shadow-lg transition" title="كتم الصوت">
         <i id="muteIcon" class="fa-solid fa-microphone"></i>
@@ -158,7 +159,6 @@
     let empTimerInterval = null;
     let empSeconds = 0;
     let pendingOffer = null;
-    let chatUnsubscribe = null; // لإلغاء المراقبة القديمة عند تغيير الشات
 
     const empRingAudio = document.getElementById("empRingAudio");
     const msgNotificationAudio = document.getElementById("msgNotificationAudio");
@@ -293,26 +293,20 @@
       });
     });
 
-    // دالة فحص المكالمات مع عزل تام: ترن فقط عند الموظف الذي يتابع العميل أو المسجل كـ targetEmployee
     function checkIncomingCallForRoom(roomKey, displayName, callData, assignedEmployee) {
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
         const targetEmp = callData.targetEmployee || assignedEmployee;
-        
-        if (targetEmp && targetEmp === currentEmpName) {
+        if (!targetEmp || targetEmp === currentEmpName) {
           if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
+            if (!targetEmp) {
+              set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), currentEmpName);
+            }
             pendingOffer = { roomKey, displayName, offer: callData.offer };
             document.getElementById("incomingCallerName").innerText = `العميل: ${displayName} يتصل بك...`;
             document.getElementById("incomingCallModal").style.display = "flex";
             if (empRingAudio.paused) {
               empRingAudio.play().catch(e => {});
             }
-          }
-        } else {
-          // إذا كانت المكالمة موجهة لموظف آخر، تأكد من إيقاف الرنين لدي هذا الموظف تماماً
-          if (pendingOffer && pendingOffer.roomKey === roomKey) {
-            document.getElementById("incomingCallModal").style.display = "none";
-            if (!empRingAudio.paused) { empRingAudio.pause(); empRingAudio.currentTime = 0; }
-            pendingOffer = null;
           }
         }
       }
@@ -326,7 +320,6 @@
       const badgeContainer = document.getElementById(`badge-container-${roomKey}`);
       if (badgeContainer) badgeContainer.innerHTML = '';
 
-      // حجز المحادثة والمكالمة حصرياً لهذا الموظف لتفادي أي تداخل نهائياً
       set(ref(db, `single_chat_room/${roomKey}/assignedTo`), currentEmpName);
       set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), currentEmpName);
 
@@ -337,24 +330,19 @@
       container.innerHTML = '<div class="text-slate-500 text-center my-auto">جاري تحميل الرسائل...</div>'; 
 
       const chatRef = ref(db, 'single_chat_room/' + roomKey);
-      
-      if (chatUnsubscribe) {
-        // إيقاف المراقبة السابقة إن وجدت لمنع التداخل بين الشاتات المفتوحة
-      }
-
       onValue(chatRef, (snapshot) => {
-        if (activeClientKey !== roomKey) return; // منع التداخل إذا انتقل لشات آخر
+        if (activeClientKey !== roomKey) return;
         container.innerHTML = '';
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
-            if(childSnapshot.key === 'call' || childSnapshot.key === 'assignedTo' || childSnapshot.key === 'candidates') {
-              if (childSnapshot.key === 'call' && !childSnapshot.val() && !document.getElementById("employeeCallScreen").classList.contains("hidden")) {
+            if(childSnapshot.key === 'call') {
+              if (!childSnapshot.val() && !document.getElementById("employeeCallScreen").classList.contains("hidden")) {
                 closeEmpCallUI();
               }
               return;
             }
             const msg = childSnapshot.val();
-            if(!msg || !msg.text) return;
+            if(!msg) return;
             const isClientMsg = (msg.sender === displayName || msg.sender === roomKey || msg.senderRole === 'client');
             appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClientMsg);
           });
@@ -400,22 +388,14 @@
         updateMuteButtonUI();
 
         createPeerConnection(activeClientKey);
-        
-        localStream.getTracks().forEach(track => {
-          peerConnection.addTrack(track, localStream);
-        });
-
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
-        
         await set(ref(db, `single_chat_room/${activeClientKey}/call/answer`), { type: answer.type, sdp: answer.sdp });
         listenForCandidates(activeClientKey);
         startEmpTimer();
-      } catch(err) { 
-        console.error("Call accept error:", err);
-        employeeEndCall(); 
-      }
+      } catch(err) { employeeEndCall(); }
     };
 
     window.rejectIncomingCall = function() {
@@ -444,10 +424,7 @@
         updateMuteButtonUI();
 
         createPeerConnection(activeClientKey);
-        localStream.getTracks().forEach(track => {
-          peerConnection.addTrack(track, localStream);
-        });
-
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
 
@@ -466,12 +443,10 @@
           }
         });
         listenForCandidates(activeClientKey);
-      } catch (err) { 
-        console.error("Start call error:", err);
-        employeeEndCall(); 
-      }
+      } catch (err) { employeeEndCall(); }
     };
 
+    // وظيفة كتم/إلغاء كتم الميكروفون
     window.toggleMuteMic = function() {
       if (!localStream) return;
       const audioTrack = localStream.getAudioTracks()[0];
@@ -499,13 +474,7 @@
     }
 
     function createPeerConnection(roomKey) {
-      if (peerConnection) {
-        peerConnection.close();
-        peerConnection = null;
-      }
-
       peerConnection = new RTCPeerConnection(servers);
-      
       peerConnection.ontrack = (event) => { 
         if (!empRingAudio.paused) {
           empRingAudio.pause();
@@ -514,11 +483,8 @@
         const remoteAudio = document.getElementById("empRemoteAudio");
         remoteAudio.srcObject = event.streams[0]; 
       };
-
       peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          push(ref(db, `single_chat_room/${roomKey}/call/candidates`), event.candidate.toJSON());
-        }
+        if (event.candidate) push(ref(db, `single_chat_room/${roomKey}/call/candidates`), event.candidate.toJSON());
       };
     }
 
@@ -526,9 +492,7 @@
       onValue(ref(db, `single_chat_room/${roomKey}/call/candidates`), (snapshot) => {
         snapshot.forEach((child) => {
           const cand = child.val();
-          if (peerConnection && cand && peerConnection.remoteDescription) {
-            peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(e => {});
-          }
+          if (peerConnection && cand) peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(e=>{});
         });
       });
     }
