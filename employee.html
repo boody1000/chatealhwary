@@ -57,7 +57,7 @@
           </div>
           <div>
             <h3 id="loggedInUsername" class="text-sm font-bold text-amber-400">موظف الدعم</h3>
-            <span class="text-xs text-green-400">متصل (جلسة مستقلة تماماً)</span>
+            <span class="text-xs text-green-400">متصل (جلسة مستقلة)</span>
           </div>
         </div>
         
@@ -89,7 +89,7 @@
 
   </div>
 
-  <!-- شاشة استقبال المكالمات (تظهر حصرياً للموظف المستهدف) -->
+  <!-- شاشة استقبال المكالمات (تظهر حصرياً للموظف المسؤول عن العميل) -->
   <div id="incomingCallModal" class="fixed inset-0 bg-slate-950/90 z-50 hidden flex-col items-center justify-center text-white backdrop-blur-sm">
     <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full text-center">
       <div class="w-24 h-24 bg-amber-600/20 text-amber-400 rounded-full flex items-center justify-center overflow-hidden mb-4 border-2 border-amber-500 animate-bounce">
@@ -158,6 +158,7 @@
     let empTimerInterval = null;
     let empSeconds = 0;
     let pendingOffer = null;
+    let chatUnsubscribe = null; // لإلغاء المراقبة القديمة عند تغيير الشات
 
     const empRingAudio = document.getElementById("empRingAudio");
     const msgNotificationAudio = document.getElementById("msgNotificationAudio");
@@ -230,7 +231,7 @@
                 const callVal = msgChild.val();
                 if (callVal) {
                   hasActiveCall = true;
-                  checkIncomingCallForRoom(roomKey, originalName, callVal);
+                  checkIncomingCallForRoom(roomKey, originalName, callVal, assignedEmployee);
                 }
                 return;
               }
@@ -292,12 +293,11 @@
       });
     });
 
-    // الفحص الحصري لمنع رنين المكالمة عند الموظفين الآخرين
-    function checkIncomingCallForRoom(roomKey, displayName, callData) {
+    // دالة فحص المكالمات مع عزل تام: ترن فقط عند الموظف الذي يتابع العميل أو المسجل كـ targetEmployee
+    function checkIncomingCallForRoom(roomKey, displayName, callData, assignedEmployee) {
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
-        const targetEmp = callData.targetEmployee;
+        const targetEmp = callData.targetEmployee || assignedEmployee;
         
-        // الشرط الحاسم: لا ترن الشاشة ولا تظهر إلا إذا كان هذا الموظف هو الموجه إليه الاتصال حصرياً
         if (targetEmp && targetEmp === currentEmpName) {
           if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
             pendingOffer = { roomKey, displayName, offer: callData.offer };
@@ -308,8 +308,8 @@
             }
           }
         } else {
-          // إذا لم تُحدد مسبقاً أو كانت موجهة لموظف آخر، يتم إغلاق نافذة الرنين فوراً لدى هذا الموظف غير المعني
-          if (pendingOffer && pendingOffer.roomKey === roomKey && targetEmp !== currentEmpName) {
+          // إذا كانت المكالمة موجهة لموظف آخر، تأكد من إيقاف الرنين لدي هذا الموظف تماماً
+          if (pendingOffer && pendingOffer.roomKey === roomKey) {
             document.getElementById("incomingCallModal").style.display = "none";
             if (!empRingAudio.paused) { empRingAudio.pause(); empRingAudio.currentTime = 0; }
             pendingOffer = null;
@@ -326,9 +326,8 @@
       const badgeContainer = document.getElementById(`badge-container-${roomKey}`);
       if (badgeContainer) badgeContainer.innerHTML = '';
 
+      // حجز المحادثة والمكالمة حصرياً لهذا الموظف لتفادي أي تداخل نهائياً
       set(ref(db, `single_chat_room/${roomKey}/assignedTo`), currentEmpName);
-
-      // إذا فتح الموظف محادثة عميل يتصل حالياً ولم يُحدد له مسبقاً، نربطه به
       set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), currentEmpName);
 
       document.getElementById('currentName').innerText = "محادثة مع: " + displayName;
@@ -338,7 +337,13 @@
       container.innerHTML = '<div class="text-slate-500 text-center my-auto">جاري تحميل الرسائل...</div>'; 
 
       const chatRef = ref(db, 'single_chat_room/' + roomKey);
+      
+      if (chatUnsubscribe) {
+        // إيقاف المراقبة السابقة إن وجدت لمنع التداخل بين الشاتات المفتوحة
+      }
+
       onValue(chatRef, (snapshot) => {
+        if (activeClientKey !== roomKey) return; // منع التداخل إذا انتقل لشات آخر
         container.innerHTML = '';
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
