@@ -84,7 +84,7 @@
     </footer>
 
     <!-- نافذة إدخال الاسم -->
-    <div id="nameModal" class="fixed inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+    <div id="nameModal" class="fixed inset-0 bg-slate-950/90 z-50 hidden items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center">
             <img src="22.jpg" alt="Logo" class="w-20 h-20 rounded-full object-cover mb-3 border-2 border-amber-500/60 shadow-xl">
             <h3 class="text-lg font-bold text-slate-100 mb-1">شركة الهواري</h3>
@@ -165,7 +165,21 @@
         }, { once: true });
 
         window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById("nameModal").style.display = "flex";
+            // التحقق مما إذا كان العميل قد سجل اسمه مسبقاً في هذا المتصفح
+            const savedKey = localStorage.getItem('elhowary_client_key');
+            const savedName = localStorage.getItem('elhowary_client_name');
+
+            if (savedKey && savedName) {
+                currentClientKey = savedKey;
+                originalDisplayName = savedName;
+                document.getElementById("clientDisplayHeader").innerText = "العميل: " + originalDisplayName;
+                document.getElementById("nameModal").style.display = "none";
+
+                initChatSession(currentClientKey, originalDisplayName);
+                listenForIncomingCalls(currentClientKey);
+            } else {
+                document.getElementById("nameModal").style.display = "flex";
+            }
         });
 
         window.saveUserName = function() {
@@ -175,6 +189,10 @@
             const uniqueId = Math.floor(Math.random() * 9000) + 1000;
             currentClientKey = inputVal.replace(/\s+/g, '_') + '_' + uniqueId;
             
+            // حفظ البيانات محلياً لكي يرجع لنفس الشات لو فتح لاحقاً
+            localStorage.setItem('elhowary_client_key', currentClientKey);
+            localStorage.setItem('elhowary_client_name', originalDisplayName);
+
             document.getElementById("nameModal").style.display = "none";
             document.getElementById("clientDisplayHeader").innerText = "العميل: " + originalDisplayName;
 
