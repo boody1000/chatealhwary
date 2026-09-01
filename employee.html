@@ -52,7 +52,7 @@
           </div>
           <div>
             <h3 id="loggedInUsername" class="text-sm font-bold text-amber-400">موظف الدعم</h3>
-            <span class="text-xs text-green-400">متصل (جلسة مستقلة)</span>
+            <span class="text-xs text-green-400">متصل الآن</span>
           </div>
         </div>
         
@@ -139,9 +139,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // معرف جلسة فريد لكل نافذة/تبويب لمنع التداخل نهائياً بين الموظفين
-    const sessionTabId = 'tab_' + Math.random().toString(36).substring(2, 9);
-
     let activeClientKey = null;
     let activeClientDisplayName = null;
     let currentEmpName = "موظف الدعم";
@@ -176,9 +173,9 @@
         document.getElementById('loggedInUsername').innerText = currentEmpName;
       }
 
-      empCleanId = currentEmpName.replace(/\s+/g, '_') + '_' + sessionTabId;
+      empCleanId = currentEmpName.replace(/\s+/g, '_');
       const empStatusRef = ref(db, 'online_employees/' + empCleanId);
-      set(empStatusRef, { name: currentEmpName, tabId: sessionTabId, inCall: false, lastActive: Date.now() });
+      set(empStatusRef, { name: currentEmpName, inCall: false, lastActive: Date.now() });
       onDisconnect(empStatusRef).remove();
 
       const chatRoomsRef = ref(db, 'single_chat_room');
@@ -229,10 +226,6 @@
 
             previousMessagesCounts[roomKey] = totalMessagesCount;
 
-            if (activeClientKey === roomKey && !hasActiveCall) {
-              closeEmpCallUI();
-            }
-
             const currentCount = unreadCounts[roomKey];
             const badgeHTML = currentCount > 0 
               ? `<div class="flex items-center gap-1 bg-red-600 text-white text-xs font-black px-2.5 py-0.5 rounded-full shadow-lg animate-pulse"><i class="fa-solid fa-bell text-[10px]"></i><span>${currentCount}</span></div>` 
@@ -265,8 +258,8 @@
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
-        // إذا تم قبول المكالمة من أي نافذة أخرى، يتم إيقاف الرنين وإغلاق الشاشة فوراً عند باقي الموظفين
-        if (callData.status === 'accepted' || callData.status === 'answered') {
+        // إذا قام موظف آخر بالرد، يتم إيقاف الرنين وإخفاء شاشة الاتصال عند باقي الموظفين دون إغلاق المكالمة في وجه العميل
+        if (callData.status === 'answered' || callData.status === 'accepted') {
           if (pendingOffer && pendingOffer.roomKey === roomKey) {
             stopRinging();
             document.getElementById("incomingCallModal").style.display = "none";
@@ -275,11 +268,10 @@
           return;
         }
 
-        const targetTab = callData.targetTabId;
-        if (!targetTab || targetTab === sessionTabId) {
+        const targetEmp = callData.targetEmployee;
+        if (!targetEmp || targetEmp === currentEmpName) {
           if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
-            if (!targetTab) {
-              set(ref(db, `single_chat_room/${roomKey}/call/targetTabId`), sessionTabId);
+            if (!targetEmp) {
               set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), currentEmpName);
             }
             pendingOffer = { roomKey, displayName, offer: callData.offer };
@@ -326,10 +318,6 @@
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
             if(childSnapshot.key === 'call') {
-              const callVal = childSnapshot.val();
-              if (!callVal && !document.getElementById("employeeCallScreen").classList.contains("hidden")) {
-                closeEmpCallUI();
-              }
               return;
             }
             const msg = childSnapshot.val();
@@ -366,30 +354,26 @@
       activeClientDisplayName = pendingOffer.displayName;
 
       document.getElementById("incomingCallModal").style.display = "none";
-      
-      // إخبار الفايربيس أن هذه الجلسة قامت بالرد لقطع الاتصال عن بقية الموظفين
-      await update(ref(db, `single_chat_room/${activeClientKey}/call`), {
-        status: 'accepted',
-        answeredBy: currentEmpName,
-        answeredTabId: sessionTabId
-      });
-
       showEmployeeCallScreen();
+
       set(ref(db, `online_employees/${empCleanId}/inCall`), true);
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         
-        await update(ref(db, `single_chat_room/${activeClientKey}/call`), { 
+        // تحديث حالة المكالمة إلى answered دون حذفها لمنع إغلاقها في وجه العميل
+        await update(ref(db, `single_chat_room/${activeClientKey}/call`), {
           answer: { type: answer.type, sdp: answer.sdp },
-          status: 'answered'
+          status: 'answered',
+          answeredBy: currentEmpName
         });
-        
+
         listenForCandidates(activeClientKey);
         startEmpTimer();
       } catch(err) { 
@@ -404,18 +388,15 @@
         const onlineEmpRef = ref(db, 'online_employees');
         onValue(onlineEmpRef, (snapshot) => {
           if (snapshot.exists()) {
-            let nextAvailableTab = null;
+            let nextAvailableEmp = null;
             snapshot.forEach((child) => {
               const empData = child.val();
-              if (empData && empData.tabId !== sessionTabId && !empData.inCall) {
-                nextAvailableTab = empData;
-              }
+              if (empData && empData.name !== currentEmpName && !empData.inCall) nextAvailableEmp = empData.name;
             });
-            if (nextAvailableTab) {
-              set(ref(db, `single_chat_room/${roomKey}/call/targetTabId`), nextAvailableTab.tabId);
-              set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), nextAvailableTab.name);
+            if (nextAvailableEmp) {
+              set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), nextAvailableEmp);
             } else {
-              remove(ref(db, `single_chat_room/${roomKey}/call/targetTabId`));
+              remove(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`));
             }
           }
         }, { onlyOnce: true });
@@ -441,7 +422,6 @@
           offer: { type: offer.type, sdp: offer.sdp },
           caller: 'employee',
           targetEmployee: currentEmpName,
-          targetTabId: sessionTabId,
           status: 'calling'
         });
 
