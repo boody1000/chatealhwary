@@ -110,19 +110,8 @@
       <p class="text-xs text-slate-400 mt-1" id="empCallTimer">00:00</p>
     </div>
     
-    <div class="flex items-center gap-4 mb-12">
-      <!-- زر كاتم الصوت (Mute/Unmute) -->
-      <button id="muteCallBtn" onclick="toggleMuteCall()" class="w-14 h-14 bg-slate-800 hover:bg-slate-700 text-white rounded-full flex items-center justify-center text-lg shadow-lg transition border border-slate-700" title="كتم الصوت">
-        <i id="muteIcon" class="fa-solid fa-microphone"></i>
-      </button>
-
-      <!-- زر تحويل المكالمة لموظف آخر -->
-      <button onclick="transferCallToAnotherEmployee()" class="px-5 py-3.5 bg-amber-600 hover:bg-amber-700 rounded-full text-sm font-semibold shadow-lg transition flex items-center gap-2" title="تحويل المكالمة لموظف آخر">
-        <i class="fa-solid fa-share"></i> تحويل لموظف آخر
-      </button>
-
-      <!-- زر إنهاء المكالمة -->
-      <button onclick="employeeEndCall()" class="w-14 h-14 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-lg shadow-lg transition" title="إنهاء المكالمة">
+    <div class="flex items-center gap-6 mb-12">
+      <button onclick="employeeEndCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-xl shadow-lg transition" title="إنهاء المكالمة">
         <i class="fa-solid fa-phone-slash"></i>
       </button>
     </div>
@@ -155,7 +144,6 @@
     let currentEmpName = "موظف الدعم";
     let peerConnection = null;
     let localStream = null;
-    let isMuted = false;
     const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
     let empTimerInterval = null;
     let empSeconds = 0;
@@ -364,8 +352,6 @@
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        isMuted = false;
-        updateMuteButtonUI();
         createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
@@ -410,8 +396,6 @@
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        isMuted = false;
-        updateMuteButtonUI();
         createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
         const offer = await peerConnection.createOffer();
@@ -433,63 +417,6 @@
         });
         listenForCandidates(activeClientKey);
       } catch (err) { employeeEndCall(); }
-    };
-
-    // ميزة كتم وإلغاء كتم الصوت للموظف أثناء المكالمة
-    window.toggleMuteCall = function() {
-      if (!localStream) return;
-      const audioTrack = localStream.getAudioTracks()[0];
-      if (!audioTrack) return;
-
-      isMuted = !isMuted;
-      audioTrack.enabled = !isMuted;
-      updateMuteButtonUI();
-    };
-
-    function updateMuteButtonUI() {
-      const btn = document.getElementById("muteCallBtn");
-      const icon = document.getElementById("muteIcon");
-      if (isMuted) {
-        btn.classList.remove("bg-slate-800", "hover:bg-slate-700", "border-slate-700");
-        btn.classList.add("bg-amber-500", "hover:bg-amber-600", "border-amber-400");
-        icon.className = "fa-solid fa-microphone-slash text-slate-950";
-        btn.title = "إلغاء كتم الصوت";
-      } else {
-        btn.classList.remove("bg-amber-500", "hover:bg-amber-600", "border-amber-400");
-        btn.classList.add("bg-slate-800", "hover:bg-slate-700", "border-slate-700");
-        icon.className = "fa-solid fa-microphone text-white";
-        btn.title = "كتم الصوت";
-      }
-    }
-
-    // ميزة تحويل المكالمة لموظف آخر غير مشغول
-    window.transferCallToAnotherEmployee = function() {
-      if (!activeClientKey) return;
-      const onlineEmpRef = ref(db, 'online_employees');
-      onValue(onlineEmpRef, (snapshot) => {
-        if (snapshot.exists()) {
-          let nextAvailableEmp = null;
-          snapshot.forEach((child) => {
-            const empData = child.val();
-            if (empData && empData.name !== currentEmpName && !empData.inCall) {
-              nextAvailableEmp = empData.name;
-            }
-          });
-
-          if (nextAvailableEmp) {
-            set(ref(db, `single_chat_room/${activeClientKey}/call/targetEmployee`), nextAvailableEmp)
-              .then(() => {
-                set(ref(db, `single_chat_room/${activeClientKey}/call/answer`), null);
-                alert(`تم تحويل المكالمة بنجاح إلى الموظف: ${nextAvailableEmp}`);
-                employeeEndCall();
-              });
-          } else {
-            alert("عذراً، لا يوجد أي موظف متاح حالياً لاستقبال المكالمة!");
-          }
-        } else {
-          alert("لا توجد بيانات للموظفين المتصلين حالياً.");
-        }
-      }, { onlyOnce: true });
     };
 
     function createPeerConnection(roomKey) {
@@ -555,8 +482,6 @@
       screen.classList.remove("flex"); screen.classList.add("hidden");
       document.getElementById("incomingCallModal").style.display = "none";
       pendingOffer = null;
-      isMuted = false;
-      updateMuteButtonUI();
 
       if (currentEmpName) {
         const empCleanId = currentEmpName.replace(/\s+/g, '_');
@@ -582,7 +507,9 @@
     }
 
     function escapeHtml(text) {
-      
+      if (!text) return '';
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text.toString().replace(/[&<>"']/g, m => map[m]);
     }
   </script>
 </body>
