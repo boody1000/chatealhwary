@@ -337,7 +337,7 @@
                             <th>اسم الموظف</th>
                             <th>الصلاحية</th>
                             <th>الحالة</th>
-                            <th>تاريخ الإنشاء / آخر ظهور</th>
+                            <th>تاريخ آخر تسجيل دخول</th>
                         </tr>
                     </thead>
                     <tbody id="statusTableBody"></tbody>
@@ -418,26 +418,25 @@
         const analytics = getAnalytics(app);
         const db = getDatabase(app);
 
-        // حفظ بيانات الموظف عند الضغط على الزر تحت جدول online_employees
+        // حفظ بيانات الموظف (username, password, role) في جدول employee
         document.getElementById('employeeForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const username = document.getElementById('empName').value.trim();
             const password = document.getElementById('empPass').value;
-            const safeUsername = username.replace(/[.#$[\]]/g, "_");
             const role = document.getElementById('empRole').value;
+            const safeUsername = username.replace(/[.#$[\]]/g, "_");
 
-            const employeeRef = ref(db, 'online_employees/' + safeUsername);
+            const employeeRef = ref(db, 'employee/' + safeUsername);
 
             set(employeeRef, {
                 username: username,
                 password: password,
                 role: role,
-                status: 'offline', // القيمة الافتراضية عند الإنشاء
                 createdAt: new Date().toLocaleString()
             })
             .then(() => {
-                alert(`تم حفظ الموظف (${username}) بنجاح في قاعدة البيانات!`);
+                alert(`تم حفظ الموظف (${username}) بنجاح في جدول employee!`);
                 document.getElementById('employeeForm').reset();
             })
             .catch((error) => {
@@ -477,9 +476,9 @@
         let allCallRecordingsData = {};
         let allEmployeesData = {};
 
-        // جلب الموظفين من جدول online_employees وعرضها
-        const employeesRef = ref(db, 'online_employees');
-        onValue(employeesRef, (snapshot) => {
+        // جلب الموظفين من جدول online_employees وعرضها عند الضغط على زر الاستعلام أو تغيير القسم
+        const onlineEmployeesRef = ref(db, 'online_employees');
+        onValue(onlineEmployeesRef, (snapshot) => {
             allEmployeesData = snapshot.val() || {};
             renderStatusTable(allEmployeesData);
         });
@@ -494,9 +493,9 @@
             if (data) {
                 Object.entries(data).forEach(([empKey, empVal]) => {
                     const empName = empVal.username || empKey.replace(/_/g, ' ');
-                    const empRole = empVal.role || 'موظف';
+                    const empRole = empVal.role || 'خدمة عملاء';
                     const status = empVal.status || 'offline';
-                    const timeInfo = empVal.createdAt || '-';
+                    const timeInfo = empVal.lastLogin || empVal.createdAt || '-';
 
                     if (searchText && !empName.toLowerCase().includes(searchText) && !empRole.toLowerCase().includes(searchText)) {
                         return;
