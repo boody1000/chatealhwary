@@ -26,12 +26,18 @@
     
     <!-- القائمة الجانبية للعملاء -->
     <section class="w-80 bg-slate-950/70 border-r border-slate-800 flex flex-col">
-      <div class="p-4 border-b border-slate-800 flex items-center gap-3">
-        <img src="22.jpg" alt="Logo" class="w-9 h-9 rounded-full object-cover border border-amber-500/50">
-        <div>
-          <h2 class="text-sm font-bold text-amber-400">الهواري</h2>
-          <span class="text-[11px] text-slate-400">رسائل العملاء الواردة</span>
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img src="22.jpg" alt="Logo" class="w-9 h-9 rounded-full object-cover border border-amber-500/50">
+          <div>
+            <h2 class="text-sm font-bold text-amber-400">الهواري</h2>
+            <span class="text-[11px] text-slate-400">رسائل العملاء الواردة</span>
+          </div>
         </div>
+        <!-- زر تغيير وتحديد اسم الموظف المستقل لمنع التداخل -->
+        <button onclick="changeEmployeeSession()" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 px-2.5 py-1 rounded-lg border border-slate-700 transition" title="تغيير اسم الموظف">
+          <i class="fa-solid fa-user-gear"></i>
+        </button>
       </div>
       <div class="p-3 border-b border-slate-800/60">
         <input type="text" id="searchClient" placeholder="بحث عن عميل..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-amber-500 text-slate-100">
@@ -52,7 +58,7 @@
           </div>
           <div>
             <h3 id="loggedInUsername" class="text-sm font-bold text-amber-400">موظف الدعم</h3>
-            <span class="text-xs text-green-400">متصل الآن</span>
+            <span class="text-xs text-green-400">متصل الآن (صفحة مستقلة)</span>
           </div>
         </div>
         
@@ -94,13 +100,14 @@
       <p id="incomingCallerName" class="text-sm text-emerald-400 font-medium mb-6">العميل يتصل بك الآن...</p>
       
       <div class="flex items-center gap-4 w-full">
-        <button onclick="rejectIncomingCall()" class="flex-1 bg-red-600 hover:bg-red-700 py-3 rounded-xl font-semibold transition text-sm">رفض</button>
+        <!-- زر الرفض والتحويل التلقائي لزميل آخر -->
+        <button onclick="rejectIncomingCall()" class="flex-1 bg-red-600 hover:bg-red-700 py-3 rounded-xl font-semibold transition text-sm">رفض / تحويل</button>
         <button onclick="acceptIncomingCall()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 py-3 rounded-xl font-semibold transition text-sm">رد</button>
       </div>
     </div>
   </div>
 
-  <!-- شاشة المكالمة النشطة للموظف -->
+  <!-- شاشة المكالمة النشطة للموظف (مع زر الكتم) -->
   <div id="employeeCallScreen" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col items-center justify-between p-8 text-white">
     <div class="flex flex-col items-center mt-12">
       <div class="w-28 h-28 bg-slate-800 rounded-full flex items-center justify-center overflow-hidden mb-4 shadow-xl border-2 border-emerald-500 animate-pulse">
@@ -111,6 +118,12 @@
     </div>
     
     <div class="flex items-center gap-6 mb-12">
+      <!-- زر كتم / إلغاء كتم الصوت -->
+      <button id="muteBtn" onclick="toggleMuteMic()" class="w-14 h-14 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-lg shadow-lg transition" title="كتم الصوت">
+        <i id="muteIcon" class="fa-solid fa-microphone"></i>
+      </button>
+
+      <!-- زر إنهاء المكالمة -->
       <button onclick="employeeEndCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-xl shadow-lg transition" title="إنهاء المكالمة">
         <i class="fa-solid fa-phone-slash"></i>
       </button>
@@ -141,9 +154,10 @@
 
     let activeClientKey = null;
     let activeClientDisplayName = null;
-    let currentEmpName = "موظف الدعم";
+    let currentEmpName = "موظف_الدعم";
     let peerConnection = null;
     let localStream = null;
+    let isMuted = false;
     const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
     let empTimerInterval = null;
     let empSeconds = 0;
@@ -156,7 +170,26 @@
     const previousMessagesCounts = {};
     let isFirstLoad = true;
 
-    // تفعيل الصوت في المتصفح عند أول تفاعل للمستخدم لتجاوز سياسة المتصفحات الحارسة للصوت
+    // إدارة جلسة مستقلة لكل موظف لمنع أي تداخل
+    function initEmployeeSession() {
+      let storedUser = localStorage.getItem('loggedUsername');
+      if (!storedUser) {
+        storedUser = prompt("أدخل اسمك الكريم (الموظف) لتشغيل صفحة مستقلة:", "موظف_" + Math.floor(Math.random() * 900 + 100));
+        if (!storedUser) storedUser = "موظف_عام";
+        localStorage.setItem('loggedUsername', storedUser.trim());
+      }
+      currentEmpName = storedUser.trim();
+      document.getElementById('loggedInUsername').innerText = currentEmpName;
+    }
+
+    window.changeEmployeeSession = function() {
+      const newUser = prompt("أدخل اسم الموظف الجديد لهذه الصفحة المستقلة:", currentEmpName);
+      if (newUser && newUser.trim() !== "") {
+        localStorage.setItem('loggedUsername', newUser.trim());
+        location.reload();
+      }
+    };
+
     document.addEventListener('click', () => {
         if (empRingAudio.paused) {
             empRingAudio.play().then(() => { empRingAudio.pause(); empRingAudio.currentTime = 0; }).catch(e => {});
@@ -167,12 +200,9 @@
     }, { once: true });
 
     window.addEventListener('DOMContentLoaded', () => {
-      const loggedUser = localStorage.getItem('loggedUsername');
-      if (loggedUser) {
-        currentEmpName = loggedUser;
-        document.getElementById('loggedInUsername').innerText = currentEmpName;
-      }
+      initEmployeeSession();
 
+      // تسجيل حالة الموظف بأنه متصل وغير مشغول بالمكالمات مبدئياً
       if (currentEmpName) {
         const empCleanId = currentEmpName.replace(/\s+/g, '_');
         const empStatusRef = ref(db, 'online_employees/' + empCleanId);
@@ -192,12 +222,16 @@
             let hasActiveCall = false;
             let lastMessageText = "انقر لعرض المحادثة";
             let totalMessagesCount = 0;
+            let assignedEmp = null;
 
             if (unreadCounts[roomKey] === undefined) {
               unreadCounts[roomKey] = 0;
             }
 
             roomSnapshot.forEach((msgChild) => {
+              if(msgChild.key === 'assignedTo') {
+                assignedEmp = msgChild.val();
+              }
               if(msgChild.key === 'call') {
                 const callVal = msgChild.val();
                 if (callVal) {
@@ -214,16 +248,13 @@
               }
             });
 
-            // مقارنة عدد الرسائل القديم بالجديد لمعرفة إذا وصلت رسالة عميل جديدة
             if (!isFirstLoad && previousMessagesCounts[roomKey] !== undefined && totalMessagesCount > previousMessagesCounts[roomKey]) {
               const diff = totalMessagesCount - previousMessagesCounts[roomKey];
               if (activeClientKey !== roomKey && diff > 0) {
                 unreadCounts[roomKey] = (unreadCounts[roomKey] || 0) + diff;
-                
-                // تشغيل صوت rnn.mp3 فوراً عند ورود الرسالة الجديدة
                 if (msgNotificationAudio) {
                   msgNotificationAudio.currentTime = 0;
-                  msgNotificationAudio.play().catch(err => console.log("Audio play error:", err));
+                  msgNotificationAudio.play().catch(err => {});
                 }
               }
             }
@@ -239,6 +270,8 @@
               ? `<div class="flex items-center gap-1 bg-red-600 text-white text-xs font-black px-2.5 py-0.5 rounded-full shadow-lg animate-pulse"><i class="fa-solid fa-bell text-[10px]"></i><span>${currentCount}</span></div>` 
               : '';
 
+            const assignedLabel = assignedEmp ? `<span class="text-[10px] text-amber-500 block">يتابع بواسطة: ${escapeHtml(assignedEmp)}</span>` : '';
+
             const chatItemHTML = `
               <div onclick="switchChat('${escapeHtml(roomKey)}', '${escapeHtml(originalName)}')" class="p-3 hover:bg-slate-800/60 cursor-pointer transition flex items-center space-x-3 space-x-reverse border-b border-slate-800/40">
                 <div class="relative">
@@ -251,6 +284,7 @@
                     <div id="badge-container-${escapeHtml(roomKey)}">${badgeHTML}</div>
                   </div>
                   <p class="text-xs text-slate-400 truncate">${escapeHtml(lastMessageText)}</p>
+                  ${assignedLabel}
                 </div>
               </div>
             `;
@@ -266,31 +300,65 @@
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
-        const targetEmp = callData.targetEmployee;
-        if (!targetEmp || targetEmp === currentEmpName) {
-          if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
-            if (!targetEmp) {
-              set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), currentEmpName);
+        let targetEmp = callData.targetEmployee;
+        
+        if (targetEmp === currentEmpName) {
+          const empCleanId = currentEmpName.replace(/\s+/g, '_');
+          onValue(ref(db, `online_employees/${empCleanId}/inCall`), (snap) => {
+            if (snap.val() === true) {
+              // الموظف الحالي مشغول، يتم تحويل المكالمة تلقائياً لشخص آخر لمنع التداخل[cite: 3]
+              autoRedirectCall(roomKey);
+            } else {
+              showCallModal(roomKey, displayName, callData.offer);
             }
-            pendingOffer = { roomKey, displayName, offer: callData.offer };
-            document.getElementById("incomingCallerName").innerText = `العميل: ${displayName} يتصل بك...`;
-            document.getElementById("incomingCallModal").style.display = "flex";
-            if (empRingAudio.paused) {
-              empRingAudio.play().catch(e => {});
-            }
-          }
+          }, { onlyOnce: true });
+        } else if (!targetEmp) {
+          set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), currentEmpName);
+          showCallModal(roomKey, displayName, callData.offer);
         }
       }
+    }
+
+    function showCallModal(roomKey, displayName, offer) {
+      if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
+        pendingOffer = { roomKey, displayName, offer };
+        document.getElementById("incomingCallerName").innerText = `العميل: ${displayName} يتصل بك...`;
+        document.getElementById("incomingCallModal").style.display = "flex";
+        if (empRingAudio.paused) {
+          empRingAudio.play().catch(e => {});
+        }
+      }
+    }
+
+    // دالة تحويل المكالمة تلقائياً لزميل آخر في حال انشغال الموظف أو رفضه[cite: 3]
+    function autoRedirectCall(roomKey) {
+      const onlineEmpRef = ref(db, 'online_employees');
+      onValue(onlineEmpRef, (snapshot) => {
+        if (snapshot.exists()) {
+          let nextAvailableEmp = null;
+          snapshot.forEach((child) => {
+            const empData = child.val();
+            if (empData && empData.name !== currentEmpName && !empData.inCall) {
+              nextAvailableEmp = empData.name;
+            }
+          });
+          if (nextAvailableEmp) {
+            set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), nextAvailableEmp);
+          }
+        }
+      }, { onlyOnce: true });
     }
 
     window.switchChat = function(roomKey, displayName) {
       activeClientKey = roomKey;
       activeClientDisplayName = displayName;
       
-      // تصفير العداد وإخفاء الشارة فور قراءة المحادثة
       unreadCounts[roomKey] = 0;
       const badgeContainer = document.getElementById(`badge-container-${roomKey}`);
       if (badgeContainer) badgeContainer.innerHTML = '';
+
+      // قفل المحادثة لصالح الموظف الحالي لمنع تداخل الردود
+      set(ref(db, `single_chat_room/${roomKey}/assignedTo`), currentEmpName);
 
       document.getElementById('currentName').innerText = "محادثة مع: " + displayName;
       document.getElementById('callClientBtn').classList.remove('hidden');
@@ -303,14 +371,14 @@
         container.innerHTML = '';
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
-            if(childSnapshot.key === 'call') {
-              if (!childSnapshot.val() && !document.getElementById("employeeCallScreen").classList.contains("hidden")) {
+            if(childSnapshot.key === 'call' || childSnapshot.key === 'assignedTo' || childSnapshot.key === 'candidates') {
+              if (childSnapshot.key === 'call' && !childSnapshot.val() && !document.getElementById("employeeCallScreen").classList.contains("hidden")) {
                 closeEmpCallUI();
               }
               return;
             }
             const msg = childSnapshot.val();
-            if(!msg) return;
+            if(!msg || !msg.text) return;
             const isClientMsg = (msg.sender === displayName || msg.sender === roomKey || msg.senderRole === 'client');
             appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClientMsg);
           });
@@ -352,6 +420,9 @@
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        isMuted = false;
+        updateMuteButtonUI();
+
         createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
@@ -369,19 +440,7 @@
         empRingAudio.currentTime = 0;
       }
       if(pendingOffer) {
-        const roomKey = pendingOffer.roomKey;
-        const onlineEmpRef = ref(db, 'online_employees');
-        onValue(onlineEmpRef, (snapshot) => {
-          if (snapshot.exists()) {
-            let nextAvailableEmp = null;
-            snapshot.forEach((child) => {
-              const empData = child.val();
-              if (empData && empData.name !== currentEmpName && !empData.inCall) nextAvailableEmp = empData.name;
-            });
-            if (nextAvailableEmp) set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), nextAvailableEmp);
-            else remove(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`));
-          }
-        }, { onlyOnce: true });
+        autoRedirectCall(pendingOffer.roomKey);
       }
       document.getElementById("incomingCallModal").style.display = "none";
       pendingOffer = null;
@@ -396,6 +455,9 @@
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        isMuted = false;
+        updateMuteButtonUI();
+
         createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
         const offer = await peerConnection.createOffer();
@@ -418,6 +480,33 @@
         listenForCandidates(activeClientKey);
       } catch (err) { employeeEndCall(); }
     };
+
+    // وظيفة زر كتم / إلغاء كتم الصوت للموظف
+    window.toggleMuteMic = function() {
+      if (!localStream) return;
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (!audioTrack) return;
+
+      isMuted = !isMuted;
+      audioTrack.enabled = !isMuted;
+      updateMuteButtonUI();
+    };
+
+    function updateMuteButtonUI() {
+      const btn = document.getElementById("muteBtn");
+      const icon = document.getElementById("muteIcon");
+      if (isMuted) {
+        btn.classList.remove("bg-slate-700", "hover:bg-slate-600");
+        btn.classList.add("bg-amber-600", "hover:bg-amber-700");
+        icon.className = "fa-solid fa-microphone-slash";
+        btn.title = "إلغاء الكتم";
+      } else {
+        btn.classList.remove("bg-amber-600", "hover:bg-amber-700");
+        btn.classList.add("bg-slate-700", "hover:bg-slate-600");
+        icon.className = "fa-solid fa-microphone";
+        btn.title = "كتم الصوت";
+      }
+    }
 
     function createPeerConnection(roomKey) {
       peerConnection = new RTCPeerConnection(servers);
