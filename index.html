@@ -57,7 +57,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js";
-        import { getDatabase, ref, get, update, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, get, set, update, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -82,6 +82,7 @@
 
             const inputUsername = document.getElementById('username').value.trim();
             const inputPassword = document.getElementById('password').value;
+            const safeUsername = inputUsername.replace(/[.#$[\]]/g, "_");
 
             messageEl.style.display = "block";
             messageEl.style.color = "#667eea";
@@ -105,7 +106,6 @@
                     });
                 }
 
-                // إذا كان المدخل مديراً وكلمة المرور صحيحة، قم بتوجيهه إلى cont.html
                 if (isAdmin) {
                     localStorage.setItem('loggedAdmin', inputUsername);
                     messageEl.style.color = "green";
@@ -114,60 +114,51 @@
                     setTimeout(() => {
                         window.location.href = "cont.html";
                     }, 1000);
-                    return; // إيقاف تنفيذ باقي الكود
+                    return; 
                 }
 
-                // 2. التحقق من جدول الموظفين (employees)
-                const employeesRef = ref(db, 'employees');
-                const snapshot = await get(employeesRef);
+                // 2. التحقق من جدول الموظفين (employee) للتأكد من أنه مسجل مسبقاً
+                const employeeRef = ref(db, 'employee/' + safeUsername);
+                const employeeSnapshot = await get(employeeRef);
 
-                if (!snapshot.exists()) {
-                    throw new Error("بيانات الدخول غير صحيحة (اسم المستخدم أو كلمة المرور غير مطابقة).");
+                if (!employeeSnapshot.exists()) {
+                    throw new Error("اسم المستخدم غير مسجل في جدول الموظفين.");
                 }
 
-                let empFound = false;
-                let empCorrectPassword = false;
-                let targetEmpRef = null;
+                const empData = employeeSnapshot.val();
 
-                snapshot.forEach((childSnapshot) => {
-                    const empData = childSnapshot.val();
-                    if (childSnapshot.key === inputUsername || (empData && empData.username === inputUsername)) {
-                        empFound = true;
-                        targetEmpRef = ref(db, 'employees/' + childSnapshot.key);
-                        
-                        if (empData.password === inputPassword) {
-                            empCorrectPassword = true;
-                        }
-                    }
-                });
-
-                if (!empFound) {
-                    throw new Error("اسم المستخدم غير موجود في قاعدة البيانات.");
-                }
-
-                if (!empCorrectPassword) {
+                if (empData.password !== inputPassword) {
                     throw new Error("كلمة المرور غير صحيحة.");
                 }
 
-                // أ. تحديث حالة الموظف في جدول employees إلى online مع حفظ الوقت والتاريخ الحالي
+                // 3. الموظف مسجل وكلمة المرور صحيحة -> نقوم بتسجيله أو تحديث حالته في جدول (online_employees)
+                const onlineEmpRef = ref(db, 'online_employees/' + safeUsername);
                 const currentDateTime = new Date().toLocaleString();
-                await update(targetEmpRef, {
-                    status: "online",
-                    lastLogin: currentDateTime
-                });
 
-                // ب. ضبط الحالة لتصبح offline تلقائياً عند قطع الاتصال في جدول employees
-                onDisconnect(targetEmpRef).update({
+                const onlineData = {
+                    username: empData.username || inputUsername,
+                    password: empData.password,
+                    role: empData.role || 'خدمة عملاء',
+                    status: "online",
+                    lastLogin: currentDateTime,
+                    createdAt: empData.createdAt || currentDateTime
+                };
+
+                // حفظ أو تحديث بياناته في جدول online_employees
+                await set(onlineEmpRef, onlineData);
+
+                // ضبط الحالة لتصبح offline تلقائياً عند قطع الاتصال في جدول online_employees
+                onDisconnect(onlineEmpRef).update({
                     status: "offline"
                 });
 
-                // ج. تخزين اسم المستخدم محلياً لكي تقرأه صفحة employee.html
+                // تخزين اسم المستخدم محلياً لتستخدمه صفحة الموظف
                 localStorage.setItem('loggedUsername', inputUsername);
 
                 messageEl.style.color = "green";
                 messageEl.innerText = "تم تسجيل الدخول بنجاح! جاري التوجيه...";
 
-                // د. التوجيه التلقائي إلى صفحة الموظف بعد ثانية واحدة
+                // التوجيه التلقائي إلى صفحة الموظف بعد ثانية واحدة
                 setTimeout(() => {
                     window.location.href = "employee.html";
                 }, 1000);
