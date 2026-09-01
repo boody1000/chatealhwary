@@ -123,7 +123,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, update, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -156,7 +156,6 @@
     const previousMessagesCounts = {};
     let isFirstLoad = true;
 
-    // تفعيل الصوت في المتصفح عند أول تفاعل للمستخدم لتجاوز سياسة المتصفحات الحارسة للصوت
     document.addEventListener('click', () => {
         if (empRingAudio.paused) {
             empRingAudio.play().then(() => { empRingAudio.pause(); empRingAudio.currentTime = 0; }).catch(e => {});
@@ -186,44 +185,53 @@
         chatsListEl.innerHTML = '';
 
         if (snapshot.exists()) {
+          let hasRoomsForMe = false;
+
           snapshot.forEach((roomSnapshot) => {
             const roomKey = roomSnapshot.key; 
             const originalName = roomKey.replace(/_/g, ' ');
-            let hasActiveCall = false;
+            
+            let assignedEmp = null;
             let lastMessageText = "انقر لعرض المحادثة";
             let totalMessagesCount = 0;
+            let hasActiveCall = false;
 
-            if (unreadCounts[roomKey] === undefined) {
-              unreadCounts[roomKey] = 0;
-            }
-
-            roomSnapshot.forEach((msgChild) => {
-              if(msgChild.key === 'call') {
-                const callVal = msgChild.val();
+            roomSnapshot.forEach((childSnap) => {
+              if (childSnap.key === 'assignedEmployee') {
+                assignedEmp = childSnap.val();
+              }
+              if (childSnap.key === 'call') {
+                const callVal = childSnap.val();
                 if (callVal) {
                   hasActiveCall = true;
                   checkIncomingCallForRoom(roomKey, originalName, callVal);
                 }
-                return;
               }
-
-              const msg = msgChild.val();
+              const msg = childSnap.val();
               if (msg && msg.text) {
                 totalMessagesCount++;
                 lastMessageText = msg.text;
               }
             });
 
-            // مقارنة عدد الرسائل القديم بالجديد لمعرفة إذا وصلت رسالة عميل جديدة
+            if (assignedEmp && assignedEmp !== currentEmpName) {
+              return; 
+            }
+
+            hasRoomsForMe = true;
+            const displayName = originalName;
+
+            if (unreadCounts[roomKey] === undefined) {
+              unreadCounts[roomKey] = 0;
+            }
+
             if (!isFirstLoad && previousMessagesCounts[roomKey] !== undefined && totalMessagesCount > previousMessagesCounts[roomKey]) {
               const diff = totalMessagesCount - previousMessagesCounts[roomKey];
               if (activeClientKey !== roomKey && diff > 0) {
                 unreadCounts[roomKey] = (unreadCounts[roomKey] || 0) + diff;
-                
-                // تشغيل صوت rnn.mp3 فوراً عند ورود الرسالة الجديدة
                 if (msgNotificationAudio) {
                   msgNotificationAudio.currentTime = 0;
-                  msgNotificationAudio.play().catch(err => console.log("Audio play error:", err));
+                  msgNotificationAudio.play().catch(err => {});
                 }
               }
             }
@@ -240,14 +248,14 @@
               : '';
 
             const chatItemHTML = `
-              <div onclick="switchChat('${escapeHtml(roomKey)}', '${escapeHtml(originalName)}')" class="p-3 hover:bg-slate-800/60 cursor-pointer transition flex items-center space-x-3 space-x-reverse border-b border-slate-800/40">
+              <div onclick="switchChat('${escapeHtml(roomKey)}', '${escapeHtml(displayName)}')" class="p-3 hover:bg-slate-800/60 cursor-pointer transition flex items-center space-x-3 space-x-reverse border-b border-slate-800/40">
                 <div class="relative">
                   <img src="22.jpg" class="w-10 h-10 rounded-full object-cover border border-amber-500/40" alt="User">
                   <span class="absolute bottom-0 left-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></span>
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between mb-0.5">
-                    <h3 class="text-sm font-semibold truncate text-white">${escapeHtml(originalName)}</h3>
+                    <h3 class="text-sm font-semibold truncate text-white">${escapeHtml(displayName)}</h3>
                     <div id="badge-container-${escapeHtml(roomKey)}">${badgeHTML}</div>
                   </div>
                   <p class="text-xs text-slate-400 truncate">${escapeHtml(lastMessageText)}</p>
@@ -256,6 +264,10 @@
             `;
             chatsListEl.insertAdjacentHTML('beforeend', chatItemHTML);
           });
+
+          if (!hasRoomsForMe) {
+            chatsListEl.innerHTML = '<div class="p-4 text-center text-slate-500 text-sm">لا توجد محادثات عملاء مسندة إليك حالياً</div>';
+          }
           isFirstLoad = false;
         } else {
           chatsListEl.innerHTML = '<div class="p-4 text-center text-slate-500 text-sm">لا توجد محادثات عملاء حالياً</div>';
@@ -283,11 +295,14 @@
       }
     }
 
-    window.switchChat = function(roomKey, displayName) {
+    window.switchChat = async function(roomKey, displayName) {
       activeClientKey = roomKey;
       activeClientDisplayName = displayName;
       
-      // تصفير العداد وإخفاء الشارة فور قراءة المحادثة
+      await update(ref(db, 'single_chat_room/' + roomKey), {
+        assignedEmployee: currentEmpName
+      });
+
       unreadCounts[roomKey] = 0;
       const badgeContainer = document.getElementById(`badge-container-${roomKey}`);
       if (badgeContainer) badgeContainer.innerHTML = '';
@@ -303,14 +318,14 @@
         container.innerHTML = '';
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
-            if(childSnapshot.key === 'call') {
-              if (!childSnapshot.val() && !document.getElementById("employeeCallScreen").classList.contains("hidden")) {
+            if(childSnapshot.key === 'call' || childSnapshot.key === 'assignedEmployee') {
+              if (childSnapshot.key === 'call' && !childSnapshot.val() && !document.getElementById("employeeCallScreen").classList.contains("hidden")) {
                 closeEmpCallUI();
               }
               return;
             }
             const msg = childSnapshot.val();
-            if(!msg) return;
+            if(!msg || !msg.text) return;
             const isClientMsg = (msg.sender === displayName || msg.sender === roomKey || msg.senderRole === 'client');
             appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClientMsg);
           });
@@ -331,6 +346,7 @@
       const chatRef = ref(db, 'single_chat_room/' + activeClientKey);
       try {
         await push(chatRef, { text: text, sender: currentEmpName, senderRole: "employee", timestamp: Date.now() });
+        await update(chatRef, { assignedEmployee: currentEmpName });
         input.value = ''; 
       } catch (error) { console.error(error); }
     };
@@ -343,6 +359,8 @@
       }
       activeClientKey = pendingOffer.roomKey;
       activeClientDisplayName = pendingOffer.displayName;
+
+      await update(ref(db, 'single_chat_room/' + activeClientKey), { assignedEmployee: currentEmpName });
 
       document.getElementById("incomingCallModal").style.display = "none";
       showEmployeeCallScreen();
@@ -401,10 +419,13 @@
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
 
-        await set(ref(db, `single_chat_room/${activeClientKey}/call`), {
-          offer: { type: offer.type, sdp: offer.sdp },
-          caller: 'employee',
-          targetEmployee: currentEmpName
+        await update(ref(db, `single_chat_room/${activeClientKey}`), {
+          assignedEmployee: currentEmpName,
+          call: {
+            offer: { type: offer.type, sdp: offer.sdp },
+            caller: 'employee',
+            targetEmployee: currentEmpName
+          }
         });
 
         onValue(ref(db, `single_chat_room/${activeClientKey}/call`), async (snapshot) => {
