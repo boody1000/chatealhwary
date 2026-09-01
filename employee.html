@@ -123,7 +123,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -265,6 +265,19 @@
     });
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
+      // التحقق: إذا تم الرد على المكالمة من قبل أي موظف، أوقف الرنين وأغلق الشاشة فوراً عند باقي الموظفين
+      if (callData && callData.status === 'answered') {
+        if (pendingOffer && pendingOffer.roomKey === roomKey) {
+          if (!empRingAudio.paused) {
+            empRingAudio.pause();
+            empRingAudio.currentTime = 0;
+          }
+          document.getElementById("incomingCallModal").style.display = "none";
+          pendingOffer = null;
+        }
+        return;
+      }
+
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
         const targetEmp = callData.targetEmployee;
         if (!targetEmp || targetEmp === currentEmpName) {
@@ -351,6 +364,12 @@
       set(ref(db, `online_employees/${empCleanId}/inCall`), true);
 
       try {
+        // تحديث حالة المكالمة في قاعدة البيانات لتصبح "تم الرد عليها" وتتوقف عند باقي الموظفين
+        await update(ref(db, `single_chat_room/${activeClientKey}/call`), {
+          status: 'answered',
+          answeredBy: currentEmpName
+        });
+
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
@@ -404,7 +423,8 @@
         await set(ref(db, `single_chat_room/${activeClientKey}/call`), {
           offer: { type: offer.type, sdp: offer.sdp },
           caller: 'employee',
-          targetEmployee: currentEmpName
+          targetEmployee: currentEmpName,
+          status: 'calling'
         });
 
         onValue(ref(db, `single_chat_room/${activeClientKey}/call`), async (snapshot) => {
