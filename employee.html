@@ -84,7 +84,7 @@
 
   </div>
 
-  <!-- شاشة استقبال المكالمات (تظهر فقط لباقي الموظفين لمنع الإزعاج) -->
+  <!-- شاشة استقبال المكالمات (تظهر فقط لمنع الإزعاج عند باقي الموظفين) -->
   <div id="incomingCallModal" class="fixed inset-0 bg-slate-950/90 z-50 hidden flex-col items-center justify-center text-white backdrop-blur-sm">
     <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full text-center">
       <div class="w-24 h-24 bg-amber-600/20 text-amber-400 rounded-full flex items-center justify-center overflow-hidden mb-4 border-2 border-amber-500 animate-bounce">
@@ -100,7 +100,7 @@
     </div>
   </div>
 
-  <!-- شاشة المكالمة النشطة للموظف الذي يقود المكالمة حالياً -->
+  <!-- شاشة المكالمة النشطة للموظف -->
   <div id="employeeCallScreen" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col items-center justify-between p-8 text-white">
     <div class="flex flex-col items-center mt-12">
       <div class="w-28 h-28 bg-slate-800 rounded-full flex items-center justify-center overflow-hidden mb-4 shadow-xl border-2 border-emerald-500 animate-pulse">
@@ -188,7 +188,6 @@
           snapshot.forEach((roomSnapshot) => {
             const roomKey = roomSnapshot.key; 
             const originalName = roomKey.replace(/_/g, ' ');
-            let hasActiveCall = false;
             let lastMessageText = "انقر لعرض المحادثة";
             let totalMessagesCount = 0;
 
@@ -200,7 +199,6 @@
               if(msgChild.key === 'call') {
                 const callVal = msgChild.val();
                 if (callVal) {
-                  hasActiveCall = true;
                   checkIncomingCallForRoom(roomKey, originalName, callVal);
                 }
                 return;
@@ -259,7 +257,7 @@
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
       const isMyScreenActive = !document.getElementById("employeeCallScreen").classList.contains("hidden");
 
-      // لو المكالمة تم الرد عليها بواسطة أي شخص، نقفل شاشة الرنين والنغمة عند باقي الموظفين فقط (بدون المساس بالمكالمة النشطة للموظف الحالي أو العميل)
+      // إذا تم الرد على المكالمة بواسطة أي شخص، نقوم بإسكات الرنين وإخفاء شاشة الاستقبال عند باقي الموظفين فقط
       if (callData && callData.status === 'answered') {
         if (pendingOffer && pendingOffer.roomKey === roomKey) {
           if (!empRingAudio.paused) {
@@ -275,7 +273,6 @@
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
         const targetEmp = callData.targetEmployee;
         if (!targetEmp || targetEmp === currentEmpName) {
-          // إذا لم تكن شاشتي النشطة في مكالمة حالياً، أعرض نافذة الرنين
           if (!isMyScreenActive) {
             if (!targetEmp) {
               set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), currentEmpName);
@@ -311,7 +308,7 @@
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
             if(childSnapshot.key === 'call') {
-              // لا تقم بإغلاق شاشة مكالمة الموظف النشط هنا لتجنب قطع الاتصال مع العميل مطلقاً
+              // تم منع أي إغلاق للمكالمة النشطة هنا لضمان عدم قطع الاتصال نهائياً
               return;
             }
             const msg = childSnapshot.val();
@@ -356,7 +353,6 @@
       set(ref(db, `online_employees/${empCleanId}/inCall`), true);
 
       try {
-        // تحديث حالة المكالمة إلى answered لإسكات بقية الموظفين بدون التأثير على اتصال العميل أو الموظف المجيب
         await update(ref(db, `single_chat_room/${activeClientKey}/call`), {
           status: 'answered',
           answeredBy: currentEmpName
