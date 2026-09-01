@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - الموظفين</title>
+    <title>تسجيل الدخول - الموظفين والمديرين</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background:url(22.jpg); height: 100vh; display: flex; justify-content: center; align-items: center; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100vh; display: flex; justify-content: center; align-items: center; }
         .login-card { background: #ffffff; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); width: 100%; max-width: 400px; }
         .login-card h2 { text-align: center; margin-bottom: 25px; color: #333; }
         .input-group { margin-bottom: 20px; }
@@ -57,7 +57,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js";
-        import { getDatabase, ref, get, update, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, get, update, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -88,11 +88,41 @@
             messageEl.innerText = "جاري التحقق من الحساب...";
 
             try {
+                // 1. التحقق أولاً من جدول المديرين (admins)
+                const adminsRef = ref(db, 'admins');
+                const adminsSnapshot = await get(adminsRef);
+
+                let isAdmin = false;
+
+                if (adminsSnapshot.exists()) {
+                    adminsSnapshot.forEach((childSnapshot) => {
+                        const adminData = childSnapshot.val();
+                        if (childSnapshot.key === inputUsername || (adminData && adminData.username === inputUsername)) {
+                            if (adminData.password === inputPassword) {
+                                isAdmin = true;
+                            }
+                        }
+                    });
+                }
+
+                // إذا كان المدخل مديراً وكلمة المرور صحيحة، قم بتوجيهه إلى cont.html
+                if (isAdmin) {
+                    localStorage.setItem('loggedAdmin', inputUsername);
+                    messageEl.style.color = "green";
+                    messageEl.innerText = "مرحباً بالمدير! تم تسجيل الدخول بنجاح، جاري التوجيه...";
+                    
+                    setTimeout(() => {
+                        window.location.href = "cont.html";
+                    }, 1000);
+                    return; // إيقاف تنفيذ باقي الكود
+                }
+
+                // 2. التحقق من جدول الموظفين (employees)
                 const employeesRef = ref(db, 'employees');
                 const snapshot = await get(employeesRef);
 
                 if (!snapshot.exists()) {
-                    throw new Error("لا توجد أي بيانات داخل جدول employees.");
+                    throw new Error("بيانات الدخول غير صحيحة (اسم المستخدم أو كلمة المرور غير مطابقة).");
                 }
 
                 let empFound = false;
@@ -119,24 +149,25 @@
                     throw new Error("كلمة المرور غير صحيحة.");
                 }
 
-                // 1. تحديث الحالة في الداتابيز إلى online
+                // أ. تحديث حالة الموظف في جدول employees إلى online مع حفظ الوقت والتاريخ الحالي
+                const currentDateTime = new Date().toLocaleString();
                 await update(targetEmpRef, {
                     status: "online",
-                    lastLogin: serverTimestamp()
+                    lastLogin: currentDateTime
                 });
 
-                // 2. ضبط الحالة لتصبح offline عند قطع الاتصال
+                // ب. ضبط الحالة لتصبح offline تلقائياً عند قطع الاتصال في جدول employees
                 onDisconnect(targetEmpRef).update({
                     status: "offline"
                 });
 
-                // 3. تخزين اسم المستخدم محلياً لكي تقرأه صفحة clint.html
+                // ج. تخزين اسم المستخدم محلياً لكي تقرأه صفحة employee.html
                 localStorage.setItem('loggedUsername', inputUsername);
 
                 messageEl.style.color = "green";
                 messageEl.innerText = "تم تسجيل الدخول بنجاح! جاري التوجيه...";
 
-                // 4. التوجيه التلقائي إلى صفحة clint.html بعد ثانية واحدة
+                // د. التوجيه التلقائي إلى صفحة الموظف بعد ثانية واحدة
                 setTimeout(() => {
                     window.location.href = "employee.html";
                 }, 1000);
