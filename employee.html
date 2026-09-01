@@ -258,8 +258,8 @@
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
-        // إذا قام موظف آخر بالرد، يتم إيقاف الرنين وإخفاء شاشة الاتصال عند باقي الموظفين دون إغلاق المكالمة في وجه العميل
-        if (callData.status === 'answered' || callData.status === 'accepted') {
+        // إذا تم الرد على المكالمة، أو تم رفضها تماماً، يتم إيقاف الرنين وإخفاء الشاشة عند الجميع
+        if (callData.status === 'answered' || callData.status === 'accepted' || callData.status === 'rejected') {
           if (pendingOffer && pendingOffer.roomKey === roomKey) {
             stopRinging();
             document.getElementById("incomingCallModal").style.display = "none";
@@ -268,18 +268,12 @@
           return;
         }
 
-        const targetEmp = callData.targetEmployee;
-        if (!targetEmp || targetEmp === currentEmpName) {
-          if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
-            if (!targetEmp) {
-              set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), currentEmpName);
-            }
-            pendingOffer = { roomKey, displayName, offer: callData.offer };
-            document.getElementById("incomingCallerName").innerText = `العميل: ${displayName} يتصل بك...`;
-            document.getElementById("incomingCallModal").style.display = "flex";
-            if (empRingAudio.paused) {
-              empRingAudio.play().catch(e => {});
-            }
+        if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
+          pendingOffer = { roomKey, displayName, offer: callData.offer };
+          document.getElementById("incomingCallerName").innerText = `العميل: ${displayName} يتصل بك...`;
+          document.getElementById("incomingCallModal").style.display = "flex";
+          if (empRingAudio.paused) {
+            empRingAudio.play().catch(e => {});
           }
         }
       } else {
@@ -367,7 +361,6 @@
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         
-        // تحديث حالة المكالمة إلى answered دون حذفها لمنع إغلاقها في وجه العميل
         await update(ref(db, `single_chat_room/${activeClientKey}/call`), {
           answer: { type: answer.type, sdp: answer.sdp },
           status: 'answered',
@@ -381,25 +374,14 @@
       }
     };
 
-    window.rejectIncomingCall = function() {
+    // عند الضغط على رفض، يتم إغلاق نافذة الاتصال عند هذا الموظف فقط وتحديث الحالة لكي لا ترن عند غيره وتُغلق المكالمة بشكل صحيح
+    window.rejectIncomingCall = async function() {
       stopRinging();
-      if(pendingOffer) {
+      if (pendingOffer) {
         const roomKey = pendingOffer.roomKey;
-        const onlineEmpRef = ref(db, 'online_employees');
-        onValue(onlineEmpRef, (snapshot) => {
-          if (snapshot.exists()) {
-            let nextAvailableEmp = null;
-            snapshot.forEach((child) => {
-              const empData = child.val();
-              if (empData && empData.name !== currentEmpName && !empData.inCall) nextAvailableEmp = empData.name;
-            });
-            if (nextAvailableEmp) {
-              set(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`), nextAvailableEmp);
-            } else {
-              remove(ref(db, `single_chat_room/${roomKey}/call/targetEmployee`));
-            }
-          }
-        }, { onlyOnce: true });
+        await update(ref(db, `single_chat_room/${roomKey}/call`), {
+          status: 'rejected'
+        });
       }
       document.getElementById("incomingCallModal").style.display = "none";
       pendingOffer = null;
