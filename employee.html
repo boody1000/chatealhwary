@@ -123,7 +123,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -156,7 +156,6 @@
     const previousMessagesCounts = {};
     let isFirstLoad = true;
 
-    // تفعيل الصوت في المتصفح عند أول تفاعل للمستخدم لتجاوز سياسة المتصفحات الحارسة للصوت
     document.addEventListener('click', () => {
         if (empRingAudio.paused) {
             empRingAudio.play().then(() => { empRingAudio.pause(); empRingAudio.currentTime = 0; }).catch(e => {});
@@ -214,13 +213,11 @@
               }
             });
 
-            // مقارنة عدد الرسائل القديم بالجديد لمعرفة إذا وصلت رسالة عميل جديدة
             if (!isFirstLoad && previousMessagesCounts[roomKey] !== undefined && totalMessagesCount > previousMessagesCounts[roomKey]) {
               const diff = totalMessagesCount - previousMessagesCounts[roomKey];
               if (activeClientKey !== roomKey && diff > 0) {
                 unreadCounts[roomKey] = (unreadCounts[roomKey] || 0) + diff;
                 
-                // تشغيل صوت rnn.mp3 فوراً عند ورود الرسالة الجديدة
                 if (msgNotificationAudio) {
                   msgNotificationAudio.currentTime = 0;
                   msgNotificationAudio.play().catch(err => console.log("Audio play error:", err));
@@ -265,6 +262,19 @@
     });
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
+      // إذا تم الرد على المكالمة من موظف آخر، نقوم بإيقاف نافذة الرنين فوراً عند باقي الموظفين
+      if (callData && callData.status === 'answered') {
+        if (pendingOffer && pendingOffer.roomKey === roomKey) {
+          if (!empRingAudio.paused) {
+            empRingAudio.pause();
+            empRingAudio.currentTime = 0;
+          }
+          document.getElementById("incomingCallModal").style.display = "none";
+          pendingOffer = null;
+        }
+        return;
+      }
+
       if (callData && callData.offer && callData.caller === 'client' && !callData.answer) {
         const targetEmp = callData.targetEmployee;
         if (!targetEmp || targetEmp === currentEmpName) {
@@ -287,7 +297,6 @@
       activeClientKey = roomKey;
       activeClientDisplayName = displayName;
       
-      // تصفير العداد وإخفاء الشارة فور قراءة المحادثة
       unreadCounts[roomKey] = 0;
       const badgeContainer = document.getElementById(`badge-container-${roomKey}`);
       if (badgeContainer) badgeContainer.innerHTML = '';
@@ -351,6 +360,12 @@
       set(ref(db, `online_employees/${empCleanId}/inCall`), true);
 
       try {
+        // تحديث حالة المكالمة في قاعدة البيانات بأنها "تم الرد عليها" لتتوقف عند باقي الموظفين
+        await update(ref(db, `single_chat_room/${activeClientKey}/call`), {
+          status: 'answered',
+          answeredBy: currentEmpName
+        });
+
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
@@ -404,7 +419,8 @@
         await set(ref(db, `single_chat_room/${activeClientKey}/call`), {
           offer: { type: offer.type, sdp: offer.sdp },
           caller: 'employee',
-          targetEmployee: currentEmpName
+          targetEmployee: currentEmpName,
+          status: 'calling'
         });
 
         onValue(ref(db, `single_chat_room/${activeClientKey}/call`), async (snapshot) => {
