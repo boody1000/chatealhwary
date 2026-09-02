@@ -53,7 +53,7 @@
         </div>
     </div>
 
-    <!-- إشعار الرسائل الجديدة العائم -->
+    <!-- إشعار الرسائل الجديدة العائم داخل الصفحة -->
     <div id="msgNotificationBanner" class="fixed top-20 left-1/2 -translate-x-1/2 bg-amber-600 text-white px-4 py-2 rounded-xl shadow-xl z-50 text-xs font-bold transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2 backdrop-blur-md">
         <i class="fa-solid fa-bell"></i>
         <span>لديك رسالة جديدة من خدمة العملاء</span>
@@ -154,24 +154,36 @@
         let isInitialLoad = true;
         let lastMessageCount = 0;
 
-        // دالة لفك قفل الصوت برمئياً عبر أي تفاعل باللمس على شاشة الهاتف
+        // طلب إذن الإشعارات من المتصفح لتعمل حتى بعد غلق المحادثة
+        function requestNotificationPermission() {
+            if ("Notification" in window && Notification.permission !== "granted") {
+                Notification.requestPermission().then(permission => {
+                    console.log("Notification permission:", permission);
+                });
+            }
+        }
+
+        // دالة إلغاء قفل الصوت عبر التفاعل
         function unlockAudioContext() {
             [ringAudio, msgSound].forEach(audio => {
                 if(audio) {
                     audio.play().then(() => {
                         audio.pause();
                         audio.currentTime = 0;
-                    }).catch(e => console.log("Audio unlock restricted by browser:", e));
+                    }).catch(e => {});
                 }
             });
         }
 
-        // الاستماع لأول لمسة على الشاشة لتفعيل الصوت نهائياً
         ['touchstart', 'click', 'keydown'].forEach(evt => {
-            document.addEventListener(evt, unlockAudioContext, { once: true });
+            document.addEventListener(evt, () => {
+                unlockAudioContext();
+                requestNotificationPermission();
+            }, { once: true });
         });
 
         window.addEventListener('DOMContentLoaded', () => {
+            requestNotificationPermission();
             if (currentClientKey && originalDisplayName) {
                 document.getElementById("nameModal").classList.add("hidden");
                 document.getElementById("clientDisplayHeader").innerText = "العميل: " + originalDisplayName;
@@ -188,6 +200,7 @@
             if (!inputVal) { alert("يرجى كتابة اسمك للمتابعة"); return; }
             
             unlockAudioContext();
+            requestNotificationPermission();
 
             originalDisplayName = inputVal;
             const uniqueId = Math.floor(Math.random() * 900000) + 100000;
@@ -221,7 +234,7 @@
                         const isClientMsg = (latestMsg.sender === displayName || latestMsg.senderRole === 'client');
                         
                         if (!isClientMsg) {
-                            playMessageAlert();
+                            playMessageAlert(latestMsg.text, latestMsg.sender || "خدمة العملاء");
                         }
                     }
 
@@ -240,17 +253,36 @@
             });
         }
 
-        // تشغيل صوت استلام الرسائل مثل الماسنجر
-        function playMessageAlert() {
+        // تشغيل صوت الرسالة وإظهار إشعار النظام العائم على الهاتف
+        function playMessageAlert(msgText, senderName) {
             if (msgSound) {
                 msgSound.currentTime = 0;
                 msgSound.play().catch(e => {
-                    console.log("Messenger sound play error, retrying via unlock:", e);
+                    console.log("Audio play blocked, forcing unlock:", e);
                     unlockAudioContext();
-                    msgSound.play().catch(err => console.log("Still blocked:", err));
+                    msgSound.play().catch(err => {});
                 });
             }
+            
+            // إظهار إشعار داخل التطبيق
             showNotificationBanner();
+
+            // إظهار إشعار خارجي على شاشة الهاتف (حتى لو كانت المحادثة في الخلفية أو مغلقة)
+            if ("Notification" in window && Notification.permission === "granted") {
+                try {
+                    const notification = new Notification(`رسالة جديدة من ${senderName}`, {
+                        body: msgText,
+                        icon: '22.jpg',
+                        tag: 'hawary-msg-notif'
+                    });
+                    notification.onclick = function() {
+                        window.focus();
+                        notification.close();
+                    };
+                } catch (err) {
+                    console.log("System notification error:", err);
+                }
+            }
         }
 
         function showNotificationBanner() {
@@ -334,7 +366,7 @@
                         ringAudio.currentTime = 0;
                         ringAudio.play().catch(e => {
                             unlockAudioContext();
-                            ringAudio.play().catch(err => console.log("Ring audio error:", err));
+                            ringAudio.play().catch(err => {});
                         });
                     }
                 }
@@ -376,7 +408,7 @@
                     peerConnection.addTrack(track, localStream);
                 });
 
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOfferData));
+                await peerConnection.setRemoteDescription(new RTCIceCandidate(incomingOfferData) || new RTCSessionDescription(incomingOfferData));
                 
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
@@ -411,7 +443,7 @@
                     inboundStream.addTrack(event.track);
                     remoteAudio.srcObject = inboundStream;
                 }
-                remoteAudio.play().catch(e => console.log("Remote audio play error:", e));
+                remoteAudio.play().catch(e => {});
             };
 
             peerConnection.onicecandidate = (event) => {
@@ -458,7 +490,7 @@
         }
 
         function closeCallUI() {
-            if (ringAudio && !ringAudio.paused) {
+            if, (ringAudio && !ringAudio.paused) {
                 ringAudio.pause();
                 ringAudio.currentTime = 0;
             }
