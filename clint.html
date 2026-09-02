@@ -122,7 +122,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
-        // تسجيل Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js')
             .then(reg => console.log('ServiceWorker active successfully', reg))
@@ -270,11 +269,14 @@
             
             showNotificationBanner();
 
+            // اسم الموقع الذي سيظهر في عنوان الإشعار
+            const siteTitle = "شركة الهواري للزواج";
+
             if ("Notification" in window && Notification.permission === "granted") {
                 if (navigator.serviceWorker) {
                     navigator.serviceWorker.ready.then(function(registration) {
-                        registration.showNotification(`رسالة جديدة من ${senderName}`, {
-                            body: msgText,
+                        registration.showNotification(siteTitle, {
+                            body: `${senderName}: ${msgText}`,
                             icon: '22.jpg',
                             badge: '22.jpg',
                             vibrate: [300, 100, 300, 100, 300],
@@ -286,8 +288,8 @@
                     });
                 } else {
                     try {
-                        const notification = new Notification(`رسالة جديدة من ${senderName}`, {
-                            body: msgText,
+                        const notification = new Notification(siteTitle, {
+                            body: `${senderName}: ${msgText}`,
                             icon: '22.jpg',
                             requireInteraction: true
                         });
@@ -310,7 +312,6 @@
             }, 3500);
         }
 
-        // إرسال التنبيه الفوري إلى تليجرام باستخدام بياناتك الخاصة
         function sendTelegramNotification(clientName, messageText) {
             const botToken = '8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4'; 
             const chatId = '7594072203'; 
@@ -339,7 +340,6 @@
                     timestamp: Date.now() 
                 });
                 
-                // إرسال تنبيه إلى تليجرام فور إرسال الرسالة
                 sendTelegramNotification(originalDisplayName, messageText);
 
                 inputField.value = "";
@@ -438,7 +438,7 @@
                     peerConnection.addTrack(track, localStream);
                 });
 
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOfferData));
+                await peerConnection.setRemoteDescription(new RTCsessionDescription(incomingOfferData));
                 
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
