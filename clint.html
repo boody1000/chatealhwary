@@ -122,6 +122,33 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
+        // حقن وتسجيل الـ Service Worker برمجياً ليعمل الإشعار الخارجي بدون الحاجة لملف خارجي
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('notificationclick', function(event) {
+                    event.notification.close();
+                    event.waitUntil(
+                        clients.matchAll({ type: 'window' }).then(function(clientList) {
+                            for (var i = 0; i < clientList.length; i++) {
+                                var client = clientList[i];
+                                if ('focus' in client) {
+                                    return client.focus();
+                                }
+                            }
+                            if (clients.openWindow) {
+                                return clients.openWindow('/');
+                            }
+                        })
+                    );
+                });
+            `;
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl)
+            .then(reg => console.log('Embedded ServiceWorker active'))
+            .catch(err => console.log('ServiceWorker failed', err));
+        }
+
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
             authDomain: "marry-55604.firebaseapp.com",
@@ -156,9 +183,7 @@
 
         function requestNotificationPermission() {
             if ("Notification" in window && Notification.permission !== "granted") {
-                Notification.requestPermission().then(permission => {
-                    console.log("Notification permission:", permission);
-                });
+                Notification.requestPermission();
             }
         }
 
@@ -261,19 +286,32 @@
             showNotificationBanner();
 
             if ("Notification" in window && Notification.permission === "granted") {
-                try {
-                    const notification = new Notification(`رسالة جديدة من ${senderName}`, {
-                        body: msgText,
-                        icon: '22.jpg',
-                        tag: 'hawary-msg-notif',
-                        requireInteraction: false
+                if (navigator.serviceWorker) {
+                    navigator.serviceWorker.ready.then(function(registration) {
+                        registration.showNotification(`رسالة جديدة من ${senderName}`, {
+                            body: msgText,
+                            icon: '22.jpg',
+                            badge: '22.jpg',
+                            vibrate: [200, 100, 200],
+                            tag: 'hawary-chat',
+                            renotify: true,
+                            requireInteraction: true,
+                            dir: 'rtl'
+                        });
                     });
-
-                    notification.onclick = function() {
-                        window.focus();
-                        notification.close();
-                    };
-                } catch (err) {}
+                } else {
+                    try {
+                        const notification = new Notification(`رسالة جديدة من ${senderName}`, {
+                            body: msgText,
+                            icon: '22.jpg',
+                            requireInteraction: true
+                        });
+                        notification.onclick = function() {
+                            window.focus();
+                            notification.close();
+                        };
+                    } catch (err) {}
+                }
             }
         }
 
