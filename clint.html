@@ -124,7 +124,7 @@
             </button>
         </div>
     </div>
-    <audio id="remoteAudio" autoplay playsinline></audio>
+    <audio id="remoteAudio" autoplay></audio>
     <audio id="ringAudio" src="ran.mp3" preload="auto" loop></audio>
 
     <script type="module">
@@ -155,17 +155,7 @@
         let peerConnection = null;
         let localStream = null;
         let incomingOfferData = null; 
-
-        // [تحديث هام]: إضافة عدة خوادم STUN احتياطية لمنع انقطاع الصوت
-        const servers = { 
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { urls: 'stun:stun.stunprotocol.org:3478' }
-            ] 
-        };
-        
+        const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
         const messagesContainer = document.getElementById("chatMessages");
         const ringAudio = document.getElementById("ringAudio");
 
@@ -341,26 +331,15 @@
 
         function createPeerConnection() {
             peerConnection = new RTCPeerConnection(servers);
-            
             peerConnection.ontrack = (event) => { 
                 if (!ringAudio.paused) {
                     ringAudio.pause();
                     ringAudio.currentTime = 0;
                 }
-                const remoteAudio = document.getElementById("remoteAudio");
-                remoteAudio.srcObject = event.streams[0]; 
-                remoteAudio.play().catch(e => {});
+                document.getElementById("remoteAudio").srcObject = event.streams[0]; 
             };
-
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) push(ref(db, `single_chat_room/${currentClientKey}/call/candidates`), event.candidate.toJSON());
-            };
-
-            // [مراقبة حالة الاتصال]: إعادة التنبيه أو التعامل عند حدوث تذبذب
-            peerConnection.onconnectionstatechange = () => {
-                if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
-                    console.warn("تم انقطاع الاتصال الصوتي مؤقتاً...");
-                }
             };
         }
 
