@@ -19,7 +19,6 @@
       background-repeat: no-repeat;
     }
     
-    /* حركة ظهور الإشعار الداخلي الاحتياطي لجميع الإصدارات */
     @keyframes slideInDown {
       from { transform: translateY(-100%); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
@@ -31,7 +30,7 @@
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans h-[100dvh] overflow-hidden bg-custom-watermark">
   
-  <!-- حاوية الإشعارات الداخلية الداعمة لجميع الإصدارات (تظهر أعلى الشاشة) -->
+  <!-- حاوية التنبيهات الشاملة والإشعارات العائمة -->
   <div id="universalToastContainer" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-md flex flex-col gap-2 pointer-events-none"></div>
 
   <div class="flex h-full w-full backdrop-blur-sm relative overflow-hidden">
@@ -48,7 +47,6 @@
         </div>
         
         <div class="flex items-center gap-2">
-          <!-- زر تفعيل الإشعارات -->
           <button onclick="requestNotificationPermission()" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs px-2.5 py-1.5 rounded-lg border border-amber-500/30 transition flex items-center gap-1.5" title="تفعيل الإشعارات">
             <i class="fa-solid fa-bell text-[11px]"></i> <span class="hidden sm:inline">الإشعارات</span>
           </button>
@@ -56,7 +54,6 @@
         </div>
       </div>
       
-      <!-- شريط البحث الفوري بالاسم -->
       <div class="p-3 border-b border-slate-800/60 bg-slate-900/60">
         <input type="text" id="searchClient" oninput="filterClients()" placeholder="بحث عن عميل بالاسم..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-amber-500 text-slate-100 shadow-inner">
       </div>
@@ -95,14 +92,12 @@
         </div>
       </header>
 
-      <!-- صندوق الرسائل -->
       <div id="messageContainer" class="flex-1 p-3 sm:p-6 overflow-y-auto flex flex-col space-y-3 text-slate-300">
         <div class="text-center text-slate-500 my-auto bg-slate-950/40 p-4 sm:p-6 rounded-2xl border border-slate-800/60 backdrop-blur-sm max-w-sm sm:max-w-md mx-auto">
           <p class="text-xs text-slate-400">جاري تحميل المحادثة...</p>
         </div>
       </div>
 
-      <!-- شريط الإرسال -->
       <div class="p-2.5 sm:p-3 border-t border-slate-800 bg-slate-950/95">
         <form id="messageForm" class="flex items-center space-x-2 space-x-reverse" onsubmit="sendMessage(event)">
           <input type="text" id="messageInput" placeholder="اكتب ردك للعميل..." autocomplete="off" class="flex-1 bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm focus:outline-none focus:border-amber-500">
@@ -129,7 +124,7 @@
     </div>
   </div>
 
-  <!-- شاشة المكالمة النشطة للموظف -->
+  <!-- شاشة المكالمة النشطة -->
   <div id="employeeCallScreen" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col items-center justify-between p-6 sm:p-8 text-white">
     <div class="flex flex-col items-center mt-8 sm:mt-12">
       <div class="w-24 h-24 sm:w-28 sm:h-28 bg-slate-800 rounded-full flex items-center justify-center overflow-hidden mb-4 shadow-xl border-2 border-emerald-500 animate-pulse">
@@ -175,41 +170,47 @@
     const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
     const TELEGRAM_CHAT_ID = "7594072203";
 
-    // تسجيل Service Worker للإشعارات الخارجية المتقدمة مع دعم كافة الإصدارات الحديثة
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw_2.js')
-          .then(reg => console.log('Service Worker 2 registered successfully:', reg.scope))
-          .catch(err => console.error('Service Worker registration failed:', err));
-
-        navigator.serviceWorker.addEventListener('message', (event) => {
-          if (event.data && event.data.type === 'FOCUS_CHAT') {
-            window.focus();
-          }
-        });
+          .then(reg => console.log('SW2 registered'))
+          .catch(err => console.log('SW2 error'));
       });
     }
 
-    // زر طلب صلاحية الإشعارات
     window.requestNotificationPermission = function() {
       if ('Notification' in window) {
         Notification.requestPermission().then(permission => {
           if (permission === 'granted') {
-            alert('تم تفعيل الإشعارات الخارجية بنجاح!');
-            showUniversalNotification("شركة الهواري للزواج", "تم تفعيل الإشعارات بنجاح لجميع الإصدارات.");
+            alert('تم تفعيل الإشعارات بنجاح!');
           } else {
-            alert('تم رفض الإشعارات الخارجية، ولكن ستستمر الإشعارات الداخلية في العمل بكفاءة.');
+            alert('التنبيهات الداخلية الشاملة مفعلة تلقائياً لكافة الإصدارات.');
           }
         });
       } else {
-        alert('متصفحك لا يدعم الإشعارات العائمة، لكن النظام الداخلي مفعل بالكامل.');
+        alert('النظام الداخلي للشات والتنبيهات يعمل بكفاءة على هذا الإصدار.');
       }
     };
 
-    // الدالة الشاملة لإظهار الإشعارات في جميع الإصدارات (خارجية أو داخلية كبديل فوري)
-    function showUniversalNotification(title, body, roomKey = null) {
-      // 1. محاولة الإرسال عبر الـ Service Worker للإشعارات الخارجية (إذا كانت مدعومة ومفعلة)
-      let sentViaSW = false;
+    // الدالة المحدثة والشاملة التي تضمن عمل التنبيهات وإظهار الإشعارات العائمة والنظامية
+    function triggerUniversalAlert(title, body, roomKey = null) {
+      // 1. تشغيل الصوت القسري
+      const msgAudio = document.getElementById("msgNotificationAudio");
+      if (msgAudio) {
+        msgAudio.currentTime = 0;
+        msgAudio.play().catch(e => {
+          console.log("Audio autoplay blocked by mobile policy");
+        });
+      }
+
+      // 2. إطلاق الاهتزاز القسري
+      if ('vibrate' in navigator) {
+        try {
+          navigator.vibrate([300, 150, 300, 150, 300]);
+        } catch(e) {}
+      }
+
+      // 3. إرسال أمر للـ Service Worker لإظهار الإشعار الخارجي النظامي
       if ('Notification' in window && Notification.permission === 'granted') {
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
@@ -218,53 +219,40 @@
             body: body,
             url: window.location.href
           });
-          sentViaSW = true;
-        } else {
-          try {
-            new Notification(title, { body: body, icon: './22.jpg', vibrate: [300, 150, 300, 150, 300] });
-            sentViaSW = true;
-          } catch(e) {}
         }
       }
 
-      // 2. النظام الاحتياطي الشامل (Toast داخل الصفحة) لضمان ظهور التنبيه في أي إصدار متصفح أو هاتف
+      // 4. إظهار شريط التنبيه العائم الداخلي (Toast)
       showInAppToast(title, body, roomKey);
     }
 
-    // عرض شريط تنبيه عائم داخل الصفحة (يعمل على جميع الأجهزة والإصدارات القديمة والحديثة)
     function showInAppToast(title, body, roomKey) {
       const container = document.getElementById('universalToastContainer');
       if (!container) return;
 
       const toastId = 'toast_' + Date.now();
       const toastHTML = `
-        <div id="${toastId}" class="pointer-events-auto bg-slate-950/95 border border-amber-500/50 text-slate-100 p-3.5 rounded-2xl shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-slide-down">
+        <div id="${toastId}" class="pointer-events-auto bg-slate-950/95 border-2 border-amber-500 text-slate-100 p-3.5 rounded-2xl shadow-2xl flex items-center justify-between gap-3 animate-slide-down">
           <div class="flex items-center gap-3 min-w-0">
             <img src="22.jpg" class="w-10 h-10 rounded-full object-cover border border-amber-500 shrink-0">
             <div class="min-w-0">
               <h4 class="text-xs font-bold text-amber-400 truncate">${escapeHtml(title)}</h4>
-              <p class="text-[11px] text-slate-300 truncate">${escapeHtml(body)}</p>
+              <p class="text-[11px] text-slate-200 truncate">${escapeHtml(body)}</p>
             </div>
           </div>
           <div class="flex items-center gap-2 shrink-0">
-            ${roomKey ? `<button onclick="openChatFromToast('${roomKey}')" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2.5 py-1.5 rounded-lg font-semibold transition">فتح</button>` : ''}
-            <button onclick="document.getElementById('${toastId}').remove()" class="text-slate-400 hover:text-white px-1 text-xs">✕</button>
+            ${roomKey ? `<button onclick="openChatFromToast('${roomKey}')" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-3 py-1.5 rounded-lg font-bold shadow">فتح</button>` : ''}
+            <button onclick="document.getElementById('${toastId}').remove()" class="text-slate-400 hover:text-white px-1 text-sm font-bold">✕</button>
           </div>
         </div>
       `;
 
       container.insertAdjacentHTML('beforeend', toastHTML);
 
-      // اهتزاز الهاتف إن وجد ودعم المتصفح له
-      if ('vibrate' in navigator) {
-        try { navigator.vibrate([200, 100, 200]); } catch(e) {}
-      }
-
-      // إزالة الإشعار تلقائياً بعد 6 ثوانٍ
       setTimeout(() => {
         const el = document.getElementById(toastId);
         if (el) el.remove();
-      }, 6000);
+      }, 7000);
     }
 
     window.openChatFromToast = function(roomKey) {
@@ -278,16 +266,12 @@
 
     function sendTelegramNotification(text) {
       const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-      const data = {
-        chat_id: TELEGRAM_CHAT_ID,
-        text: text,
-        parse_mode: "Markdown"
-      };
+      const data = { chat_id: TELEGRAM_CHAT_ID, text: text, parse_mode: "Markdown" };
       fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
-      }).catch(err => console.error("Telegram error:", err));
+      }).catch(err => {});
     }
 
     let activeClientKey = null;
@@ -310,18 +294,13 @@
     let allRoomsCache = []; 
 
     document.addEventListener('click', () => {
-        if (empRingAudio.paused) {
-            empRingAudio.play().then(() => { empRingAudio.pause(); empRingAudio.currentTime = 0; }).catch(e => {});
-        }
-        if (msgNotificationAudio.paused) {
-            msgNotificationAudio.play().then(() => { msgNotificationAudio.play().catch(e => {}); msgNotificationAudio.pause(); msgNotificationAudio.currentTime = 0; }).catch(e => {});
-        }
+        if (empRingAudio) { empRingAudio.play().then(() => { empRingAudio.pause(); empRingAudio.currentTime = 0; }).catch(e => {}); }
+        if (msgNotificationAudio) { msgNotificationAudio.play().then(() => { msgNotificationAudio.pause(); msgNotificationAudio.currentTime = 0; }).catch(e => {}); }
     }, { once: true });
 
     window.backToSidebar = function() {
       document.getElementById('chatPage').classList.add('hidden');
       document.getElementById('chatPage').classList.remove('flex');
-      
       document.getElementById('sidebarPage').classList.remove('hidden');
       document.getElementById('sidebarPage').classList.add('flex');
       
@@ -389,27 +368,14 @@
               if (activeClientKey !== roomKey && diff > 0) {
                 unreadCounts[roomKey] = (unreadCounts[roomKey] || 0) + diff;
                 
-                if (msgNotificationAudio) {
-                  msgNotificationAudio.currentTime = 0;
-                  msgNotificationAudio.play().catch(err => {});
-                }
-
-                // إطلاق الإشعار الشامل الذي يعمل على كافة الإصدارات والهواتف
-                showUniversalNotification(`رسالة من: ${originalName}`, lastMessageText, roomKey);
+                triggerUniversalAlert(`رسالة جديدة: ${originalName}`, lastMessageText, roomKey);
                 sendTelegramNotification(`📩 رسالة جديدة من العميل: *${originalName}*\n💬 النص: ${lastMessageText}`);
               }
             }
 
             previousMessagesCounts[roomKey] = totalMessagesCount;
 
-            roomsArray.push({
-              roomKey,
-              originalName,
-              lastMessageText,
-              lockedBy,
-              lastTimestamp,
-              totalMessagesCount
-            });
+            roomsArray.push({ roomKey, originalName, lastMessageText, lockedBy, lastTimestamp, totalMessagesCount });
           });
 
           roomsArray.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
@@ -467,10 +433,7 @@
 
     window.filterClients = function() {
       const query = document.getElementById('searchClient').value.trim().toLowerCase();
-      if (!query) {
-        renderRoomsList(allRoomsCache);
-        return;
-      }
+      if (!query) { renderRoomsList(allRoomsCache); return; }
       const filtered = allRoomsCache.filter(room => room.originalName.toLowerCase().includes(query));
       renderRoomsList(filtered);
     };
@@ -479,14 +442,10 @@
       if (!activeClientKey) return;
       if (confirm(`هل أنت متأكد من حذف محادثة العميل "${activeClientDisplayName}" بالكامل؟`)) {
         try {
-          const chatRef = ref(db, 'single_chat_room/' + activeClientKey);
-          await remove(chatRef);
+          await remove(ref(db, 'single_chat_room/' + activeClientKey));
           alert("تم حذف المحادثة بنجاح.");
           backToSidebar();
-        } catch (error) {
-          console.error("Error deleting chat:", error);
-          alert("حدث خطأ أثناء محاولة الحذف.");
-        }
+        } catch (error) { alert("حدث خطأ أثناء الحذف."); }
       }
     };
 
@@ -503,16 +462,14 @@
 
         if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
           if (!pendingOffer) {
-            showUniversalNotification("مكالمة صوتية واردة!", `العميل: ${displayName} يتصل بك...`, roomKey);
+            triggerUniversalAlert("مكالمة صوتية واردة!", `العميل: ${displayName} يتصل بك...`, roomKey);
             sendTelegramNotification(`📞 مكالمة صوتية واردة من العميل: *${displayName}*`);
           }
 
           pendingOffer = { roomKey, displayName, offer: callData.offer };
           document.getElementById("incomingCallerName").innerText = `العميل: ${displayName} يتصل بك...`;
           document.getElementById("incomingCallModal").style.display = "flex";
-          if (empRingAudio.paused) {
-            empRingAudio.play().catch(e => {});
-          }
+          if (empRingAudio) { empRingAudio.play().catch(e => {}); }
         }
       } else {
         if (pendingOffer && pendingOffer.roomKey === roomKey) {
@@ -524,7 +481,7 @@
     }
 
     function stopRinging() {
-      if (!empRingAudio.paused) {
+      if (empRingAudio && !empRingAudio.paused) {
         empRingAudio.pause();
         empRingAudio.currentTime = 0;
       }
@@ -533,7 +490,6 @@
     window.switchChat = function(roomKey, displayName) {
       document.getElementById('sidebarPage').classList.add('hidden');
       document.getElementById('sidebarPage').classList.remove('flex');
-
       document.getElementById('chatPage').classList.remove('hidden');
       document.getElementById('chatPage').classList.add('flex');
 
@@ -558,7 +514,6 @@
       container.innerHTML = '<div class="text-slate-500 text-center my-auto">جاري تحميل الرسائل...</div>'; 
 
       const chatRef = ref(db, 'single_chat_room/' + roomKey);
-
       let isInitialChatLoad = true;
       let lastMsgKey = null;
 
@@ -571,7 +526,6 @@
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
             if(childSnapshot.key === 'call') return;
-            
             if(childSnapshot.key === 'lockedBy') {
               const locker = childSnapshot.val();
               if(locker && locker !== currentEmpName) {
@@ -604,7 +558,6 @@
         }
         
         isInitialChatLoad = false;
-
         if (!hasMessages) {
           container.innerHTML = '<div class="text-slate-500 text-center my-auto">لا توجد رسائل سابقة مع هذا العميل</div>';
         }
@@ -621,17 +574,8 @@
 
       const chatRef = ref(db, 'single_chat_room/' + activeClientKey);
       try {
-        await update(chatRef, {
-          lockedBy: currentEmpName
-        });
-
-        await push(chatRef, { 
-          text: text, 
-          sender: currentEmpName, 
-          senderRole: "employee", 
-          timestamp: Date.now() 
-        });
-        
+        await update(chatRef, { lockedBy: currentEmpName });
+        await push(chatRef, { text: text, sender: currentEmpName, senderRole: "employee", timestamp: Date.now() });
         input.value = ''; 
       } catch (error) { console.error(error); }
     };
@@ -644,24 +588,19 @@
       activeClientDisplayName = pendingOffer.displayName;
 
       document.getElementById("incomingCallModal").style.display = "none";
-      
       document.getElementById('sidebarPage').classList.add('hidden');
       document.getElementById('sidebarPage').classList.remove('flex');
       document.getElementById('chatPage').classList.remove('hidden');
       document.getElementById('chatPage').classList.add('flex');
 
       showEmployeeCallScreen();
-
       set(ref(db, `online_employees/${empCleanId}/inCall`), true);
       set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), currentEmpName);
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         createPeerConnection(activeClientKey);
-        
-        localStream.getTracks().forEach(track => {
-            peerConnection.addTrack(track, localStream);
-        });
+        localStream.getTracks().forEach(track => { peerConnection.addTrack(track, localStream); });
         
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
         const answer = await peerConnection.createAnswer();
@@ -675,18 +614,13 @@
 
         listenForCandidates(activeClientKey);
         startEmpTimer();
-      } catch(err) { 
-        employeeEndCall(); 
-      }
+      } catch(err) { employeeEndCall(); }
     };
 
     window.rejectIncomingCall = async function() {
       stopRinging();
       if (pendingOffer) {
-        const roomKey = pendingOffer.roomKey;
-        await update(ref(db, `single_chat_room/${roomKey}/call`), {
-          status: 'rejected'
-        });
+        await update(ref(db, `single_chat_room/${pendingOffer.roomKey}/call`), { status: 'rejected' });
       }
       document.getElementById("incomingCallModal").style.display = "none";
       pendingOffer = null;
@@ -702,10 +636,7 @@
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         createPeerConnection(activeClientKey);
-        
-        localStream.getTracks().forEach(track => {
-            peerConnection.addTrack(track, localStream);
-        });
+        localStream.getTracks().forEach(track => { peerConnection.addTrack(track, localStream); });
 
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
@@ -732,7 +663,6 @@
     function createPeerConnection(roomKey) {
       if (peerConnection) return;
       peerConnection = new RTCPeerConnection(servers);
-      
       peerConnection.ontrack = (event) => { 
         stopRinging();
         const remoteAudio = document.getElementById("empRemoteAudio");
@@ -743,9 +673,8 @@
             inboundStream.addTrack(event.track);
             remoteAudio.srcObject = inboundStream;
         }
-        remoteAudio.play().catch(e => console.log("Audio play error:", e));
+        remoteAudio.play().catch(e => {});
       };
-
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) push(ref(db, `single_chat_room/${roomKey}/call/candidates`), event.candidate.toJSON());
       };
