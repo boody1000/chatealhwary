@@ -1,23 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <!-- Meta Pixel Code -->
-    <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '2500843507000877');
-    fbq('track', 'PageView');
-    </script>
-    <noscript><img height="1" width="1" style="display:none"
-    src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
-    /></noscript>
-    <!-- End Meta Pixel Code -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>محادثة ومكالمة مباشرة الهواري للتعارف والزواج</title>
@@ -61,13 +44,19 @@
         </div>
     </header>
 
-    <!-- صندوق عرض الرسائل (مثل الماسنجر) -->
+    <!-- صندوق عرض الرسائل -->
     <div id="chatMessages" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 flex flex-col max-w-4xl w-full mx-auto z-10">
         <div class="text-center text-slate-400 my-auto text-sm bg-slate-950/40 p-6 rounded-2xl border border-slate-800/60 backdrop-blur-sm">
             <img src="22.jpg" alt="Logo" class="w-16 h-16 mx-auto rounded-full object-cover mb-3 border border-amber-500/40 shadow-lg">
             <p class="font-bold text-amber-400 mb-1">أهلاً بك في الهواري للأصالة والعراقة</p>
             <p class="text-xs text-slate-400">محادثتك محفوظة ومؤمنة بالكامل كالمراسلة الفورية</p>
         </div>
+    </div>
+
+    <!-- إشعار الرسائل الجديدة العائم -->
+    <div id="msgNotificationBanner" class="fixed top-20 left-1/2 -translate-x-1/2 bg-amber-600 text-white px-4 py-2 rounded-xl shadow-xl z-50 text-xs font-bold transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2 backdrop-blur-md">
+        <i class="fa-solid fa-bell"></i>
+        <span>لديك رسالة جديدة من خدمة العملاء</span>
     </div>
 
     <!-- شريط الإرسال -->
@@ -81,7 +70,7 @@
         </form>
     </footer>
 
-    <!-- نافذة إدخال الاسم (تظهر فقط أول مرة زي تسجيل الدخول للماسنجر) -->
+    <!-- نافذة إدخال الاسم -->
     <div id="nameModal" class="fixed inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm hidden">
         <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center">
             <img src="22.jpg" alt="Logo" class="w-20 h-20 rounded-full object-cover mb-3 border-2 border-amber-500/60 shadow-xl">
@@ -112,7 +101,6 @@
                 <i id="muteIcon" class="fa-solid fa-microphone"></i>
             </button>
             
-            <!-- زر الرد على المكالمة الواردة (أخضر) -->
             <button id="answerCallBtn" onclick="answerIncomingCall()" class="w-16 h-16 bg-emerald-600 hover:bg-emerald-700 rounded-full flex items-center justify-center text-xl shadow-lg transition hidden animate-bounce" title="الرد على المكالمة">
                 <i class="fa-solid fa-phone"></i>
             </button>
@@ -125,8 +113,10 @@
             </button>
         </div>
     </div>
-    <audio id="remoteAudio" autoplay></audio>
+    
+    <audio id="remoteAudio" autoplay playsinline></audio>
     <audio id="ringAudio" src="ran.mp3" preload="auto" loop></audio>
+    <audio id="msgSound" src="mes.mp3" preload="auto"></audio>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -155,19 +145,29 @@
         let secondsElapsed = 0;
         let peerConnection = null;
         let localStream = null;
-        let incomingOfferData = null; // تخزين بيانات العرض الواردة لحين الضغط على زر الرد
+        let incomingOfferData = null; 
         const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
         const messagesContainer = document.getElementById("chatMessages");
         const ringAudio = document.getElementById("ringAudio");
+        const msgSound = document.getElementById("msgSound");
 
-        document.addEventListener('click', () => {
-            if (ringAudio.paused) {
-                ringAudio.play().then(() => {
-                    ringAudio.pause();
-                    ringAudio.currentTime = 0;
-                }).catch(e => {});
-            }
-        }, { once: true });
+        let isInitialLoad = true;
+        let lastMessageCount = 0;
+
+        // دالة إلغاء قفل الصوت عبر التفاعل مع الصفحة
+        function unlockAudioContext() {
+            [ringAudio, msgSound].forEach(audio => {
+                if(audio) {
+                    audio.play().then(() => {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    }).catch(e => {});
+                }
+            });
+        }
+
+        document.addEventListener('click', unlockAudioContext, { once: true });
+        document.addEventListener('keydown', unlockAudioContext, { once: true });
 
         window.addEventListener('DOMContentLoaded', () => {
             if (currentClientKey && originalDisplayName) {
@@ -185,6 +185,8 @@
             const inputVal = document.getElementById("userNameInput").value.trim();
             if (!inputVal) { alert("يرجى كتابة اسمك للمتابعة"); return; }
             
+            unlockAudioContext();
+
             originalDisplayName = inputVal;
             const uniqueId = Math.floor(Math.random() * 900000) + 100000;
             currentClientKey = inputVal.replace(/\s+/g, '_') + '_' + uniqueId;
@@ -203,19 +205,56 @@
             const roomRef = ref(db, 'single_chat_room/' + clientKey);
             onValue(roomRef, (snapshot) => {
                 messagesContainer.innerHTML = '';
+                let messagesArray = [];
                 if (snapshot.exists()) {
                     snapshot.forEach((childSnapshot) => {
                         if(childSnapshot.key === 'call') return;
                         const msg = childSnapshot.val();
                         if(!msg || !msg.text) return;
+                        messagesArray.push(msg);
+                    });
+
+                    if (!isInitialLoad && messagesArray.length > lastMessageCount) {
+                        const latestMsg = messagesArray[messagesArray.length - 1];
+                        const isClientMsg = (latestMsg.sender === displayName || latestMsg.senderRole === 'client');
+                        
+                        if (!isClientMsg) {
+                            playMessageAlert();
+                        }
+                    }
+
+                    messagesArray.forEach((msg) => {
                         const isClientMsg = (msg.sender === displayName || msg.senderRole === 'client');
                         appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClientMsg);
                     });
+
+                    lastMessageCount = messagesArray.length;
+                    isInitialLoad = false;
                 } else {
                     messagesContainer.innerHTML = '<div class="text-slate-400 text-center my-auto text-sm bg-slate-950/40 p-4 rounded-xl border border-slate-800"><p>أهلاً بك ' + escapeHtml(displayName) + '، تم فتح شات خاص بك. يمكنك إرسال رسالتك الآن وسيرد عليك ممثل الدعم.</p></div>';
+                    isInitialLoad = false;
                 }
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             });
+        }
+
+        // تشغيل صوت مسنجر mes.mp3 من العنصر الثابت في الصفحة
+        function playMessageAlert() {
+            if (msgSound) {
+                msgSound.currentTime = 0;
+                msgSound.play().catch(e => console.log("Messenger sound play blocked:", e));
+            }
+            showNotificationBanner();
+        }
+
+        function showNotificationBanner() {
+            const banner = document.getElementById("msgNotificationBanner");
+            banner.classList.remove("opacity-0", "pointer-events-none");
+            banner.classList.add("opacity-100");
+            setTimeout(() => {
+                banner.classList.remove("opacity-100");
+                banner.classList.add("opacity-0", "pointer-events-none");
+            }, 3500);
         }
 
         window.sendMessage = async function(event) {
@@ -253,14 +292,21 @@
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 createPeerConnection();
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
                 await set(ref(db, `single_chat_room/${currentClientKey}/call`), {
                     offer: { type: offer.type, sdp: offer.sdp },
                     caller: 'client'
                 });
-            } catch (err) { alert("يرجى السماح بالميكروفون"); closeCallUI(); }
+            } catch (err) { 
+                alert("يرجى السماح بالميكروفون والتاكد من توصيله"); 
+                closeCallUI(); 
+            }
         }
 
         function listenForIncomingCalls(clientKey) {
@@ -272,17 +318,17 @@
                     return; 
                 }
                 
-                // إذا اتصل الموظف بالعميل
                 if (data.caller === 'employee' && !data.answer) {
                     incomingOfferData = data.offer;
-                    showCallScreen("مكالمة واردة من شركة الهواري...", true); // إظهار زر الرد
-                    if (ringAudio.paused) {
-                        ringAudio.play().catch(e => {});
+                    showCallScreen("مكالمة واردة من شركة الهواري...", true);
+                    if (ringAudio) {
+                        ringAudio.currentTime = 0;
+                        ringAudio.play().catch(e => console.log("Ring audio error:", e));
                     }
                 }
 
                 if (data.answer && peerConnection && !peerConnection.currentRemoteDescription) {
-                    if (!ringAudio.paused) {
+                    if (ringAudio && !ringAudio.paused) {
                         ringAudio.pause();
                         ringAudio.currentTime = 0;
                     }
@@ -299,9 +345,8 @@
             });
         }
 
-        // دالة يتم تنفيذها عند الضغط على زر الرد الأخضر
         window.answerIncomingCall = async function() {
-            if (!ringAudio.paused) {
+            if (ringAudio && !ringAudio.paused) {
                 ringAudio.pause();
                 ringAudio.currentTime = 0;
             }
@@ -313,9 +358,13 @@
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 createPeerConnection();
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+                
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
 
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOfferData));
+                
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
 
@@ -333,14 +382,25 @@
         }
 
         function createPeerConnection() {
+            if (peerConnection) return;
             peerConnection = new RTCPeerConnection(servers);
+            
             peerConnection.ontrack = (event) => { 
-                if (!ringAudio.paused) {
+                if (ringAudio && !ringAudio.paused) {
                     ringAudio.pause();
                     ringAudio.currentTime = 0;
                 }
-                document.getElementById("remoteAudio").srcObject = event.streams[0]; 
+                const remoteAudio = document.getElementById("remoteAudio");
+                if (event.streams && event.streams[0]) {
+                    remoteAudio.srcObject = event.streams[0];
+                } else {
+                    let inboundStream = new MediaStream();
+                    inboundStream.addTrack(event.track);
+                    remoteAudio.srcObject = inboundStream;
+                }
+                remoteAudio.play().catch(e => console.log("Remote audio play error:", e));
             };
+
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) push(ref(db, `single_chat_room/${currentClientKey}/call/candidates`), event.candidate.toJSON());
             };
@@ -376,7 +436,7 @@
         }
 
         window.endCall = function() {
-            if (!ringAudio.paused) {
+            if (ringAudio && !ringAudio.paused) {
                 ringAudio.pause();
                 ringAudio.currentTime = 0;
             }
@@ -385,7 +445,7 @@
         }
 
         function closeCallUI() {
-            if (!ringAudio.paused) {
+            if (ringAudio && !ringAudio.paused) {
                 ringAudio.pause();
                 ringAudio.currentTime = 0;
             }
@@ -398,8 +458,10 @@
 
         window.toggleMute = function() {
             isMuted = !isMuted;
-            if (localStream) localStream.getAudioTracks()[0].enabled = !isMuted;
-            const muteBtn = document.getElementById("muteBtn");
+            if (localStream && localStream.getAudioTracks()[0]) {
+                localStream.getAudioTracks()[0].enabled = !isMuted;
+            }
+            const muteBtn = theElement = document.getElementById("muteBtn");
             const muteIcon = document.getElementById("muteIcon");
             if (isMuted) {
                 muteBtn.className = "w-14 h-14 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-lg shadow-lg transition";
