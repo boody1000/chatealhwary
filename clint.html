@@ -487,7 +487,8 @@
                 ringAudio.currentTime = 0;
             }
             const callScreen = document.getElementById("callScreen");
-            callScreen.classList.remove("flex"); callScreen.classList.add("hidden");
+            callScreen.classList.remove("flex"); 
+            callScreen.classList.add("hidden");
             if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
             if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
             if (peerConnection) { peerConnection.close(); peerConnection = null; }
