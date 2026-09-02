@@ -154,7 +154,6 @@
         let isInitialLoad = true;
         let lastMessageCount = 0;
 
-        // طلب إذن الإشعارات من المتصفح لتعمل حتى بعد غلق المحادثة
         function requestNotificationPermission() {
             if ("Notification" in window && Notification.permission !== "granted") {
                 Notification.requestPermission().then(permission => {
@@ -163,7 +162,6 @@
             }
         }
 
-        // دالة إلغاء قفل الصوت عبر التفاعل
         function unlockAudioContext() {
             [ringAudio, msgSound].forEach(audio => {
                 if(audio) {
@@ -253,21 +251,17 @@
             });
         }
 
-        // تشغيل صوت الرسالة وإظهار إشعار النظام العائم على الهاتف
         function playMessageAlert(msgText, senderName) {
             if (msgSound) {
                 msgSound.currentTime = 0;
                 msgSound.play().catch(e => {
-                    console.log("Audio play blocked, forcing unlock:", e);
                     unlockAudioContext();
                     msgSound.play().catch(err => {});
                 });
             }
             
-            // إظهار إشعار داخل التطبيق
             showNotificationBanner();
 
-            // إظهار إشعار خارجي على شاشة الهاتف (حتى لو كانت المحادثة في الخلفية أو مغلقة)
             if ("Notification" in window && Notification.permission === "granted") {
                 try {
                     const notification = new Notification(`رسالة جديدة من ${senderName}`, {
@@ -279,9 +273,7 @@
                         window.focus();
                         notification.close();
                     };
-                } catch (err) {
-                    console.log("System notification error:", err);
-                }
+                } catch (err) {}
             }
         }
 
@@ -408,7 +400,7 @@
                     peerConnection.addTrack(track, localStream);
                 });
 
-                await peerConnection.setRemoteDescription(new RTCIceCandidate(incomingOfferData) || new RTCSessionDescription(incomingOfferData));
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOfferData));
                 
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
@@ -490,7 +482,7 @@
         }
 
         function closeCallUI() {
-            if, (ringAudio && !ringAudio.paused) {
+            if (ringAudio && !ringAudio.paused) {
                 ringAudio.pause();
                 ringAudio.currentTime = 0;
             }
