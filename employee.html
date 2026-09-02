@@ -356,8 +356,8 @@
             if(!msg || !msg.text) return;
             
             hasMessages = true;
-            // تحديد ما إذا كانت الرسالة مرسلة من العميل أو الموظف بدقة
-            const isClientMsg = (msg.senderRole === 'client' || msg.sender === displayName || msg.senderKey === roomKey);
+            // التحقق الدقيق من نوع المرسل بناءً على الـ senderRole أو مقارنة اسم المرسل
+            const isClientMsg = (msg.senderRole === 'client') || (!msg.senderRole && msg.sender !== currentEmpName);
             appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClientMsg);
           });
         }
