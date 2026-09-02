@@ -61,7 +61,7 @@
         </div>
     </header>
 
-    <!-- صندوق عرض الرسائل (مثل الماسنجر) -->
+    <!-- صندوق عرض الرسائل -->
     <div id="chatMessages" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 flex flex-col max-w-4xl w-full mx-auto z-10">
         <div class="text-center text-slate-400 my-auto text-sm bg-slate-950/40 p-6 rounded-2xl border border-slate-800/60 backdrop-blur-sm">
             <img src="22.jpg" alt="Logo" class="w-16 h-16 mx-auto rounded-full object-cover mb-3 border border-amber-500/40 shadow-lg">
@@ -81,72 +81,7 @@
         </form>
     </footer>
 
-    <!-- نافذة نموذج فيسبوك الفوري (Instant Form Modal) المدمجة داخل الموقع -->
-    <div id="instantFormModal" class="fixed inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm hidden">
-        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-6 shadow-2xl flex flex-col relative max-h-[90vh] overflow-y-auto">
-            <!-- زر إغلاق النموذج -->
-            <button onclick="closeInstantForm()" class="absolute top-4 left-4 text-slate-400 hover:text-white text-lg">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-
-            <div class="text-center mb-4">
-                <img src="22.jpg" alt="Logo" class="w-16 h-16 rounded-full object-cover mx-auto mb-2 border-2 border-amber-500/60 shadow-lg">
-                <h3 class="text-base font-bold text-slate-100">الهواري للتعارف والزواج</h3>
-                <p class="text-xs text-amber-400 mt-1">نموذج التسجيل الفوري (Instant Form)</p>
-            </div>
-
-            <!-- محتوى خطوات النموذج -->
-            <form id="fbInstantForm" onsubmit="submitInstantForm(event)" class="space-y-3">
-                <!-- الخطوة 1: المقدمة والترحيب -->
-                <div class="bg-slate-800/60 border border-slate-700/60 p-3 rounded-xl text-xs text-slate-300 mb-3">
-                    <p class="font-semibold text-amber-300 mb-1">احصل على استشارة وتواصل فوري</p>
-                    <p class="text-slate-400">املأ البيانات أدناه لتتمكن من إرسال طلبك مباشرة ومتابعة حالته عبر الشات والمكالمات.</p>
-                </div>
-
-                <!-- الأسئلة والحقول -->
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">الاسم بالكامل (مطلوب)</label>
-                    <input type="text" id="formFullName" required placeholder="أدخل اسمك هنا..." 
-                           class="w-full bg-slate-800 border border-slate-700 text-slate-100 px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-amber-500 transition">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">رقم الهاتف (مطلوب)</label>
-                    <input type="tel" id="formPhone" required placeholder="010xxxxxxxx" 
-                           class="w-full bg-slate-800 border border-slate-700 text-slate-100 px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-amber-500 transition">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-1">المدينة أو بلد الإقامة</label>
-                    <input type="text" id="formCity" placeholder="مثال: القاهرة، الجيزة..." 
-                           class="w-full bg-slate-800 border border-slate-700 text-slate-100 px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-amber-500 transition">
-                </div>
-
-                <!-- سياسة الخصوصية -->
-                <div class="text-[10px] text-slate-400 py-1">
-                    بإرسال هذا النموذج، أنت توافق على شروط الخدمة وسياسة الخصوصية الخاصة بشركة الهواري للتعارف والزواج. بياناتك محمية وآمنة تماماً.
-                </div>
-
-                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl text-xs font-semibold transition shadow-md mt-2">
-                    إرسال النموذج (Submit)
-                </button>
-            </form>
-
-            <!-- شاشة النجاح (تظهر بعد الإرسال تماماً كنموذج فيسبوك) -->
-            <div id="formSuccessScreen" class="hidden flex-col items-center text-center py-8">
-                <div class="w-16 h-16 bg-emerald-600/20 border border-emerald-500 rounded-full flex items-center justify-center text-emerald-400 text-2xl mb-3">
-                    <i class="fa-solid fa-check"></i>
-                </div>
-                <h3 class="text-base font-bold text-slate-100 mb-1">تم إرسال بياناتك بنجاح!</h3>
-                <p class="text-xs text-slate-400 mb-6">شكراً لانضمامك إلينا. تم تفعيل حسابك وربط طلبك بنجاح وسيتواصل معك ممثل الخدمة.</p>
-                <button onclick="closeInstantForm()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 rounded-xl text-xs font-semibold transition">
-                    إغلاق العودة للمحادثة
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- نافذة إدخال الاسم (تظهر فقط أول مرة زي تسجيل الدخول للماسنجر) -->
+    <!-- نافذة إدخال الاسم -->
     <div id="nameModal" class="fixed inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm hidden">
         <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center">
             <img src="22.jpg" alt="Logo" class="w-20 h-20 rounded-full object-cover mb-3 border-2 border-amber-500/60 shadow-xl">
@@ -177,7 +112,6 @@
                 <i id="muteIcon" class="fa-solid fa-microphone"></i>
             </button>
             
-            <!-- زر الرد على المكالمة الواردة (أخضر) -->
             <button id="answerCallBtn" onclick="answerIncomingCall()" class="w-16 h-16 bg-emerald-600 hover:bg-emerald-700 rounded-full flex items-center justify-center text-xl shadow-lg transition hidden animate-bounce" title="الرد على المكالمة">
                 <i class="fa-solid fa-phone"></i>
             </button>
@@ -190,7 +124,7 @@
             </button>
         </div>
     </div>
-    <audio id="remoteAudio" autoplay></audio>
+    <audio id="remoteAudio" autoplay playsinline></audio>
     <audio id="ringAudio" src="ran.mp3" preload="auto" loop></audio>
 
     <script type="module">
@@ -220,7 +154,7 @@
         let secondsElapsed = 0;
         let peerConnection = null;
         let localStream = null;
-        let incomingOfferData = null; 
+        let incomingOfferData = null;
         const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
         const messagesContainer = document.getElementById("chatMessages");
         const ringAudio = document.getElementById("ringAudio");
@@ -244,14 +178,6 @@
                 document.getElementById("nameModal").classList.remove("hidden");
                 document.getElementById("nameModal").classList.add("flex");
             }
-
-            // إظهار نموذج الفيسبوك الفوري تلقائياً لأول زائر لم يملأه بعد
-            if (!localStorage.getItem('form_submitted_hawary')) {
-                setTimeout(() => {
-                    document.getElementById("instantFormModal").classList.remove("hidden");
-                    document.getElementById("instantFormModal").classList.add("flex");
-                }, 1000);
-            }
         });
 
         window.saveUserName = function() {
@@ -270,57 +196,6 @@
 
             initChatSession(currentClientKey, originalDisplayName);
             listenForIncomingCalls(currentClientKey);
-        };
-
-        // دالة إرسال نموذج فيسبوك الفوري مع تفعيل البيكسل والفايربيز
-        window.submitInstantForm = async function(event) {
-            event.preventDefault();
-            const fullName = document.getElementById("formFullName").value.trim();
-            const phone = document.getElementById("formPhone").value.trim();
-            const city = document.getElementById("formCity").value.trim();
-
-            if (!fullName || !phone) return;
-
-            // 1. تفعيل حدث البيكسل الأساسي للعملاء المحتملين (Lead)
-            if (typeof fbq === 'function') {
-                fbq('track', 'Lead');
-            }
-
-            // 2. إذا كان للعميل مفتاح مسجل، نقوم بإرسال البيانات للفايربيز أيضاً
-            if (currentClientKey) {
-                const roomRef = ref(db, 'single_chat_room/' + currentClientKey);
-                try {
-                    await push(roomRef, { 
-                        text: `[بيانات النموذج الفوري Instant Form] - الاسم: ${fullName} - الهاتف: ${phone} - المدينة: ${city}`, 
-                        sender: originalDisplayName || fullName, 
-                        senderRole: "client", 
-                        timestamp: Date.now() 
-                    });
-                } catch(e) { console.error(e); }
-            }
-
-            // حفظ علامة أن المستخدم قام بملء النموذج
-            localStorage.setItem('form_submitted_hawary', 'true');
-            if(!originalDisplayName) {
-                originalDisplayName = fullName;
-                const uniqueId = Math.floor(Math.random() * 900000) + 100000;
-                currentClientKey = fullName.replace(/\s+/g, '_') + '_' + uniqueId;
-                localStorage.setItem('messenger_hawary_key', currentClientKey);
-                localStorage.setItem('messenger_hawary_name', originalDisplayName);
-                document.getElementById("clientDisplayHeader").innerText = "العميل: " + originalDisplayName;
-                initChatSession(currentClientKey, originalDisplayName);
-                listenForIncomingCalls(currentClientKey);
-            }
-
-            // إظهار شاشة النجاح داخل نافذة النموذج مثل فيسبوك تماماً
-            document.getElementById("fbInstantForm").classList.add("hidden");
-            document.getElementById("formSuccessScreen").classList.remove("hidden");
-            document.getElementById("formSuccessScreen").classList.add("flex");
-        };
-
-        window.closeInstantForm = function() {
-            document.getElementById("instantFormModal").classList.remove("flex");
-            document.getElementById("instantFormModal").classList.add("hidden");
         };
 
         function initChatSession(clientKey, displayName) {
@@ -461,7 +336,9 @@
                     ringAudio.pause();
                     ringAudio.currentTime = 0;
                 }
-                document.getElementById("remoteAudio").srcObject = event.streams[0]; 
+                const remoteAudio = document.getElementById("remoteAudio");
+                remoteAudio.srcObject = event.streams[0]; 
+                remoteAudio.play().catch(e => console.log("Audio play error:", e));
             };
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) push(ref(db, `single_chat_room/${currentClientKey}/call/candidates`), event.candidate.toJSON());
