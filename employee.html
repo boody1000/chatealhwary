@@ -124,7 +124,7 @@
     </div>
   </div>
 
-  <audio id="empRemoteAudio" autoplay></audio>
+  <audio id="empRemoteAudio" autoplay playsinline></audio>
   <audio id="empRingAudio" src="ran.mp3" preload="auto" loop></audio>
   <audio id="msgNotificationAudio" src="rnn.mp3" preload="auto"></audio>
 
@@ -156,7 +156,6 @@
     let empTimerInterval = null;
     let empSeconds = 0;
     let pendingOffer = null;
-    let currentChatUnsubscribe = null;
 
     const empRingAudio = document.getElementById("empRingAudio");
     const msgNotificationAudio = document.getElementById("msgNotificationAudio");
@@ -310,7 +309,6 @@
       }
     }
 
-    // الانتقال للشات مع حجز المحادثة لمنع تداخل الموظفين
     window.switchChat = function(roomKey, displayName) {
       if (activeClientKey && activeClientKey !== roomKey) {
         set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), null);
@@ -356,7 +354,6 @@
             if(!msg || !msg.text) return;
             
             hasMessages = true;
-            // تحديد ما إذا كانت الرسالة مرسلة من العميل أو الموظف بدقة
             const isClientMsg = (msg.senderRole === 'client' || msg.sender === displayName || msg.senderKey === roomKey);
             appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClientMsg);
           });
@@ -480,6 +477,7 @@
         stopRinging();
         const remoteAudio = document.getElementById("empRemoteAudio");
         remoteAudio.srcObject = event.streams[0]; 
+        remoteAudio.play().catch(e => console.log("Audio play error:", e));
       };
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) push(ref(db, `single_chat_room/${roomKey}/call/candidates`), event.candidate.toJSON());
