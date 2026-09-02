@@ -188,6 +188,7 @@
                 initChatSession(currentClientKey, originalDisplayName);
                 listenForIncomingCalls(currentClientKey);
             } else {
+                document.getElementById("nameModal").classList.add("hidden"); // اصلاح منطقي لعرض نافذة الاسم عند عدم وجوده
                 document.getElementById("nameModal").classList.remove("hidden");
                 document.getElementById("nameModal").classList.add("flex");
             }
@@ -252,30 +253,28 @@
         }
 
         function playMessageAlert(msgText, senderName) {
-            // تشغيل صوت الرسائل بغض النظر عن حالة المحادثة
+            // محاولة تشغيل الصوت العادي إذا كانت الصفحة نشطة
             if (msgSound) {
                 msgSound.currentTime = 0;
-                msgSound.play().catch(e => {
-                    unlockAudioContext();
-                    msgSound.play().catch(err => {});
-                });
+                msgSound.play().catch(e => {});
             }
             
             showNotificationBanner();
 
-            // إرسال الإشعار الخارجي ليعمل حتى وإن كانت المحادثة بالخلفية
+            // إرسال إشعار النظام (يحبر المتصفح والهاتف على إظهار الإشعار وتشغيل تنبيه النظام حتى لو كان المستخدم بالخلفية)
             if ("Notification" in window && Notification.permission === "granted") {
                 try {
                     const notification = new Notification(`رسالة جديدة من ${senderName}`, {
                         body: msgText,
                         icon: '22.jpg',
-                        tag: 'hawary-msg-notif'
+                        tag: 'hawary-msg-notif',
+                        requireInteraction: false
                     });
-                    
-                    // تشغيل الصوت احتياطياً مع كائن الإشعار لضمان سماعه في الهواتف المغلقة تماماً
+
+                    // تشغيل الصوت كملف ثانِ مكرر لضمان التفاعل مع الحدث الخارجي للإشعار
                     if (msgSound) {
-                        msgSound.currentTime = 0;
-                        msgSound.play().catch(e => {});
+                        let backgroundAudio = new Audio('mes.mp3');
+                        backgroundAudio.play().catch(err => {});
                     }
 
                     notification.onclick = function() {
@@ -500,7 +499,7 @@
             callScreen.classList.add("hidden");
             if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
             if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-            if (peerConnection) { peerConnection.close(); peerConnection = null; }
+            if, (peerConnection) { peerConnection.close(); peerConnection = null; }
         }
 
         window.toggleMute = function() {
