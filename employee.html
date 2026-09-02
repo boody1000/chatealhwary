@@ -18,9 +18,22 @@
       background-position: center;
       background-repeat: no-repeat;
     }
+    
+    /* حركة ظهور الإشعار الداخلي الاحتياطي لجميع الإصدارات */
+    @keyframes slideInDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-slide-down {
+      animation: slideInDown 0.3s ease-out forwards;
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans h-[100dvh] overflow-hidden bg-custom-watermark">
+  
+  <!-- حاوية الإشعارات الداخلية الداعمة لجميع الإصدارات (تظهر أعلى الشاشة) -->
+  <div id="universalToastContainer" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-md flex flex-col gap-2 pointer-events-none"></div>
+
   <div class="flex h-full w-full backdrop-blur-sm relative overflow-hidden">
     
     <!-- الصفحة الأولى: قائمة العملاء -->
@@ -76,7 +89,6 @@
             <i class="fa-solid fa-phone text-xs sm:text-sm"></i>
           </button>
           
-          <!-- زر حذف الشات بالكامل -->
           <button onclick="deleteCurrentChat()" class="w-9 h-9 sm:w-10 sm:h-10 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-full flex items-center justify-center transition border border-red-500/30" title="حذف المحادثة بالكامل">
             <i class="fa-solid fa-trash-can text-xs sm:text-sm"></i>
           </button>
@@ -163,16 +175,13 @@
     const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
     const TELEGRAM_CHAT_ID = "7594072203";
 
-    // تسجيل Service Worker للإشعارات المتقدمة (sw_2.js)
+    // تسجيل Service Worker للإشعارات الخارجية المتقدمة مع دعم كافة الإصدارات الحديثة
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw_2.js')
-          .then(reg => {
-            console.log('Service Worker 2 registered successfully:', reg.scope);
-          })
+          .then(reg => console.log('Service Worker 2 registered successfully:', reg.scope))
           .catch(err => console.error('Service Worker registration failed:', err));
 
-        // الاستماع لأوامر التركيز القادمة من الإشعار عند الضغط عليه
         navigator.serviceWorker.addEventListener('message', (event) => {
           if (event.data && event.data.type === 'FOCUS_CHAT') {
             window.focus();
@@ -186,18 +195,22 @@
       if ('Notification' in window) {
         Notification.requestPermission().then(permission => {
           if (permission === 'granted') {
-            alert('تم تفعيل الإشعارات بنجاح!');
-            showDesktopNotification("شركة الهواري للزواج", "تم تفعيل الإشعارات بنجاح. ستصلك تنبيهات الرسائل مثل المسنجر تماماً.");
+            alert('تم تفعيل الإشعارات الخارجية بنجاح!');
+            showUniversalNotification("شركة الهواري للزواج", "تم تفعيل الإشعارات بنجاح لجميع الإصدارات.");
           } else {
-            alert('تم رفض الإشعارات. يرجى تفعيلها من إعدادات المتصفح.');
+            alert('تم رفض الإشعارات الخارجية، ولكن ستستمر الإشعارات الداخلية في العمل بكفاءة.');
           }
         });
+      } else {
+        alert('متصفحك لا يدعم الإشعارات العائمة، لكن النظام الداخلي مفعل بالكامل.');
       }
     };
 
-    // إرسال إشعار عبر Service Worker
-    function showDesktopNotification(title, body) {
-      if (Notification.permission === 'granted') {
+    // الدالة الشاملة لإظهار الإشعارات في جميع الإصدارات (خارجية أو داخلية كبديل فوري)
+    function showUniversalNotification(title, body, roomKey = null) {
+      // 1. محاولة الإرسال عبر الـ Service Worker للإشعارات الخارجية (إذا كانت مدعومة ومفعلة)
+      let sentViaSW = false;
+      if ('Notification' in window && Notification.permission === 'granted') {
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
             type: 'SHOW_NOTIFICATION',
@@ -205,11 +218,63 @@
             body: body,
             url: window.location.href
           });
+          sentViaSW = true;
         } else {
-          new Notification(title, { body: body, icon: './22.jpg', vibrate: [300, 150, 300, 150, 300] });
+          try {
+            new Notification(title, { body: body, icon: './22.jpg', vibrate: [300, 150, 300, 150, 300] });
+            sentViaSW = true;
+          } catch(e) {}
         }
       }
+
+      // 2. النظام الاحتياطي الشامل (Toast داخل الصفحة) لضمان ظهور التنبيه في أي إصدار متصفح أو هاتف
+      showInAppToast(title, body, roomKey);
     }
+
+    // عرض شريط تنبيه عائم داخل الصفحة (يعمل على جميع الأجهزة والإصدارات القديمة والحديثة)
+    function showInAppToast(title, body, roomKey) {
+      const container = document.getElementById('universalToastContainer');
+      if (!container) return;
+
+      const toastId = 'toast_' + Date.now();
+      const toastHTML = `
+        <div id="${toastId}" class="pointer-events-auto bg-slate-950/95 border border-amber-500/50 text-slate-100 p-3.5 rounded-2xl shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 animate-slide-down">
+          <div class="flex items-center gap-3 min-w-0">
+            <img src="22.jpg" class="w-10 h-10 rounded-full object-cover border border-amber-500 shrink-0">
+            <div class="min-w-0">
+              <h4 class="text-xs font-bold text-amber-400 truncate">${escapeHtml(title)}</h4>
+              <p class="text-[11px] text-slate-300 truncate">${escapeHtml(body)}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            ${roomKey ? `<button onclick="openChatFromToast('${roomKey}')" class="bg-amber-600 hover:bg-amber-700 text-white text-[10px] px-2.5 py-1.5 rounded-lg font-semibold transition">فتح</button>` : ''}
+            <button onclick="document.getElementById('${toastId}').remove()" class="text-slate-400 hover:text-white px-1 text-xs">✕</button>
+          </div>
+        </div>
+      `;
+
+      container.insertAdjacentHTML('beforeend', toastHTML);
+
+      // اهتزاز الهاتف إن وجد ودعم المتصفح له
+      if ('vibrate' in navigator) {
+        try { navigator.vibrate([200, 100, 200]); } catch(e) {}
+      }
+
+      // إزالة الإشعار تلقائياً بعد 6 ثوانٍ
+      setTimeout(() => {
+        const el = document.getElementById(toastId);
+        if (el) el.remove();
+      }, 6000);
+    }
+
+    window.openChatFromToast = function(roomKey) {
+      const room = allRoomsCache.find(r => r.roomKey === roomKey);
+      if (room) {
+        switchChat(room.roomKey, room.originalName);
+      }
+      const container = document.getElementById('universalToastContainer');
+      if (container) container.innerHTML = '';
+    };
 
     function sendTelegramNotification(text) {
       const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -329,8 +394,8 @@
                   msgNotificationAudio.play().catch(err => {});
                 }
 
-                // تفعيل إشعار المسنجر الخارجي العائم
-                showDesktopNotification(`رسالة جديدة من: ${originalName}`, lastMessageText);
+                // إطلاق الإشعار الشامل الذي يعمل على كافة الإصدارات والهواتف
+                showUniversalNotification(`رسالة من: ${originalName}`, lastMessageText, roomKey);
                 sendTelegramNotification(`📩 رسالة جديدة من العميل: *${originalName}*\n💬 النص: ${lastMessageText}`);
               }
             }
@@ -438,7 +503,7 @@
 
         if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
           if (!pendingOffer) {
-            showDesktopNotification("مكالمة صوتية واردة!", `العميل: ${displayName} يتصل بك...`);
+            showUniversalNotification("مكالمة صوتية واردة!", `العميل: ${displayName} يتصل بك...`, roomKey);
             sendTelegramNotification(`📞 مكالمة صوتية واردة من العميل: *${displayName}*`);
           }
 
