@@ -47,10 +47,7 @@
         </div>
         
         <div class="flex items-center gap-2">
-          <button onclick="requestNotificationPermission()" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs px-2.5 py-1.5 rounded-lg border border-amber-500/30 transition flex items-center gap-1.5" title="تفعيل الإشعارات">
-            <i class="fa-solid fa-bell text-[11px]"></i> <span class="hidden sm:inline">الإشعارات</span>
-          </button>
-          <div class="text-[11px] sm:text-xs text-amber-400 font-semibold bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 truncate max-w-[100px] sm:max-w-xs" id="loggedInUsername">موظف الدعم</div>
+          <div class="text-[11px] sm:text-xs text-amber-400 font-semibold bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 truncate max-w-[120px] sm:max-w-xs" id="loggedInUsername">موظف الدعم</div>
         </div>
       </div>
       
@@ -178,39 +175,40 @@
       });
     }
 
-    window.requestNotificationPermission = function() {
-      if ('Notification' in window) {
+    // تفعيل إذن الإشعارات وتشغيل الصوت تلقائياً فور أول تفاعل للموظف مع الصفحة
+    function autoEnableNotificationsAndAudio() {
+      if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            alert('تم تفعيل الإشعارات بنجاح!');
-          } else {
-            alert('التنبيهات الداخلية الشاملة مفعلة تلقائياً لكافة الإصدارات.');
-          }
+          console.log("Notification permission status:", permission);
         });
-      } else {
-        alert('النظام الداخلي للشات والتنبيهات يعمل بكفاءة على هذا الإصدار.');
       }
-    };
 
-    // الدالة المحدثة والشاملة التي تضمن عمل التنبيهات وإظهار الإشعارات العائمة والنظامية
+      const empRingAudio = document.getElementById("empRingAudio");
+      const msgNotificationAudio = document.getElementById("msgNotificationAudio");
+      
+      if (empRingAudio) { 
+        empRingAudio.play().then(() => { empRingAudio.pause(); empRingAudio.currentTime = 0; }).catch(e => {}); 
+      }
+      if (msgNotificationAudio) { 
+        msgNotificationAudio.play().then(() => { msgNotificationAudio.pause(); msgNotificationAudio.currentTime = 0; }).catch(e => {}); 
+      }
+    }
+
+    // ربط التفعيل التلقائي بأول نقرة أو لمسة في الصفحة
+    document.addEventListener('click', autoEnableNotificationsAndAudio, { once: true });
+    document.addEventListener('touchstart', autoEnableNotificationsAndAudio, { once: true });
+
     function triggerUniversalAlert(title, body, roomKey = null) {
-      // 1. تشغيل الصوت القسري
       const msgAudio = document.getElementById("msgNotificationAudio");
       if (msgAudio) {
         msgAudio.currentTime = 0;
-        msgAudio.play().catch(e => {
-          console.log("Audio autoplay blocked by mobile policy");
-        });
+        msgAudio.play().catch(e => {});
       }
 
-      // 2. إطلاق الاهتزاز القسري
       if ('vibrate' in navigator) {
-        try {
-          navigator.vibrate([300, 150, 300, 150, 300]);
-        } catch(e) {}
+        try { navigator.vibrate([300, 150, 300, 150, 300]); } catch(e) {}
       }
 
-      // 3. إرسال أمر للـ Service Worker لإظهار الإشعار الخارجي النظامي
       if ('Notification' in window && Notification.permission === 'granted') {
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
@@ -222,7 +220,6 @@
         }
       }
 
-      // 4. إظهار شريط التنبيه العائم الداخلي (Toast)
       showInAppToast(title, body, roomKey);
     }
 
@@ -292,11 +289,6 @@
     const previousMessagesCounts = {};
     let isFirstLoad = true;
     let allRoomsCache = []; 
-
-    document.addEventListener('click', () => {
-        if (empRingAudio) { empRingAudio.play().then(() => { empRingAudio.pause(); empRingAudio.currentTime = 0; }).catch(e => {}); }
-        if (msgNotificationAudio) { msgNotificationAudio.play().then(() => { msgNotificationAudio.pause(); msgNotificationAudio.currentTime = 0; }).catch(e => {}); }
-    }, { once: true });
 
     window.backToSidebar = function() {
       document.getElementById('chatPage').classList.add('hidden');
