@@ -163,7 +163,7 @@
     const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
     const TELEGRAM_CHAT_ID = "7594072203";
 
-    // تسجيل Service Worker للإشعارات في الخلفية
+    // تسجيل Service Worker للإشعارات الخارجية في الخلفية
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -185,7 +185,7 @@
       }
     };
 
-    // إرسال تنبيه للـ Service Worker لإظهار الإشعار الميداني
+    // إرسال إشعار سطح المكتب الميداني عبر Service Worker
     function showDesktopNotification(title, body) {
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
@@ -230,7 +230,7 @@
     const unreadCounts = {};
     const previousMessagesCounts = {};
     let isFirstLoad = true;
-    let allRoomsCache = []; // ذاكرة مؤقتة لنتائج البحث الفوري
+    let allRoomsCache = []; 
 
     document.addEventListener('click', () => {
         if (empRingAudio.paused) {
@@ -317,7 +317,7 @@
                   msgNotificationAudio.play().catch(err => {});
                 }
 
-                // إظهار إشعار سطح المكتب الحقيقي عبر الـ Service Worker
+                // تفعيل الإشعار الخارجي المرئي عبر Service Worker حتى لو المحادثة مغلقة
                 showDesktopNotification(`رسالة جديدة من: ${originalName}`, lastMessageText);
 
                 sendTelegramNotification(`📩 رسالة جديدة من العميل: *${originalName}*\n💬 النص: ${lastMessageText}`);
@@ -336,7 +336,6 @@
             });
           });
 
-          // ترتيب المحادثات تنازلياً حسب الأحدث
           roomsArray.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
           allRoomsCache = roomsArray;
           renderRoomsList(allRoomsCache);
@@ -349,7 +348,6 @@
       });
     });
 
-    // دالة رسم وتحديث قائمة العملاء في واجهة المستخدم
     function renderRoomsList(roomsArray) {
       const chatsListEl = document.getElementById('chatsList');
       chatsListEl.innerHTML = '';
@@ -391,7 +389,6 @@
       });
     }
 
-    // تفعيل البحث الفوري بالاسم
     window.filterClients = function() {
       const query = document.getElementById('searchClient').value.trim().toLowerCase();
       if (!query) {
@@ -402,7 +399,6 @@
       renderRoomsList(filtered);
     };
 
-    // ميزة حذف الشات بالكامل من قاعدة البيانات
     window.deleteCurrentChat = async function() {
       if (!activeClientKey) return;
       if (confirm(`هل أنت متأكد من حذف محادثة العميل "${activeClientDisplayName}" بالكامل؟`)) {
