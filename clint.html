@@ -252,6 +252,7 @@
         }
 
         function playMessageAlert(msgText, senderName) {
+            // تشغيل صوت الرسائل بغض النظر عن حالة المحادثة
             if (msgSound) {
                 msgSound.currentTime = 0;
                 msgSound.play().catch(e => {
@@ -262,6 +263,7 @@
             
             showNotificationBanner();
 
+            // إرسال الإشعار الخارجي ليعمل حتى وإن كانت المحادثة بالخلفية
             if ("Notification" in window && Notification.permission === "granted") {
                 try {
                     const notification = new Notification(`رسالة جديدة من ${senderName}`, {
@@ -269,6 +271,13 @@
                         icon: '22.jpg',
                         tag: 'hawary-msg-notif'
                     });
+                    
+                    // تشغيل الصوت احتياطياً مع كائن الإشعار لضمان سماعه في الهواتف المغلقة تماماً
+                    if (msgSound) {
+                        msgSound.currentTime = 0;
+                        msgSound.play().catch(e => {});
+                    }
+
                     notification.onclick = function() {
                         window.focus();
                         notification.close();
