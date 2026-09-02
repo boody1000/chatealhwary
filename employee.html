@@ -312,7 +312,6 @@
 
     // الانتقال للشات مع حجز المحادثة لمنع تداخل الموظفين
     window.switchChat = function(roomKey, displayName) {
-      // إذا كان هناك شات قديم مفتوح، نرفع الحجز عنه ليتاح لغيره لو أردنا، أو نبقيه (يفضل تحديث حجز الجديد)
       if (activeClientKey && activeClientKey !== roomKey) {
         set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), null);
       }
@@ -328,22 +327,16 @@
       document.getElementById('callClientBtn').classList.remove('hidden');
       document.getElementById('chatLockStatus').innerText = "جاري قفل الشات وتعيينه لك...";
 
-      // قفل المحادثة باسم الموظف الحالي لمنع تداخل باقي الموظفين
       set(ref(db, `single_chat_room/${roomKey}/lockedBy`), currentEmpName);
 
       const container = document.getElementById('messageContainer');
       container.innerHTML = '<div class="text-slate-500 text-center my-auto">جاري تحميل الرسائل...</div>'; 
 
       const chatRef = ref(db, 'single_chat_room/' + roomKey);
-      
-      // إلغاء الاستماع القديم لتفادي تكرار الأحدث
-      if(currentChatUnsubscribe) {
-        // Firebase onValue returns an unsubscribe function in modern modular SDK
-      }
 
       onValue(chatRef, (snapshot) => {
         container.innerHTML = '';
-        let isLockedByOther = false;
+        let hasMessages = false;
         
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
@@ -352,7 +345,6 @@
             if(childSnapshot.key === 'lockedBy') {
               const locker = childSnapshot.val();
               if(locker && locker !== currentEmpName) {
-                isLockedByOther = true;
                 document.getElementById('chatLockStatus').innerText = `⚠️ الشات قيد الرد بواسطة الموظف: ${locker}`;
               } else if(locker === currentEmpName) {
                 document.getElementById('chatLockStatus').innerText = "✅ متصل وتحت إدارتك المباشرة";
@@ -361,11 +353,16 @@
             }
 
             const msg = childSnapshot.val();
-            if(!msg) return;
-            const isClientMsg = (msg.sender === displayName || msg.sender === roomKey || msg.senderRole === 'client');
+            if(!msg || !msg.text) return;
+            
+            hasMessages = true;
+            // تحديد ما إذا كانت الرسالة مرسلة من العميل أو الموظف بدقة
+            const isClientMsg = (msg.senderRole === 'client' || msg.sender === displayName || msg.senderKey === roomKey);
             appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClientMsg);
           });
-        } else {
+        }
+        
+        if (!hasMessages) {
           container.innerHTML = '<div class="text-slate-500 text-center my-auto">لا توجد رسائل سابقة مع هذا العميل</div>';
         }
         container.scrollTop = container.scrollHeight;
@@ -381,7 +378,6 @@
 
       const chatRef = ref(db, 'single_chat_room/' + activeClientKey);
       try {
-        // تأكيد القفل للموظف الحالي قبل إرسال الرسالة
         await update(chatRef, {
           lockedBy: currentEmpName
         });
@@ -570,7 +566,7 @@
 
     function appendMessageToUI(text, sender, timestamp, isClientMsg) {
       const container = document.getElementById('messageContainer');
-      const timeNow = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-Digit' }) : 'الآن';
+      const timeNow = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'الآن';
       let messageHTML = '';
       if (!isClientMsg) {
         messageHTML = `<div class="flex flex-col items-end w-full"><div class="bg-amber-600 text-white p-3 rounded-2xl rounded-tl-none max-w-md text-sm shadow-md"><span class="block text-[10px] text-amber-200 font-bold mb-1">${escapeHtml(sender)} (أنت)</span>${escapeHtml(text)}<span class="block text-[10px] text-amber-200 mt-1 text-left">${timeNow}</span></div></div>`;
