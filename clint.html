@@ -168,6 +168,7 @@
             }
         }
 
+        // تفعيل وفتح قفل الصوت للمتصفح مع أي نقرة أو تفاعل
         function unlockAudioContext() {
             [ringAudio, msgSound].forEach(audio => {
                 if(audio) {
@@ -258,18 +259,22 @@
             });
         }
 
+        // دالة تشغيل صوت الرسالة المحدثة لضمان العمل الفوري
         function playMessageAlert(msgText, senderName) {
             if (msgSound) {
                 msgSound.currentTime = 0;
-                msgSound.play().catch(e => {
-                    unlockAudioContext();
-                    msgSound.play().catch(err => {});
-                });
+                let playPromise = msgSound.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        // إذا تم حظره من المتصفح، نحاول إلغاء القفل وإعادة التشغيل
+                        unlockAudioContext();
+                        msgSound.play().catch(e => console.log("Audio play error:", e));
+                    });
+                }
             }
             
             showNotificationBanner();
 
-            // اسم الموقع الذي سيظهر في عنوان الإشعار
             const siteTitle = "شركة الهواري للزواج";
 
             if ("Notification" in window && Notification.permission === "granted") {
@@ -438,7 +443,7 @@
                     peerConnection.addTrack(track, localStream);
                 });
 
-                await peerConnection.setRemoteDescription(new RTCsessionDescription(incomingOfferData));
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOfferData));
                 
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
