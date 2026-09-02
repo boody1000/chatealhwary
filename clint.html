@@ -188,7 +188,7 @@
                 initChatSession(currentClientKey, originalDisplayName);
                 listenForIncomingCalls(currentClientKey);
             } else {
-                document.getElementById("nameModal").classList.add("hidden"); // اصلاح منطقي لعرض نافذة الاسم عند عدم وجوده
+                document.getElementById("nameModal").classList.add("hidden");
                 document.getElementById("nameModal").classList.remove("hidden");
                 document.getElementById("nameModal").classList.add("flex");
             }
@@ -253,7 +253,6 @@
         }
 
         function playMessageAlert(msgText, senderName) {
-            // محاولة تشغيل الصوت العادي إذا كانت الصفحة نشطة
             if (msgSound) {
                 msgSound.currentTime = 0;
                 msgSound.play().catch(e => {});
@@ -261,7 +260,6 @@
             
             showNotificationBanner();
 
-            // إرسال إشعار النظام (يحبر المتصفح والهاتف على إظهار الإشعار وتشغيل تنبيه النظام حتى لو كان المستخدم بالخلفية)
             if ("Notification" in window && Notification.permission === "granted") {
                 try {
                     const notification = new Notification(`رسالة جديدة من ${senderName}`, {
@@ -271,7 +269,6 @@
                         requireInteraction: false
                     });
 
-                    // تشغيل الصوت كملف ثانِ مكرر لضمان التفاعل مع الحدث الخارجي للإشعار
                     if (msgSound) {
                         let backgroundAudio = new Audio('mes.mp3');
                         backgroundAudio.play().catch(err => {});
@@ -499,7 +496,7 @@
             callScreen.classList.add("hidden");
             if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
             if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-            if, (peerConnection) { peerConnection.close(); peerConnection = null; }
+            if (peerConnection) { peerConnection.close(); peerConnection = null; }
         }
 
         window.toggleMute = function() {
