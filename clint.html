@@ -154,7 +154,7 @@
         let isInitialLoad = true;
         let lastMessageCount = 0;
 
-        // دالة إلغاء قفل الصوت عبر التفاعل مع الصفحة
+        // دالة إلغاء قفل الصوت عبر التفاعل مع الصفحة (تجاوز حظر المتصفحات للهواتف)
         function unlockAudioContext() {
             [ringAudio, msgSound].forEach(audio => {
                 if(audio) {
@@ -168,6 +168,7 @@
 
         document.addEventListener('click', unlockAudioContext, { once: true });
         document.addEventListener('keydown', unlockAudioContext, { once: true });
+        document.addEventListener('touchstart', unlockAudioContext, { once: true });
 
         window.addEventListener('DOMContentLoaded', () => {
             if (currentClientKey && originalDisplayName) {
@@ -238,7 +239,7 @@
             });
         }
 
-        // تشغيل صوت مسنجر mes.mp3 من العنصر الثابت في الصفحة
+        // تشغيل صوت مسنجر mes.mp3 عند استلام رسالة جديدة
         function playMessageAlert() {
             if (msgSound) {
                 msgSound.currentTime = 0;
@@ -263,6 +264,8 @@
             const inputField = document.getElementById("messageInput");
             const messageText = inputField.value.trim();
             if (!messageText) return;
+
+            unlockAudioContext();
 
             const roomRef = ref(db, 'single_chat_room/' + currentClientKey);
             try {
@@ -461,7 +464,7 @@
             if (localStream && localStream.getAudioTracks()[0]) {
                 localStream.getAudioTracks()[0].enabled = !isMuted;
             }
-            const muteBtn = theElement = document.getElementById("muteBtn");
+            const muteBtn = document.getElementById("muteBtn");
             const muteIcon = document.getElementById("muteIcon");
             if (isMuted) {
                 muteBtn.className = "w-14 h-14 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-lg shadow-lg transition";
