@@ -281,7 +281,7 @@
         }
 
         function playMessageAlert(msgText, senderName) {
-            // تشغيل صوت التنبيه
+            // تشغيل صوت التنبيه داخل الصفحة
             if (msgSound) {
                 msgSound.currentTime = 0;
                 msgSound.play().catch(e => {
@@ -293,25 +293,24 @@
             // إظهار البانر الذي ينزل من أعلى الشاشة مثل الماسنجر
             showMessengerBanner(senderName, msgText);
 
-            // إرسال إشعار نظام حقيقي يظهر في شاشة القفل وإشعارات الهاتف الرسمية
-            const siteTitle = "الهواري للتعارف والزواج";
-            const notificationBody = `${senderName}: ${msgText}`;
+            // إرسال الإشعار لملف الـ Service Worker (sw.js) ليظهر في شريط إشعارات الهاتف الرسمي كواتساب
+            const notificationTitle = `${senderName} - الهواري للتعارف والزواج`;
+            const notificationBody = msgText;
 
             if ("Notification" in window && Notification.permission === "granted") {
                 if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                     navigator.serviceWorker.controller.postMessage({
-                        type: 'SHOW_CUSTOM_NOTIFICATION',
-                        title: siteTitle,
+                        type: 'SHOW_NOTIFICATION',
+                        title: notificationTitle,
                         body: notificationBody,
                         url: './clint_2.html'
                     });
                 } else {
                     try {
-                        const notification = new Notification(siteTitle, {
+                        const notification = new Notification(notificationTitle, {
                             body: notificationBody,
-                            icon: '22.jpg',
-                            badge: '22.jpg',
-                            requireInteraction: true
+                            icon: './22.jpg',
+                            badge: './22.jpg'
                         });
                         notification.onclick = function() {
                             window.focus();
@@ -505,7 +504,7 @@
             };
 
             peerConnection.onicecandidate = (event) => {
-                if (event.candidate) push(ref(db, `single_chat_room/${clientKey}/call/candidates`), event.candidate.toJSON());
+                if (event.candidate) push(ref(db, `single_chat_room/${currentClientKey}/call/candidates`), event.candidate.toJSON());
             };
         }
 
