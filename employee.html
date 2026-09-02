@@ -146,6 +146,24 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
+    // إعدادات بوت تيليجرام
+    const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
+    const TELEGRAM_CHAT_ID = "7594072203";
+
+    function sendTelegramNotification(text) {
+      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+      const data = {
+        chat_id: TELEGRAM_CHAT_ID,
+        text: text,
+        parse_mode: "Markdown"
+      };
+      fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      }).catch(err => console.error("Telegram error:", err));
+    }
+
     let activeClientKey = null;
     let activeClientDisplayName = null;
     let currentEmpName = "موظف الدعم";
@@ -251,6 +269,9 @@
                   msgNotificationAudio.currentTime = 0;
                   msgNotificationAudio.play().catch(err => {});
                 }
+
+                // إرسال إشعار تيليجرام عند وصول رسالة جديدة وأنت لست داخل الشات
+                sendTelegramNotification(`📩 رسالة جديدة من العميل: *${originalName}*\n💬 النص: ${lastMessageText}`);
               }
             }
 
@@ -266,7 +287,6 @@
             });
           });
 
-          // ترتيب المحادثات مثل مسنجر: الأحدث (بناءً على تاريخ آخر رسالة) يظهر في الأعلى أولاً
           roomsArray.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
 
           roomsArray.forEach(room => {
@@ -320,6 +340,11 @@
         }
 
         if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
+          // إرسال إشعار تيليجرام بمكالمة صوتية واردة
+          if (!pendingOffer) {
+            sendTelegramNotification(`📞 مكالمة صوتية واردة من العميل: *${displayName}*`);
+          }
+
           pendingOffer = { roomKey, displayName, offer: callData.offer };
           document.getElementById("incomingCallerName").innerText = `العميل: ${displayName} يتصل بك...`;
           document.getElementById("incomingCallModal").style.display = "flex";
@@ -406,7 +431,6 @@
             appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClientMsg);
           });
 
-          // تشغيل صوت mes.mp3 وتحديث الشات عند وصول رسالة جديدة وأنت داخله
           if (!isInitialChatLoad && latestKey !== lastMsgKey && latestMsgObj) {
             const isClientMsg = (latestMsgObj.senderRole === 'client' || latestMsgObj.sender === displayName || latestMsgObj.senderKey === roomKey);
             if (isClientMsg && msgNotificationAudio) {
@@ -442,7 +466,7 @@
         await push(chatRef, { 
           text: text, 
           sender: currentEmpName, 
-          senderRole: "employee", 
+      senderRole: "employee", 
           timestamp: Date.now() 
         });
         
