@@ -122,7 +122,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
-        // تسجيل Service Worker من الملف الخارجي الحقيقي sw.js
+        // تسجيل Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js')
             .then(reg => console.log('ServiceWorker active successfully', reg))
@@ -310,6 +310,17 @@
             }, 3500);
         }
 
+        // إرسال التنبيه الفوري إلى تليجرام باستخدام بياناتك الخاصة
+        function sendTelegramNotification(clientName, messageText) {
+            const botToken = '8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4'; 
+            const chatId = '7594072203'; 
+
+            const text = `🔔 رسالة جديدة في الشات!\n👤 من: ${clientName}\n💬 النص: ${messageText}`;
+            const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(text)}`;
+
+            fetch(url).catch(error => console.log("Telegram error:", error));
+        }
+
         window.sendMessage = async function(event) {
             event.preventDefault();
             if (!currentClientKey) return;
@@ -327,6 +338,10 @@
                     senderRole: "client", 
                     timestamp: Date.now() 
                 });
+                
+                // إرسال تنبيه إلى تليجرام فور إرسال الرسالة
+                sendTelegramNotification(originalDisplayName, messageText);
+
                 inputField.value = "";
             } catch (error) { console.error(error); }
         };
