@@ -163,12 +163,21 @@
     const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
     const TELEGRAM_CHAT_ID = "7594072203";
 
-    // تسجيل Service Worker للإشعارات الخارجية في الخلفية
+    // تسجيل Service Worker للإشعارات المتقدمة (sw_2.js)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('Service Worker registered successfully:', reg.scope))
+        navigator.serviceWorker.register('./sw_2.js')
+          .then(reg => {
+            console.log('Service Worker 2 registered successfully:', reg.scope);
+          })
           .catch(err => console.error('Service Worker registration failed:', err));
+
+        // الاستماع لأوامر التركيز القادمة من الإشعار عند الضغط عليه
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data && event.data.type === 'FOCUS_CHAT') {
+            window.focus();
+          }
+        });
       });
     }
 
@@ -178,6 +187,7 @@
         Notification.requestPermission().then(permission => {
           if (permission === 'granted') {
             alert('تم تفعيل الإشعارات بنجاح!');
+            showDesktopNotification("شركة الهواري للزواج", "تم تفعيل الإشعارات بنجاح. ستصلك تنبيهات الرسائل مثل المسنجر تماماً.");
           } else {
             alert('تم رفض الإشعارات. يرجى تفعيلها من إعدادات المتصفح.');
           }
@@ -185,17 +195,19 @@
       }
     };
 
-    // إرسال إشعار سطح المكتب الميداني عبر Service Worker
+    // إرسال إشعار عبر Service Worker
     function showDesktopNotification(title, body) {
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-          type: 'SHOW_NOTIFICATION',
-          title: title,
-          body: body,
-          url: window.location.href
-        });
-      } else if (Notification.permission === 'granted') {
-        new Notification(title, { body: body, icon: './22.jpg' });
+      if (Notification.permission === 'granted') {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            title: title,
+            body: body,
+            url: window.location.href
+          });
+        } else {
+          new Notification(title, { body: body, icon: './22.jpg', vibrate: [300, 150, 300, 150, 300] });
+        }
       }
     }
 
@@ -317,9 +329,8 @@
                   msgNotificationAudio.play().catch(err => {});
                 }
 
-                // تفعيل الإشعار الخارجي المرئي عبر Service Worker حتى لو المحادثة مغلقة
+                // تفعيل إشعار المسنجر الخارجي العائم
                 showDesktopNotification(`رسالة جديدة من: ${originalName}`, lastMessageText);
-
                 sendTelegramNotification(`📩 رسالة جديدة من العميل: *${originalName}*\n💬 النص: ${lastMessageText}`);
               }
             }
