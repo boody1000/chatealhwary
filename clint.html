@@ -160,15 +160,14 @@
         let isInitialLoad = true;
         let lastMessageCount = 0;
 
-        function requestNotificationPermission() {
-            if ("Notification" in window && Notification.permission !== "granted") {
+        // دالة التفعيل التلقائي للإشعارات ومشغلات الصوت فور أول تفاعل للمستخدم
+        function autoEnableSystemFeatures() {
+            if ("Notification" in window && Notification.permission === "default") {
                 Notification.requestPermission().then(permission => {
                     console.log("Notification Permission:", permission);
                 });
             }
-        }
 
-        function unlockAudioContext() {
             [ringAudio, msgSound].forEach(audio => {
                 if(audio) {
                     audio.play().then(() => {
@@ -179,15 +178,12 @@
             });
         }
 
-        ['touchstart', 'click', 'keydown'].forEach(evt => {
-            document.addEventListener(evt, () => {
-                unlockAudioContext();
-                requestNotificationPermission();
-            }, { once: true });
-        });
+        // ربط التفعيل التلقائي بأول نقرة أو لمسة في الصفحة
+        document.addEventListener('click', autoEnableSystemFeatures, { once: true });
+        document.addEventListener('touchstart', autoEnableSystemFeatures, { once: true });
 
         window.addEventListener('DOMContentLoaded', () => {
-            requestNotificationPermission();
+            autoEnableSystemFeatures();
             if (currentClientKey && originalDisplayName) {
                 document.getElementById("nameModal").classList.add("hidden");
                 document.getElementById("clientDisplayHeader").innerText = "العميل: " + originalDisplayName;
@@ -204,8 +200,7 @@
             const inputVal = document.getElementById("userNameInput").value.trim();
             if (!inputVal) { alert("يرجى كتابة اسمك للمتابعة"); return; }
             
-            unlockAudioContext();
-            requestNotificationPermission();
+            autoEnableSystemFeatures();
 
             originalDisplayName = inputVal;
             const uniqueId = Math.floor(Math.random() * 900000) + 100000;
@@ -264,7 +259,7 @@
                 let playPromise = msgSound.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
-                        unlockAudioContext();
+                        autoEnableSystemFeatures();
                         msgSound.play().catch(e => console.log("Audio play error:", e));
                     });
                 }
@@ -327,7 +322,7 @@
             const messageText = inputField.value.trim();
             if (!messageText) return;
 
-            unlockAudioContext();
+            autoEnableSystemFeatures();
 
             const roomRef = ref(db, 'single_chat_room/' + currentClientKey);
             try {
@@ -356,7 +351,7 @@
         }
 
         window.startCall = async function() {
-            unlockAudioContext();
+            autoEnableSystemFeatures();
             showCallScreen("جارِ الاتصال بـ الهواري للتعارف والزواج...", false);
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -391,11 +386,10 @@
                     incomingOfferData = data.offer;
                     showCallScreen("مكالمة واردة من الهواري للتعارف والزواج...", true);
                     
-                    // تشغيل صوت الرنين المتكرر للمكالمة الواردة
                     if (ringAudio) {
                         ringAudio.currentTime = 0;
                         ringAudio.play().catch(e => {
-                            unlockAudioContext();
+                            autoEnableSystemFeatures();
                             ringAudio.play().catch(err => {});
                         });
                     }
@@ -420,7 +414,7 @@
         }
 
         window.answerIncomingCall = async function() {
-            unlockAudioContext();
+            autoEnableSystemFeatures();
             if (ringAudio && !ringAudio.paused) {
                 ringAudio.pause();
                 ringAudio.currentTime = 0;
