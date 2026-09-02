@@ -122,30 +122,10 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
-        // تسجيل Service Worker برمجياً لإعطاء صلاحيات الإشعارات الخارجية وتوجيه التركيز عند النقر عليها
+        // تسجيل Service Worker من الملف الخارجي الحقيقي sw.js
         if ('serviceWorker' in navigator) {
-            const swCode = `
-                self.addEventListener('notificationclick', function(event) {
-                    event.notification.close();
-                    event.waitUntil(
-                        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-                            for (var i = 0; i < clientList.length; i++) {
-                                var client = clientList[i];
-                                if ('focus' in client) {
-                                    return client.focus();
-                                }
-                            }
-                            if (clients.openWindow) {
-                                return clients.openWindow('/');
-                            }
-                        })
-                    );
-                });
-            `;
-            const blob = new Blob([swCode], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(blob);
-            navigator.serviceWorker.register(swUrl)
-            .then(reg => console.log('Embedded ServiceWorker active'))
+            navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('ServiceWorker active successfully', reg))
             .catch(err => console.log('ServiceWorker failed', err));
         }
 
@@ -280,11 +260,9 @@
         }
 
         function playMessageAlert(msgText, senderName) {
-            // تشغيل صوت الرسالة الواردة بضمان كامل
             if (msgSound) {
                 msgSound.currentTime = 0;
                 msgSound.play().catch(e => {
-                    // إعادة المحاولة في حال قيام المتصفح بحظر التشغيل التلقائي المؤقت
                     unlockAudioContext();
                     msgSound.play().catch(err => {});
                 });
@@ -292,7 +270,6 @@
             
             showNotificationBanner();
 
-            // إظهار إشعار خارجي حقيقي يظهر أعلى الشاشة في الهاتف أو الويندوز
             if ("Notification" in window && Notification.permission === "granted") {
                 if (navigator.serviceWorker) {
                     navigator.serviceWorker.ready.then(function(registration) {
@@ -300,7 +277,7 @@
                             body: msgText,
                             icon: '22.jpg',
                             badge: '22.jpg',
-                            vibrate: [300, 100, 300, 100, 300], // اهتزاز قوي يشبه التطبيقات الكبرى
+                            vibrate: [300, 100, 300, 100, 300],
                             tag: 'hawary-chat-msg',
                             renotify: true,
                             requireInteraction: true,
@@ -521,7 +498,7 @@
         window.endCall = function() {
             if (ringAudio && !ringAudio.paused) {
                 ringAudio.pause();
-                ringAudio.currentTime, 0;
+                ringAudio.currentTime = 0;
             }
             if (currentClientKey) remove(ref(db, `single_chat_room/${currentClientKey}/call`));
             closeCallUI();
