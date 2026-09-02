@@ -9,7 +9,7 @@
     <link rel="icon" href="22.jpg" type="image/jpeg">
     <style>
       ::-webkit-scrollbar { width: 6px; }
-      ::-webkit-scrollbar-track { background:url(22.jpg) }
+      ::-webkit-scrollbar-track { background:url(22.jpg); }
       ::-webkit-scrollbar-thumb { background: url(22.jpg); border-radius: 4px; }
       ::-webkit-scrollbar-thumb:hover { background: url(22.jpg); }
 
@@ -31,7 +31,7 @@
                 <span class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
             </div>
             <div>
-                <h3 class="font-bold text-slate-100 text-sm"> الهواري للتعارف والزواج</h3>
+                <h3 class="font-bold text-slate-100 text-sm">الهواري للتعارف والزواج</h3>
                 <span class="text-xs text-emerald-400 font-medium">خدمة العملاء - متصل الآن</span>
             </div>
         </div>
@@ -269,11 +269,6 @@
                         requireInteraction: false
                     });
 
-                    if (msgSound) {
-                        let backgroundAudio = new Audio('mes.mp3');
-                        backgroundAudio.play().catch(err => {});
-                    }
-
                     notification.onclick = function() {
                         window.focus();
                         notification.close();
@@ -345,7 +340,7 @@
                 alert("يرجى السماح بالميكروفون والتاكد من توصيله"); 
                 closeCallUI(); 
             }
-        }
+        };
 
         function listenForIncomingCalls(clientKey) {
             const callRef = ref(db, `single_chat_room/${clientKey}/call`);
@@ -421,7 +416,7 @@
                 alert("يرجى السماح بالميكروفون للرد على المكالمة");
                 closeCallUI();
             }
-        }
+        };
 
         function createPeerConnection() {
             if (peerConnection) return;
@@ -484,7 +479,7 @@
             }
             if (currentClientKey) remove(ref(db, `single_chat_room/${currentClientKey}/call`));
             closeCallUI();
-        }
+        };
 
         function closeCallUI() {
             if (ringAudio && !ringAudio.paused) {
@@ -513,7 +508,7 @@
                 muteBtn.className = "w-14 h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-lg shadow-lg transition";
                 muteIcon.className = "fa-solid fa-microphone";
             }
-        }
+        };
 
         window.toggleSpeaker = function() {
             isSpeakerOn = !isSpeakerOn;
@@ -527,7 +522,7 @@
                 speakerBtn.className = "w-14 h-14 bg-amber-600 hover:bg-amber-700 rounded-full flex items-center justify-center text-lg shadow-lg transition";
                 speakerIcon.className = "fa-solid fa-volume-xmark";
             }
-        }
+        };
 
         function escapeHtml(text) {
             if (!text) return '';
