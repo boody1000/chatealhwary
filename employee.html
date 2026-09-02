@@ -6,7 +6,7 @@
   <title>لوحة تحكم شركة الهواري - خدمة العملاء</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
+    <link rel="icon" href="22.jpg" type="image/jpeg">
   <style>
    ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
@@ -126,7 +126,7 @@
 
   <audio id="empRemoteAudio" autoplay playsinline></audio>
   <audio id="empRingAudio" src="ran.mp3" preload="auto" loop></audio>
-  <audio id="msgNotificationAudio" src="rnn.mp3" preload="auto"></audio>
+  <audio id="msgNotificationAudio" src="mes.mp3" preload="auto"></audio>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -351,9 +351,14 @@
 
       const chatRef = ref(db, 'single_chat_room/' + roomKey);
 
+      let isInitialChatLoad = true;
+      let lastMsgKey = null;
+
       onValue(chatRef, (snapshot) => {
         container.innerHTML = '';
         let hasMessages = false;
+        let latestKey = null;
+        let latestMsgObj = null;
         
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
@@ -373,11 +378,26 @@
             if(!msg || !msg.text) return;
             
             hasMessages = true;
+            latestKey = childSnapshot.key;
+            latestMsgObj = msg;
+
             const isClientMsg = (msg.senderRole === 'client' || msg.sender === displayName || msg.senderKey === roomKey);
             appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClientMsg);
           });
+
+          // تشغيل صوت mes.mp3 إذا وصلت رسالة جديدة من العميل وأنت داخل المحادثة
+          if (!isInitialChatLoad && latestKey !== lastMsgKey && latestMsgObj) {
+            const isClientMsg = (latestMsgObj.senderRole === 'client' || latestMsgObj.sender === displayName || latestMsgObj.senderKey === roomKey);
+            if (isClientMsg && msgNotificationAudio) {
+              msgNotificationAudio.currentTime = 0;
+              msgNotificationAudio.play().catch(err => {});
+            }
+          }
+          if (latestKey) lastMsgKey = latestKey;
         }
         
+        isInitialChatLoad = false;
+
         if (!hasMessages) {
           container.innerHTML = '<div class="text-slate-500 text-center my-auto">لا توجد رسائل سابقة مع هذا العميل</div>';
         }
