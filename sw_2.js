@@ -1,61 +1,46 @@
-// Service Worker المتكامل لإدارة الإشعارات في الخلفية - شركة الهواري للزواج
 self.addEventListener('install', (event) => {
-    self.skipWaiting();
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-    event.waitUntil(clients.claim());
+  event.waitUntil(clients.claim());
 });
 
-// استقبال أمر إظهار الإشعار من صفحة الشات الرئيسية
+// استقبال طلبات الإشعار من التطبيق وعرضها بشكل نظامي
 self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-        const title = event.data.title || 'رسالة جديدة - شركة الهواري للزواج';
-        const options = {
-            body: event.data.body || 'لديك رسالة جديدة في الشات',
-            icon: './22.jpg', // تأكد أن هذه الصورة موجودة في مشروعك
-            badge: './22.jpg',
-            vibrate: [300, 150, 300, 150, 300], // نمط اهتزاز قوي شبيه بالميسنجر
-            tag: 'hawary-chat-notification',    // لتجميع الإشعارات وعدم تكرارها عشوائياً
-            renotify: true,                     // إصدار تنبيه صوتي/اهتزاز حتى لو كان هناك إشعار سابق
-            requireInteraction: true,           // يبقى الإشعار ظاهراً على الشاشة حتى يتفاعل معه المستخدم
-            data: { url: event.data.url || self.location.origin },
-            actions: [
-                { action: 'open_chat', title: '💬 فتح المحادثة والرد' },
-                { action: 'dismiss', title: '✖️ إغلاق' }
-            ]
-        };
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, body, url } = event.data;
+    
+    const options = {
+      body: body,
+      icon: '22.jpg',
+      badge: '22.jpg',
+      vibrate: [300, 150, 300, 150, 300],
+      tag: 'universal-alert',
+      renotify: true,
+      requireInteraction: true, // يظل الإشعار ظاهراً على الشاشة حتى يتفاعل معه الموظف
+      data: { url: url || self.location.origin }
+    };
 
-        event.waitUntil(
-            self.registration.showNotification(title, options)
-        );
-    }
+    event.waitUntil(
+      self.registration.showNotification(title, options)
+    );
+  }
 });
 
-// عند الضغط على الإشعار أو الأزرار التفاعلية
+// فتح لوحة التحكم عند الضغط على الإشعار
 self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-
-    // إذا ضغط المستخدم على زر الإغلاق
-    if (event.action === 'dismiss') {
-        return;
-    }
-
-    // افتراضي أو عند الضغط على زر فتح المحادثة
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            for (let i = 0; i < clientList.length; i++) {
-                let client = clientList[i];
-                if ('focus' in client) {
-                    client.focus();
-                    // إرسال أمر داخلي لفتح الشات مباشرة إذا كان المتصفح مفتوحاً
-                    client.postMessage({ type: 'FOCUS_CHAT' });
-                    return;
-                }
-            }
-            if (clients.openWindow) {
-                return clients.openWindow(event.notification.data.url);
-            }
-        })
-    );
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      for (let client of windowClients) {
+        if (client.url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(event.notification.data.url);
+      }
+    })
+  );
 });
