@@ -241,7 +241,11 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
       }
 
       if ('vibrate' in navigator) {
-        try { navigator.vibrate([300, 150, 300, 150, 300]); } catch(e) {}
+        try { 
+          navigator.vibrate([300, 150, 300, 150, 300]); 
+        } catch(e) {
+          // تم تجاهل خطأ الاهتزاز في حال عدم تفاعل المستخدم بعد
+        }
       }
 
       if ('Notification' in window && Notification.permission === 'granted') {
@@ -305,11 +309,10 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
       })
-      .then(response => {
-        if (!response.ok) {
-          return response.text().then(errText => {
-            console.error("Telegram Error Response:", errText);
-          });
+      .then(async response => {
+        const resJson = await response.json();
+        if (!response.ok || !resJson.ok) {
+          console.warn("Telegram API Warning/Error:", resJson.description || response.statusText);
         }
       })
       .catch(err => {
