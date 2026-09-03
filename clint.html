@@ -237,7 +237,6 @@
         let incomingOfferData = null; 
         let cachedIceServers = null;
 
-        // جلب خوادم Metered TURN Server ديناميكياً باستخدام مفتاح API الخاص بك
         async function getMeteredIceServers() {
             if (cachedIceServers) return cachedIceServers;
             try {
@@ -246,7 +245,6 @@
                 return cachedIceServers;
             } catch (error) {
                 console.error("Error fetching Metered TURN credentials:", error);
-                // Fallback احتياطي في حال عدم الاتصال بالانترنت لجلب الـ API
                 return {
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -458,9 +456,27 @@
         function sendTelegramNotification(clientName, messageText) {
             const botToken = '8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4'; 
             const chatId = '7594072203'; 
-            const text = `🔔 عميل محتمل جديد (الهواري للتعارف والزواج)!\n👤 من: ${clientName}\n💬 التفاصيل:\n${messageText}`;
-            const url = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(text)}`;
-            fetch(url).catch(error => console.log("Telegram error:", error));
+            
+            // تنظيف النص وضمان عدم تسبب الرموز الخاصة بأخطاء في الاستجابة (خطأ 400)
+            const safeClientName = clientName ? clientName.toString().trim() : "مستخدم";
+            const safeMessageText = messageText ? messageText.toString().trim() : "";
+            
+            const text = `🔔 عميل محتمل جديد (الهواري للتعارف والزواج)!\n👤 من: ${safeClientName}\n💬 التفاصيل:\n${safeMessageText}`;
+            
+            fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    chat_id: chatId, 
+                    text: text,
+                    disable_web_page_preview: true
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.ok) console.error("Telegram error description:", data.description);
+            })
+            .catch(error => console.log("Telegram network error:", error));
         }
 
         window.sendMessage = async function(event) {
