@@ -22,21 +22,20 @@ messaging.onBackgroundMessage((payload) => {
         icon: './22.jpg',
         badge: './22.jpg',
         vibrate: [300, 100, 300, 100, 300],
-        data: { url: payload.data?.url || './clint_2.html' }
+        data: { url: payload.data?.url || './clint.html' }
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// التعامل مع الضغط على الإشعار لفتح صفحة الشات مباشرة
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const targetUrl = event.notification.data?.url || './clint_2.html';
+    const targetUrl = event.notification.data?.url || './clint.html';
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             for (let i = 0; i < clientList.length; i++) {
                 let client = clientList[i];
-                if (client.url.includes('clint_2.html') && 'focus' in client) {
+                if (client.url.includes('clint.html') && 'focus' in client) {
                     return client.focus();
                 }
             }
@@ -46,4 +45,3 @@ self.addEventListener('notificationclick', (event) => {
         })
     );
 });
-```[cite: 2]
