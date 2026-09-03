@@ -112,7 +112,6 @@
       <h2 id="empCallStatus" class="text-lg font-bold mb-1">المكالمة جارية مع العميل</h2>
       <p class="text-xs text-[#8796a5]" id="empCallTimer">00:00</p>
       
-      <!-- زر طوارئ لتفعيل الصوت يدويًا للموظف -->
       <button id="forceEmpAudioBtn" onclick="forcePlayEmpAudio()" class="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg animate-bounce">
         <i class="fa-solid fa-volume-high"></i> اضغط هنا لتفعيل سماع الصوت الآن
       </button>
@@ -161,6 +160,23 @@
             if (!res.ok) throw new Error();
             let data = await res.json();
             
+            // إجبار استخدام TCP وبورت 443 لتجاوز حظر داتا الموبايل
+            if (data && data.iceServers) {
+                data.iceServers = data.iceServers.map(server => {
+                    if (server.urls) {
+                        let urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+                        server.urls = urls.map(url => {
+                            if (url.startsWith('turn:') || url.startsWith('turns:')) {
+                                let cleanUrl = url.split('?')[0];
+                                return `${cleanUrl}:443?transport=tcp`;
+                            }
+                            return url;
+                        });
+                    }
+                    return server;
+                });
+            }
+
             const extraStunServers = [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
@@ -418,9 +434,7 @@
       remoteAudio.volume = 1.0;
       let playPromise = remoteAudio.play();
       if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // المتصفح يمنع التشغيل التلقائي حتى يتم الضغط على الزر
-        });
+        playPromise.catch(() => {});
       }
     }
 
@@ -508,7 +522,7 @@
       backToSidebar();
     };
 
-    window.deleteCurrentChat = async function() {
+    window.deleteCurrentChat = async function`() {
       if (confirm("هل تريد حذف المحادثة بالكامل؟")) {
         await remove(ref(db, 'single_chat_room/' + activeClientKey));
         backToSidebar();
