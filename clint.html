@@ -331,7 +331,11 @@
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOfferData));
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
-                remoteAudio.play().catch(e => {});
+                
+                remoteAudio.play().catch(err => {
+                    console.log("Audio play blocked, enabling via interaction", err);
+                });
+
                 await set(ref(db, `single_chat_room/${currentClientKey}/call/answer`), { type: answer.type, sdp: answer.sdp });
                 startTimer();
             } catch (e) { alert("خطأ أثناء الرد على المكالمة"); closeCallUI(); }
