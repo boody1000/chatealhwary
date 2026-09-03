@@ -1,4 +1,4 @@
-[source: 8]<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
@@ -312,18 +312,26 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
     let empCleanId = "default_emp";
     let peerConnection = null;
     let localStream = null;
-    
-    const servers = { 
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
-            { urls: 'stun:stun.stunprotocol.org:3478' }
-        ],
-        iceCandidatePoolSize: 10
-    };
+    let cachedIceServers = null;
+
+    // جلب خوادم Metered TURN Server ديناميكياً باستخدام مفتاح API الخاص بك
+    async function getMeteredIceServers() {
+        if (cachedIceServers) return cachedIceServers;
+        try {
+            const response = await fetch("https://alhwary.metered.live/api/v1/turn/credentials?apiKey=6079dfbbdcf8564255625baf8471629ed765");
+            cachedIceServers = await response.json();
+            return cachedIceServers;
+        } catch (error) {
+            console.error("Error fetching Metered TURN credentials:", error);
+            // Fallback احتياطي في حال عدم الاتصال بالانترنت لجلب الـ API
+            return {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            };
+        }
+    }
 
     let empTimerInterval = null;
     let empSeconds = 0;
@@ -727,7 +735,7 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, 
             video: false 
         });
-        createPeerConnection(activeClientKey);
+        await createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(track => { peerConnection.addTrack(track, localStream); });
         
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
@@ -766,7 +774,7 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, 
             video: false 
         });
-        createPeerConnection(activeClientKey);
+        await createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(track => { peerConnection.addTrack(track, localStream); });
 
         const offer = await peerConnection.createOffer({ offerToReceiveAudio: true });
@@ -791,9 +799,10 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
       } catch (err) { employeeEndCall(); }
     };
 
-    function createPeerConnection(roomKey) {
+    async function createPeerConnection(roomKey) {
       if (peerConnection) return;
-      peerConnection = new RTCPeerConnection(servers);
+      const iceServersConfig = await getMeteredIceServers();
+      peerConnection = new RTCPeerConnection(iceServersConfig);
       
       peerConnection.ontrack = (event) => { 
         stopRinging();
