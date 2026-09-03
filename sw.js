@@ -1,4 +1,4 @@
-// استيراد مكتبات Firebase متوافقة مع Service Worker للعمل في الخلفية التامة
+// استيراد مكتبات Firebase متوافقة مع Service Worker للعمل عند إغلاق التطبيق والمتصفح
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js');
 
@@ -14,17 +14,20 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// معالجة الرسائل والإشعارات في الخلفية التامة عند إغلاق المتصفح أو التطبيق
 messaging.onBackgroundMessage((payload) => {
     const isCall = payload.data?.type === 'call' || payload.notification?.title?.includes('مكالمة');
     
-    const notificationTitle = payload.notification?.title || (isCall ? '📞 مكالمة صوتية واردة...' : 'رسالة جديدة - الهواري للزواج');
+    const notificationTitle = payload.notification?.title || (isCall ? '📞 مكالمة صوتية واردة...' : 'رسالة جديدة - شركة الهواري للزواج');
     const notificationOptions = {
-        body: payload.notification?.body || (isCall ? 'شركة الهواري للزواج - اضغط للرد أو الرفض' : 'لديك رسالة جديدة في الشات'),
+        body: payload.notification?.body || (isCall ? 'اضغط للرد أو الرفض' : 'لديك رسالة جديدة في الشات'),
         icon: './22.jpg',
         badge: './22.jpg',
-        vibrate: isCall ? [500, 200, 500, 200, 500, 200, 500, 200] : [300, 100, 300],
+        vibrate: isCall ? [500, 200, 500, 200, 500, 200, 500, 200] : [300, 100, 300, 100, 300],
         tag: isCall ? ('incoming-call-' + Date.now()) : 'hawary-chat-msg',
-        requireInteraction: isCall ? true : false, // للرسائل تنزل من الأعلى ثم تستقر، للمكالمات تظل ثابتة
+        renotify: true,
+        // إشعار الرسائل يظهر من الأعلى ويختفي طبيعياً، والمكالمة تظل ثابتة
+        requireInteraction: isCall ? true : false, 
         dir: 'rtl',
         lang: 'ar',
         actions: isCall ? [
@@ -39,6 +42,7 @@ messaging.onBackgroundMessage((payload) => {
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+// التعامل مع النقر على الإشعار أو أزرار التفاعل المباشرة
 self.addEventListener('notificationclick', (event) => {
     const action = event.action;
     event.notification.close();
