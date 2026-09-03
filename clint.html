@@ -189,7 +189,6 @@
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
                         { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' },
                         { urls: 'stun:global.stun.twilio.com:3478' }
                     ] 
                 };
@@ -290,7 +289,7 @@
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 await createPeerConnection(currentClientKey);
-                localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+                
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
                 await set(ref(db, `single_chat_room/${currentClientKey}/call`), { offer: { type: offer.type, sdp: offer.sdp }, caller: 'client' });
@@ -313,6 +312,7 @@
                 if (data.answer && peerConnection && peerConnection.signalingState === "have-local-offer") {
                     if (!ringAudio.paused) ringAudio.pause();
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    remoteAudio.play().catch(e => {});
                     startTimer();
                 }
             });
@@ -327,10 +327,11 @@
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 await createPeerConnection(currentClientKey);
-                localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+                
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOfferData));
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
+                remoteAudio.play().catch(e => {});
                 await set(ref(db, `single_chat_room/${currentClientKey}/call/answer`), { type: answer.type, sdp: answer.sdp });
                 startTimer();
             } catch (e) { alert("خطأ أثناء الرد على المكالمة"); closeCallUI(); }
@@ -341,13 +342,23 @@
             const config = await getMeteredIceServers();
             peerConnection = new RTCPeerConnection(config);
             
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+            }
+
             peerConnection.onicecandidate = e => { 
-                if (e.candidate) push(ref(db, `single_chat_room/${roomKey}/call/candidates`), e.candidate.toJSON()); 
+                if (e.candidate) {
+                    push(ref(db, `single_chat_room/${roomKey}/call/candidates`), e.candidate.toJSON()); 
+                }
             };
             
             peerConnection.ontrack = e => {
                 remoteAudio.srcObject = e.streams[0];
-                remoteAudio.play().catch(err => {});
+                remoteAudio.play().catch(err => {
+                    console.log("Audio play blocked, waiting for interaction");
+                });
             };
         }
 
