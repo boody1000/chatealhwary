@@ -1,4 +1,4 @@
-// Service Worker المحدث لضمان بقاء إشعارات المكالمات في الشريط وعدم اختفائها
+// Service Worker المحدث لإشعارات شركة الهواري للزواج (يعمل في الخلفية التامة)
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -8,6 +8,7 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(clients.claim());
 });
 
+// استقبال أوامر الإشعارات والمكالمات في الخلفية
 self.addEventListener('message', (event) => {
     if (event.data) {
         if (event.data.type === 'SHOW_NOTIFICATION') {
@@ -17,7 +18,7 @@ self.addEventListener('message', (event) => {
                 icon: './22.jpg',
                 badge: './22.jpg',
                 vibrate: [300, 100, 300, 100, 300],
-                tag: 'hawary-chat-' + Date.now(), // تگ متجدد لمنع التداخل
+                tag: 'hawary-chat-' + Date.now(),
                 renotify: true,
                 requireInteraction: false,
                 actions: [
@@ -30,16 +31,16 @@ self.addEventListener('message', (event) => {
                 self.registration.showNotification(title, options)
             );
         } else if (event.data.type === 'SHOW_CALL_NOTIFICATION') {
-            // إشعار مكالمة واردة بـ Tag فريد لضمان عدم اختفائه من الشريط
+            // إشعار المكالمة الواردة بطابع زمني وتثبيت تام في شريط الإشعارات مثل الماسنجر
             const title = event.data.title || '📞 مكالمة صوتية واردة...';
             const options = {
                 body: event.data.body || 'شركة الهواري للزواج - اضغط للرد أو الرفض',
                 icon: './22.jpg',
                 badge: './22.jpg',
                 vibrate: [500, 200, 500, 200, 500, 200, 500, 200],
-                tag: 'incoming-call-' + Date.now(), // يضمن بقاء كل مكالمة وعدم مسحها تلقائياً
+                tag: 'incoming-call-' + Date.now(), // تگ متجدد لمنع حذف الإشعار
                 renotify: true,
-                requireInteraction: true, // اجبار الإشعار على البقاء ظاهراً في الشريط حتى يتفاعل المستخدم
+                requireInteraction: true, // يظل ثابتاً في شريط الإشعارات ولا تختفي المكالمة
                 dir: 'rtl',
                 lang: 'ar',
                 actions: [
@@ -56,7 +57,7 @@ self.addEventListener('message', (event) => {
     }
 });
 
-// التعامل مع أزرار الرد والرفض
+// التعامل مع الضغط على الإشعار أو أزرار (رد / رفض)
 self.addEventListener('notificationclick', (event) => {
     const action = event.action;
     event.notification.close();
