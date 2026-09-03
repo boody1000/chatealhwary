@@ -70,7 +70,6 @@
 
           <div class="relative shrink-0">
             <img id="currentAvatar" src="22.jpg" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-amber-500/40" alt="User">
-            <!-- مؤشر حالة العميل الأخضر أو الرمادي ديناميكياً مثل المسنجر -->
             <span id="headerClientStatusDot" class="absolute bottom-0 left-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-slate-500 border-2 border-slate-900 rounded-full transition-colors"></span>
           </div>
           <div class="min-w-0 pr-1">
@@ -80,6 +79,11 @@
         </div>
         
         <div class="flex items-center gap-2 shrink-0">
+          <!-- زر تحويل المحادثة لموظف آخر -->
+          <button onclick="openTransferModal()" class="w-9 h-9 sm:w-10 sm:h-10 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-full flex items-center justify-center transition border border-blue-500/30" title="تحويل المحادثة لموظف آخر">
+            <i class="fa-solid fa-share text-xs sm:text-sm"></i>
+          </button>
+
           <button id="callClientBtn" onclick="employeeStartCall()" class="w-9 h-9 sm:w-10 sm:h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center transition shadow-md hidden" title="اتصال صوتي بالعميل">
             <i class="fa-solid fa-phone text-xs sm:text-sm"></i>
           </button>
@@ -104,6 +108,21 @@
       </div>
     </main>
 
+  </div>
+
+  <!-- نافذة اختيار الموظف لتحويل المحادثة -->
+  <div id="transferModal" class="fixed inset-0 bg-slate-950/90 z-50 hidden flex-col items-center justify-center text-white backdrop-blur-sm p-4">
+    <div class="bg-slate-950 border border-slate-800 p-6 rounded-2xl shadow-2xl flex flex-col max-w-sm w-full">
+      <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+        <h3 class="text-sm font-bold text-amber-400">تحويل المحادثة إلى موظف</h3>
+        <button onclick="closeTransferModal()" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
+      </div>
+      <p class="text-xs text-slate-400 mb-4">اختر الموظف المطلوب تحويل الشات إليه لتصبح تابعة له وحده:</p>
+      <div id="employeesListContainer" class="flex flex-col gap-2 max-h-48 overflow-y-auto mb-4">
+        <div class="text-center text-xs text-slate-500 py-3">جاري البحث عن الموظفين...</div>
+      </div>
+      <button onclick="closeTransferModal()" class="w-full bg-slate-800 hover:bg-slate-700 py-2 rounded-xl text-xs font-semibold transition">إلغاء</button>
+    </div>
   </div>
 
   <!-- شاشة استقبال المكالمات -->
@@ -324,8 +343,9 @@
             let lastMessageText = "انقر لعرض المحادثة";
             let totalMessagesCount = 0;
             let lockedBy = null;
+            let assignedTo = null; // الموظف المخصص له المحادثة
             let lastTimestamp = 0;
-            let clientStatus = "offline"; // الحالة الافتراضية
+            let clientStatus = "offline";
 
             if (unreadCounts[roomKey] === undefined) {
               unreadCounts[roomKey] = 0;
@@ -345,6 +365,11 @@
                 return;
               }
 
+              if(msgChild.key === 'assignedTo') {
+                assignedTo = msgChild.val();
+                return;
+              }
+
               if(msgChild.key === 'status') {
                 clientStatus = msgChild.val() || "offline";
                 return;
@@ -360,6 +385,11 @@
               }
             });
 
+            // فلترة القائمة: إذا كانت المحادثة مخصصة لموظف آخر (ليست لك وليست عامة)، فلا تظهر في قائمتك
+            if (assignedTo && assignedTo !== currentEmpName) {
+              return; 
+            }
+
             if (!isFirstLoad && previousMessagesCounts[roomKey] !== undefined && totalMessagesCount > previousMessagesCounts[roomKey]) {
               const diff = totalMessagesCount - previousMessagesCounts[roomKey];
               if (activeClientKey !== roomKey && diff > 0) {
@@ -372,7 +402,7 @@
 
             previousMessagesCounts[roomKey] = totalMessagesCount;
 
-            roomsArray.push({ roomKey, originalName, lastMessageText, lockedBy, lastTimestamp, totalMessagesCount, clientStatus });
+            roomsArray.push({ roomKey, originalName, lastMessageText, lockedBy, assignedTo, lastTimestamp, totalMessagesCount, clientStatus });
           });
 
           roomsArray.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
@@ -392,7 +422,7 @@
       chatsListEl.innerHTML = '';
 
       if (roomsArray.length === 0) {
-        chatsListEl.innerHTML = '<div class="p-6 text-center text-slate-500 text-sm">لا توجد نتائج مطابقة للبحث</div>';
+        chatsListEl.innerHTML = '<div class="p-6 text-center text-slate-500 text-sm">لا توجد محادثات مطابقة</div>';
         return;
       }
 
@@ -406,7 +436,6 @@
           ? `<span class="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30 truncate max-w-[100px]">مع: ${escapeHtml(room.lockedBy)}</span>` 
           : '';
 
-        // نقطة الحالة (أخضر لمتصل، رمادي لغير متصل) مثل المسنجر تماماً في قائمة الجانب
         const isOnline = room.clientStatus === 'online';
         const dotColorClass = isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500';
         const statusTextLabel = isOnline ? 'متصل الآن' : 'غير متصل';
@@ -449,6 +478,58 @@
           alert("تم حذف المحادثة بنجاح.");
           backToSidebar();
         } catch (error) { alert("حدث خطأ أثناء الحذف."); }
+      }
+    };
+
+    // ميزة فتح نافذة اختيار الموظف لتحويل الشات إليه
+    window.openTransferModal = function() {
+      const modal = document.getElementById('transferModal');
+      const container = document.getElementById('employeesListContainer');
+      container.innerHTML = '<div class="text-center text-xs text-slate-500 py-3">جاري جلب الموظفين المتصلين...</div>';
+      modal.style.display = 'flex';
+
+      const empRef = ref(db, 'online_employees');
+      onValue(empRef, (snapshot) => {
+        container.innerHTML = '';
+        if (snapshot.exists()) {
+          let foundAny = false;
+          snapshot.forEach((child) => {
+            const empData = child.val();
+            if (empData && empData.name && empData.name !== currentEmpName) {
+              foundAny = true;
+              const btn = document.createElement('button');
+              btn.className = "w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 py-2.5 px-3 rounded-xl text-xs font-semibold text-right transition flex items-center justify-between";
+              btn.innerHTML = `<span>👤 ${escapeHtml(empData.name)}</span> <span class="text-amber-400 text-[10px]">تحويل</span>`;
+              btn.onclick = () => executeTransferChat(empData.name);
+              container.appendChild(btn);
+            }
+          });
+          if (!foundAny) {
+            container.innerHTML = '<div class="text-center text-xs text-slate-500 py-3">لا يوجد موظفون آخرون متصلون حالياً</div>';
+          }
+        } else {
+          container.innerHTML = '<div class="text-center text-xs text-slate-500 py-3">لا يوجد موظفون متصلون</div>';
+        }
+      }, { onlyOnce: true });
+    };
+
+    window.closeTransferModal = function() {
+      document.getElementById('transferModal').style.display = 'none';
+    };
+
+    // تنفيذ عملية تحويل المحادثة لموظف آخر وتخصيصها له
+    window.executeTransferChat = async function(targetEmpName) {
+      if (!activeClientKey) return;
+      try {
+        await update(ref(db, `single_chat_room/${activeClientKey}`), {
+          assignedTo: targetEmpName,
+          lockedBy: null
+        });
+        alert(`تم تحويل المحادثة إلى الموظف: ${targetEmpName} بنجاح، وستظهر لديه وحده.`);
+        closeTransferModal();
+        backToSidebar();
+      } catch (err) {
+        alert("حدث خطأ أثناء تحويل المحادثة.");
       }
     };
 
@@ -509,9 +590,13 @@
 
       document.getElementById('currentName').innerText = displayName;
       document.getElementById('callClientBtn').classList.remove('hidden');
-      document.getElementById('chatLockStatus').innerText = "جاري قفل الشات...";
+      document.getElementById('chatLockStatus').innerText = "جاري قفل الشات وتخصيصه...";
 
-      set(ref(db, `single_chat_room/${roomKey}/lockedBy`), currentEmpName);
+      // بمجرد أن يفتح الموظف الشات، يتم تخصيصه له وحده إذا لم يكن مخصصاً مسبقاً
+      update(ref(db, `single_chat_room/${roomKey}`), {
+        lockedBy: currentEmpName,
+        assignedTo: currentEmpName
+      });
 
       const container = document.getElementById('messageContainer');
       container.innerHTML = '<div class="text-slate-500 text-center my-auto">جاري تحميل الرسائل...</div>'; 
@@ -528,7 +613,7 @@
         
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
-            if(childSnapshot.key === 'call') return;
+            if(childSnapshot.key === 'call' || childSnapshot.key === 'assignedTo') return;
             if(childSnapshot.key === 'status') {
               const statusVal = childSnapshot.val();
               const statusDot = document.getElementById('headerClientStatusDot');
@@ -589,7 +674,7 @@
 
       const chatRef = ref(db, 'single_chat_room/' + activeClientKey);
       try {
-        await update(chatRef, { lockedBy: currentEmpName });
+        await update(chatRef, { lockedBy: currentEmpName, assignedTo: currentEmpName });
         await push(chatRef, { text: text, sender: currentEmpName, senderRole: "employee", timestamp: Date.now() });
         input.value = ''; 
       } catch (error) { console.error(error); }
@@ -610,7 +695,7 @@
 
       showEmployeeCallScreen();
       set(ref(db, `online_employees/${empCleanId}/inCall`), true);
-      set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), currentEmpName);
+      update(ref(db, `single_chat_room/${activeClientKey}`), { lockedBy: currentEmpName, assignedTo: currentEmpName });
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -646,7 +731,7 @@
       showEmployeeCallScreen();
 
       set(ref(db, `online_employees/${empCleanId}/inCall`), true);
-      set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), currentEmpName);
+      update(ref(db, `single_chat_room/${activeClientKey}`), { lockedBy: currentEmpName, assignedTo: currentEmpName });
 
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
