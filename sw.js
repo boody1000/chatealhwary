@@ -14,33 +14,49 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// استقبال الإشعارات في الخلفية التامة (حتى لو المتصفح مغلق)[cite: 6]
+// استقبال الإشعارات في الخلفية التامة مع أزرار المكالمات[cite: 6]
 messaging.onBackgroundMessage((payload) => {
-    const notificationTitle = payload.notification?.title || 'رسالة جديدة - الهواري للزواج';[cite: 6]
+    const isCall = payload.data?.type === 'call' || payload.notification?.title?.includes('مكالمة');
+    
+    const notificationTitle = payload.notification?.title || (isCall ? '📞 مكالمة صوتية واردة' : 'رسالة جديدة - الهواري للزواج');[cite: 6]
     const notificationOptions = {
-        body: payload.notification?.body || 'لديك رسالة جديدة في الشات',[cite: 6]
+        body: payload.notification?.body || (isCall ? 'لديك مكالمة واردة الآن...' : 'لديك رسالة جديدة في الشات'),[cite: 6]
         icon: './22.jpg',[cite: 6]
         badge: './22.jpg',[cite: 6]
-        vibrate: [300, 100, 300, 100, 300],[cite: 6]
+        vibrate: [300, 150, 300, 150, 300, 150, 300],[cite: 6]
+        requireInteraction: true,
+        actions: [
+            { action: 'answer_call', title: '📞 رد' },
+            { action: 'reject_call', title: '❌ إغلاق / رفض' }
+        ],
         data: { url: payload.data?.url || './clint_2.html' }[cite: 6]
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+// التعامل مع النقر على الإشعار أو أزرار التفاعل (الرد / الرفض)
 self.addEventListener('notificationclick', (event) => {
+    const action = event.action;
     event.notification.close();
     const targetUrl = event.notification.data?.url || './clint_2.html';[cite: 6]
+
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             for (let i = 0; i < clientList.length; i++) {
                 let client = clientList[i];
-                if (client.url.includes('clint_2.html') && 'focus' in client) {[cite: 6]
-                    return client.focus();
+                if ('focus' in client) {
+                    client.focus();
+                    if (action === 'answer_call') {
+                        client.postMessage({ type: 'TRIGGER_ANSWER_CALL' });
+                    } else if (action === 'reject_call') {
+                        client.postMessage({ type: 'TRIGGER_REJECT_CALL' });
+                    }
+                    return;
                 }
             }
             if (clients.openWindow) {
-                return clients.openWindow(targetUrl);
+                return clients.openWindow(targetUrl);[cite: 6]
             }
         })
     );
