@@ -42,17 +42,6 @@
 </head>
 <body class="bg-slate-900 text-slate-100 h-[100dvh] flex flex-col font-sans relative overflow-hidden bg-custom-watermark">
 
-    <!-- شريط تفعيل الإشعارات للعميل -->
-    <div id="notifPermissionBanner" class="bg-amber-600/90 border-b border-amber-500 p-2.5 text-center text-xs text-white z-20 hidden flex items-center justify-between px-4 shadow-md backdrop-blur-md">
-        <span class="flex items-center gap-2">
-            <i class="fa-solid fa-bell-slash text-sm"></i>
-            <span>لتلقي تنبيهات الرسائل والمكالمات فور وصولها، يرجى تفعيل الإشعارات:</span>
-        </span>
-        <button onclick="requestManualNotification()" class="bg-slate-950 hover:bg-slate-900 text-amber-400 border border-amber-500/50 px-3 py-1.5 rounded-lg font-bold transition shadow">
-            تفعيل الإشعارات الآن
-        </button>
-    </div>
-
     <!-- رأس المحادثة -->
     <header class="bg-slate-950/80 border-b border-slate-800 px-4 py-3 flex items-center justify-between z-10 shrink-0 backdrop-blur-md">
         <div class="flex items-center gap-3">
@@ -204,12 +193,6 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             autoEnableSystemFeatures();
-
-            // فحص إذن الإشعارات لإظهار شريط التفعيل التلقائي إن لم يتم منحه
-            if ("Notification" in window && Notification.permission === 'default') {
-                document.getElementById("notifPermissionBanner").classList.remove("hidden");
-            }
-
             if (currentClientKey && originalDisplayName) {
                 document.getElementById("nameModal").classList.add("hidden");
                 document.getElementById("clientDisplayHeader").innerText = "العميل: " + originalDisplayName;
@@ -218,32 +201,10 @@
                 requestFCMToken(currentClientKey);
                 setupUserPresence(currentClientKey);
             } else {
-                document.getElementById("nameModal").classList.add("hidden");
+                document.getElementById("nameModal").classList.remove("hidden");
                 document.getElementById("nameModal").classList.add("flex");
             }
         });
-
-        // دالة تفعيل الإشعارات يدويًا عبر الزر الجديد
-        window.requestManualNotification = async function() {
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    document.getElementById("notifPermissionBanner").classList.add("hidden");
-                    alert("شكراً لك! تم تفعيل الإشعارات بنجاح.");
-                    if (currentClientKey) {
-                        const tokenOptions = { serviceWorkerRegistration: await navigator.serviceWorker.register('./sw_3.js') };
-                        const token = await getToken(messaging, tokenOptions);
-                        if (token) {
-                            await set(ref(db, `single_chat_room/${currentClientKey}/fcm_token`), token);
-                        }
-                    }
-                } else {
-                    alert("تم رفض إذن الإشعارات. يمكنك تفعيلها لاحقاً يدوياً من إعدادات المتصفح بجوار الرابط.");
-                }
-            } catch (error) {
-                console.log("Error requesting notification permission:", error);
-            }
-        };
 
         function setupUserPresence(clientKey) {
             const userStatusRef = ref(db, `single_chat_room/${clientKey}/status`);
@@ -273,11 +234,10 @@
 
         async function requestFCMToken(clientKey) {
             try {
-                const permission = await Notification.permission;
+                const permission = await Notification.requestPermission();
                 if (permission === 'granted') {
-                    // تم تصحيح اسم ملف Service Worker ليطابق sw_3.js
-                    const tokenOptions = { serviceWorkerRegistration: await navigator.serviceWorker.register('./sw_3.js') };
-                    const token = await getToken(messaging, tokenOptions);
+                    const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+                    const token = await getToken(messaging, { serviceWorkerRegistration: registration });
                     if (token) {
                         await set(ref(db, `single_chat_room/${clientKey}/fcm_token`), token);
                     }
@@ -478,7 +438,7 @@
                 createPeerConnection();
                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOfferData));
+                await peerConnection.setRemoteDescription(new RTCIceCandidate(incomingOfferData) || new RTCSessionDescription(incomingOfferData));
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
 
