@@ -7,6 +7,25 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="22.jpg" type="image/jpeg">
+    
+    <!-- Meta Pixel Code -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push(n,arguments);!q;version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      n.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', 'YOUR_PIXEL_ID');
+      fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=YOUR_PIXEL_ID&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code -->
+
     <style>
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background:url(22.jpg); }
@@ -144,6 +163,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, push, onValue, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -158,15 +178,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-
-        // تسجيل الـ Service Worker للإشعارات في الخلفية
-        if ('serviceWorker' in navigator) {
-          window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-              .then(reg => console.log('Client Service Worker registered'))
-              .catch(err => console.log('Client SW registration error', err));
-          });
-        }
+        const messaging = getMessaging(app);
 
         let currentClientKey = localStorage.getItem('messenger_hawary_key');
         let originalDisplayName = localStorage.getItem('messenger_hawary_name');
@@ -178,15 +190,7 @@
         let peerConnection = null;
         let localStream = null;
         let incomingOfferData = null; 
-        
-        // خوادم STUN متعددة ومستقرة لضمان نجاح الاتصال الصوتي
-        const servers = { 
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ] 
-        };
-
+        const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
         const messagesContainer = document.getElementById("chatMessages");
         const ringAudio = document.getElementById("ringAudio");
         const msgSound = document.getElementById("msgSound");
@@ -195,12 +199,6 @@
         let lastMessageCount = 0;
 
         function autoEnableSystemFeatures() {
-            if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission().then(permission => {
-                    console.log("Notification permission status:", permission);
-                });
-            }
-
             [ringAudio, msgSound].forEach(audio => {
                 if(audio) {
                     audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(e => {});
@@ -219,6 +217,7 @@
                 document.getElementById("clientDisplayHeader").innerText = "العميل: " + originalDisplayName;
                 initChatSession(currentClientKey, originalDisplayName);
                 listenForIncomingCalls(currentClientKey);
+                requestFCMToken(currentClientKey);
                 setupUserPresence(currentClientKey);
             } else {
                 document.getElementById("nameModal").classList.remove("hidden");
@@ -227,10 +226,10 @@
         });
 
         function setupUserPresence(clientKey) {
-            if (!clientKey) return;
             const userStatusRef = ref(db, `single_chat_room/${clientKey}/status`);
             const userClientRef = ref(db, `single_chat_room/${clientKey}/client_info`);
 
+            // تحديث الحالة عند الاتصال المباشر وضبطها للقطع التلقائي offline عند إغلاق التبويب
             set(userStatusRef, "online");
             onDisconnect(userStatusRef).set("offline");
 
@@ -253,6 +252,25 @@
             });
         }
 
+        async function requestFCMToken(clientKey) {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    const tokenOptions = { serviceWorkerRegistration: await navigator.serviceWorker.register('./firebase-messaging-sw.js') };
+                    const token = await getToken(messaging, tokenOptions);
+                    if (token) {
+                        await set(ref(db, `single_chat_room/${clientKey}/fcm_token`), token);
+                    }
+                }
+            } catch (error) {
+                console.log('FCM Token error:', error);
+            }
+        }
+
+        onMessage(messaging, (payload) => {
+            playMessageAlert(payload.notification?.body || "لديك رسالة جديدة", payload.notification?.title || "الهواري للتعارف والزواج");
+        });
+
         window.saveUserName = function() {
             const inputVal = document.getElementById("userNameInput").value.trim();
             if (!inputVal) { alert("يرجى كتابة اسمك للمتابعة"); return; }
@@ -261,7 +279,7 @@
 
             originalDisplayName = inputVal;
             const uniqueId = Math.floor(Math.random() * 900000) + 100000;
-            currentClientKey = inputVal.replace(/[^a-zA-Z0-9\u0600-\u06FF]/g, '_') + '_' + uniqueId;
+            currentClientKey = inputVal.replace(/\s+/g, '_') + '_' + uniqueId;
             
             localStorage.setItem('messenger_hawary_key', currentClientKey);
             localStorage.setItem('messenger_hawary_name', originalDisplayName);
@@ -271,18 +289,18 @@
 
             initChatSession(currentClientKey, originalDisplayName);
             listenForIncomingCalls(currentClientKey);
+            requestFCMToken(currentClientKey);
             setupUserPresence(currentClientKey);
         };
 
         function initChatSession(clientKey, displayName) {
-            if (!clientKey) return;
             const roomRef = ref(db, 'single_chat_room/' + clientKey);
             onValue(roomRef, (snapshot) => {
                 messagesContainer.innerHTML = '';
                 let messagesArray = [];
                 if (snapshot.exists()) {
                     snapshot.forEach((childSnapshot) => {
-                        if(childSnapshot.key === 'call' || childSnapshot.key === 'fcm_token' || childSnapshot.key === 'status' || childSnapshot.key === 'client_info' || childSnapshot.key === 'lockedBy') return;
+                        if(childSnapshot.key === 'call' || childSnapshot.key === 'fcm_token' || childSnapshot.key === 'status' || childSnapshot.key === 'client_info') return;
                         const msg = childSnapshot.val();
                         if(!msg || !msg.text) return;
                         messagesArray.push(msg);
@@ -317,22 +335,6 @@
                 msgSound.currentTime = 0;
                 msgSound.play().catch(e => {});
             }
-
-            if ('vibrate' in navigator) {
-                try { navigator.vibrate([300, 150, 300, 150, 300]); } catch(e) {}
-            }
-
-            if ('Notification' in window && Notification.permission === 'granted') {
-                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                    navigator.serviceWorker.controller.postMessage({
-                        type: 'SHOW_NOTIFICATION',
-                        title: senderName || 'الهواري للتعارف والزواج',
-                        body: msgText,
-                        url: window.location.href
-                    });
-                }
-            }
-
             showMessengerBanner(senderName, msgText);
         }
 
@@ -379,7 +381,7 @@
                 
                 sendTelegramNotification(originalDisplayName, messageText);
                 inputField.value = "";
-            } catch (error) { console.error("Send message error:", error); }
+            } catch (error) { console.error(error); }
         };
 
         function appendMessageToUI(text, sender, timestamp, isClientMsg) {
@@ -394,36 +396,26 @@
         }
 
         window.startCall = async function() {
-            if (!currentClientKey) { alert("يرجى إدخال الاسم وبدء الشات أولاً"); return; }
             autoEnableSystemFeatures();
             showCallScreen("جارِ الاتصال...", false);
-            
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, 
-                    video: false 
-                });
-                
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 createPeerConnection();
                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
-                
                 await set(ref(db, `single_chat_room/${currentClientKey}/call`), {
                     offer: { type: offer.type, sdp: offer.sdp },
-                    caller: 'client',
-                    timestamp: Date.now()
+                    caller: 'client'
                 });
             } catch (err) { 
-                console.error("Mic error:", err);
-                alert("تعذر الوصول إلى الميكروفون. يرجى السماح بصلاحية الميكروفون من المتصفح."); 
+                alert("يرجى السماح بالميكروفون"); 
                 closeCallUI(); 
             }
         };
 
         function listenForIncomingCalls(clientKey) {
-            if (!clientKey) return;
             const callRef = ref(db, `single_chat_room/${clientKey}/call`);
             onValue(callRef, async (snapshot) => {
                 const data = snapshot.val();
@@ -440,19 +432,15 @@
 
                 if (data.answer && peerConnection && !peerConnection.currentRemoteDescription) {
                     if (ringAudio && !ringAudio.paused) { ringAudio.pause(); ringAudio.currentTime = 0; }
-                    try {
-                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-                        startTimer();
-                        document.getElementById("callStatusText").innerText = "المكالمة جارية...";
-                    } catch (e) { console.error("Remote description error:", e); }
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    startTimer();
+                    document.getElementById("callStatusText").innerText = "المكالمة جارية...";
                 }
             });
             onValue(ref(db, `single_chat_room/${clientKey}/call/candidates`), (snapshot) => {
                 snapshot.forEach((child) => {
                     const cand = child.val();
-                    if (peerConnection && cand) {
-                        peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(e=>{});
-                    }
+                    if (peerConnection && cand) peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(e=>{});
                 });
             });
         }
@@ -466,11 +454,7 @@
             document.getElementById("callStatusText").innerText = "جارِ الانضمام...";
 
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, 
-                    video: false 
-                });
-                
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 createPeerConnection();
                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
@@ -485,8 +469,7 @@
                 startTimer();
                 document.getElementById("callStatusText").innerText = "المكالمة جارية...";
             } catch (err) {
-                console.error("Answer call error:", err);
-                alert("تعذر الوصول إلى الميكروفون.");
+                alert("يرجى السماح بالميكروفون");
                 closeCallUI();
             }
         };
@@ -507,9 +490,7 @@
                 remoteAudio.play().catch(e => {});
             };
             peerConnection.onicecandidate = (event) => {
-                if (event.candidate && currentClientKey) {
-                    push(ref(db, `single_chat_room/${currentClientKey}/call/candidates`), event.candidate.toJSON());
-                }
+                if (event.candidate) push(ref(db, `single_chat_room/${currentClientKey}/call/candidates`), event.candidate.toJSON());
             };
         }
 
