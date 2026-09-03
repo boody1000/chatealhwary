@@ -14,28 +14,27 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// استقبال الإشعارات في الخلفية التامة مع أزرار المكالمات
 messaging.onBackgroundMessage((payload) => {
     const isCall = payload.data?.type === 'call' || payload.notification?.title?.includes('مكالمة');
     
-    const notificationTitle = payload.notification?.title || (isCall ? '📞 مكالمة صوتية واردة' : 'رسالة جديدة - الهواري للزواج');
+    const notificationTitle = payload.notification?.title || (isCall ? 'مكالمة صوتية واردة...' : 'رسالة جديدة - الهواري للزواج');
     const notificationOptions = {
-        body: payload.notification?.body || (isCall ? 'لديك مكالمة واردة الآن...' : 'لديك رسالة جديدة في الشات'),
+        body: payload.notification?.body || (isCall ? 'شركة الهواري للزواج - اضغط للرد' : 'لديك رسالة جديدة في الشات'),
         icon: './22.jpg',
         badge: './22.jpg',
-        vibrate: [300, 150, 300, 150, 300, 150, 300],
+        vibrate: [500, 200, 500, 200, 500, 200, 500, 200],
+        tag: 'incoming-call-ring',
         requireInteraction: true,
         actions: [
-            { action: 'answer_call', title: '📞 رد' },
-            { action: 'reject_call', title: '❌ إغلاق / رفض' }
+            { action: 'answer_call', title: '📞 رد على المكالمة' },
+            { action: 'reject_call', title: '❌ إنهاء / رفض' }
         ],
-        data: { url: payload.data?.url || './clint_2.html' }
+        data: { url: payload.data?.url || './clint_2.html', type: 'call' }
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// التعامل مع النقر على الإشعار أو أزرار التفاعل (الرد / الرفض)
 self.addEventListener('notificationclick', (event) => {
     const action = event.action;
     event.notification.close();
