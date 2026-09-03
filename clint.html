@@ -550,7 +550,6 @@
                 }
             });
 
-            // الاستماع للـ ICE Candidates الخاصة بالطرف الآخر وإضافتها للاتصال
             listenForCandidates(clientKey);
         }
 
@@ -599,6 +598,7 @@
                 }
             };
 
+            // تعديل دالة ontrack لتضمن تشغيل الصوت تلقائياً وتجاوز قيود المتصفح
             peerConnection.ontrack = (event) => { 
                 if (ringAudio && !ringAudio.paused) { ringAudio.pause(); ringAudio.currentTime = 0; }
                 const remoteAudio = document.getElementById("remoteAudio");
@@ -609,7 +609,11 @@
                     inboundStream.addTrack(event.track);
                     remoteAudio.srcObject = inboundStream;
                 }
-                remoteAudio.play().catch(e => {});
+                remoteAudio.play().then(() => {
+                    console.log("Audio started successfully");
+                }).catch(e => {
+                    console.warn("Autoplay blocked, waiting for interaction", e);
+                });
             };
 
             peerConnection.oniceconnectionstatechange = () => {
