@@ -1,4 +1,4 @@
-// Service Worker المتكامل لإدارة الإشعارات في الخلفية - شركة الهواري للزواج
+// Service Worker المحدث لإشعارات المكالمات الحقيقية - شركة الهواري للزواج
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -8,7 +8,6 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(clients.claim());
 });
 
-// استقبال أمر إظهار الإشعار من صفحة الشات أو المكالمات
 self.addEventListener('message', (event) => {
     if (event.data) {
         if (event.data.type === 'SHOW_NOTIFICATION') {
@@ -31,21 +30,26 @@ self.addEventListener('message', (event) => {
                 self.registration.showNotification(title, options)
             );
         } else if (event.data.type === 'SHOW_CALL_NOTIFICATION') {
-            // إشعار المكالمة الواردة مع أزرار الرد والرفض كلوحة اتصال مصغرة
-            const title = event.data.title || '📞 مكالمة صوتية واردة';
+            // إشعار مكالمة واردة مصمم خصيصاً كـ مكالمة وليس مقطع صوتي
+            const title = event.data.title || 'مكالمة صوتية واردة...';
             const options = {
-                body: event.data.body || 'لديك مكالمة واردة الآن...',
+                body: event.data.body || 'شركة الهواري للزواج - اضغط للرد أو الرفض',
                 icon: './22.jpg',
                 badge: './22.jpg',
-                vibrate: [300, 150, 300, 150, 300, 150, 300],
-                tag: 'incoming-call',
+                // تخصيص الاهتزاز بنمط رنين هاتفي حقيقي متقطع
+                vibrate: [500, 200, 500, 200, 500, 200, 500, 200],
+                tag: 'incoming-call-ring', // تگ خاص لعدم تداخل الإشعار مع الوسائط
                 renotify: true,
-                requireInteraction: true, // يبقى ثابتاً حتى يتفاعل المستخدم
+                requireInteraction: true, // يظل الإشعار ثابتاً ولا يختفي حتى يتم الرد
+                // الخصائص البرمجية لإجبار المتصفح والنظام على معاملة الإشعار كمكالمة
+                dir: 'rtl',
+                lang: 'ar',
+                // تفعيل الأكشن المباشر للاتصال
                 actions: [
-                    { action: 'answer_call', title: '📞 رد' },
-                    { action: 'reject_call', title: '❌ إغلاق / رفض' }
+                    { action: 'answer_call', title: '📞 رد على المكالمة' },
+                    { action: 'reject_call', title: '❌ إنهاء / رفض' }
                 ],
-                data: { url: event.data.url || self.location.origin }
+                data: { url: event.data.url || self.location.origin, type: 'call' }
             };
 
             event.waitUntil(
@@ -55,7 +59,7 @@ self.addEventListener('message', (event) => {
     }
 });
 
-// عند الضغط على الإشعار أو أزرار التفاعل (رد / رفض)
+// التعامل مع أزرار الرد والرفض
 self.addEventListener('notificationclick', (event) => {
     const action = event.action;
     event.notification.close();
