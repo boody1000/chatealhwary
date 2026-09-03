@@ -137,7 +137,8 @@
         </div>
     </div>
     
-    <audio id="remoteAudio" autoplay playsinline></audio>
+    <!-- عناصر الصوت المخفية لدعم الموبايل -->
+    <audio id="remoteAudio" autoplay playsinline controls style="display:none;"></audio>
     <audio id="ringAudio" src="ran.mp3" preload="auto" loop></audio>
     <audio id="msgSound" src="mes.mp3" preload="auto"></audio>
 
@@ -178,7 +179,7 @@
 
         const messagesContainer = document.getElementById("chatMessages");
         const ringAudio = document.getElementById("ringAudio");
-        const msgSound = document.getElementById("msgSound");
+        const remoteAudio = document.getElementById("remoteAudio");
 
         window.addEventListener('DOMContentLoaded', () => {
             if (currentClientKey && originalDisplayName) {
@@ -272,7 +273,7 @@
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
                 await set(ref(db, `single_chat_room/${currentClientKey}/call`), { offer: { type: offer.type, sdp: offer.sdp }, caller: 'client' });
-            } catch (e) { alert("خطأ في الميكروفون"); closeCallUI(); }
+            } catch (e) { alert("تعذر الوصول للميكروفون، يرجى السماح به من إعدادات المتصفح"); closeCallUI(); }
         };
 
         function listenForIncomingCalls(clientKey) {
@@ -307,20 +308,33 @@
                 await peerConnection.setLocalDescription(answer);
                 await set(ref(db, `single_chat_room/${currentClientKey}/call/answer`), { type: answer.type, sdp: answer.sdp });
                 startTimer();
-            } catch (e) { closeCallUI(); }
+            } catch (e) { alert("خطأ أثناء الرد على المكالمة"); closeCallUI(); }
         };
 
         async function createPeerConnection(roomKey) {
             if (peerConnection) return;
             const config = await getMeteredIceServers();
             peerConnection = new RTCPeerConnection(config);
-            peerConnection.onicecandidate = e => { if (e.candidate) push(ref(db, `single_chat_room/${roomKey}/call/candidates`), e.candidate.toJSON()); };
-            peerConnection.ontrack = e => { document.getElementById("remoteAudio").srcObject = e.streams[0]; };
+            
+            peerConnection.onicecandidate = e => { 
+                if (e.candidate) push(ref(db, `single_chat_room/${roomKey}/call/candidates`), e.candidate.toJSON()); 
+            };
+            
+            peerConnection.ontrack = e => {
+                remoteAudio.srcObject = e.streams[0];
+                remoteAudio.play().catch(err => {
+                    console.log("Audio autoplay restricted, forcing play...");
+                });
+            };
         }
 
         function listenForCandidates(roomKey) {
             onValue(ref(db, `single_chat_room/${roomKey}/call/candidates`), snap => {
-                snap.forEach(c => { if (peerConnection && c.val()) peerConnection.addIceCandidate(new RTCIceCandidate(c.val())).catch(e => {}); });
+                snap.forEach(c => { 
+                    if (peerConnection && c.val()) {
+                        peerConnection.addIceCandidate(new RTCIceCandidate(c.val())).catch(e => {}); 
+                    }
+                });
             });
         }
 
@@ -332,9 +346,11 @@
             if (incoming) {
                 document.getElementById("answerCallBtn").classList.remove("hidden");
                 document.getElementById("muteBtn").classList.add("hidden");
+                document.getElementById("speakerBtn").classList.add("hidden");
             } else {
                 document.getElementById("answerCallBtn").classList.add("hidden");
                 document.getElementById("muteBtn").classList.remove("hidden");
+                document.getElementById("speakerBtn").classList.remove("hidden");
             }
         }
 
@@ -363,17 +379,20 @@
 
         window.toggleMute = function() {
             isMuted = !isMuted;
-            if (localStream) localStream.getAudioTracks()[0].enabled = !isMuted;
+            if (localStream && localStream.getAudioTracks().length > 0) {
+                localStream.getAudioTracks()[0].enabled = !isMuted;
+            }
             document.getElementById("muteIcon").className = isMuted ? "fa-solid fa-microphone-slash text-red-400" : "fa-solid fa-microphone";
         };
 
         window.toggleSpeaker = function() {
             isSpeakerOn = !isSpeakerOn;
-            document.getElementById("remoteAudio").muted = !isSpeakerOn;
+            remoteAudio.muted = !isSpeakerOn;
+            document.getElementById("speakerIcon").className = isSpeakerOn ? "fa-solid fa-volume-high" : "fa-solid fa-volume-xmark text-red-400";
         };
 
         function escapeHtml(str) {
-            return str ? str.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])) : '';
+            return str ? str.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'#'+m.charCodeAt(0)+';'}[m])) : '';
         }
     </script>
 </body>
