@@ -14,23 +14,35 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// استقبال الإشعارات في الخلفية وتوليد إشعار المتصفح بالطريقة القياسية
+// معالجة الرسائل والمكالمات في الخلفية لتظهر بشكل إشعار رسائل ومكالمات حقيقي مثل الماسنجر
 messaging.onBackgroundMessage((payload) => {
-    const notificationTitle = payload.notification?.title || payload.data?.title || 'رسالة جديدة';
+    const isCall = payload.data?.type === 'call' || payload.notification?.title?.includes('مكالمة');
+    
+    const notificationTitle = payload.notification?.title || (isCall ? '📞 مكالمة صوتية واردة' : 'رسالة جديدة - الهواري للزواج');
     const notificationOptions = {
-        body: payload.notification?.body || payload.data?.body || 'لديك رسالة جديدة',
+        body: payload.notification?.body || (isCall ? 'لديك مكالمة واردة الآن...' : 'لديك رسالة جديدة في الشات'),
         icon: './22.jpg',
         badge: './22.jpg',
-        tag: 'hawary-chat-msg',
+        // تفعيل الاهتزاز والخصائص لتجنب اعتبار الإشعار مشغل صوتي (MP3)
+        vibrate: isCall ? [500, 200, 500, 200, 500] : [200, 100, 200],
+        tag: isCall ? ('incoming-call-' + Date.now()) : 'hawary-chat-msg',
         renotify: true,
-        data: { url: payload.data?.url || './clint_2.html' }
+        requireInteraction: isCall ? true : false, // المكالمة تظل ثابتة، والرسالة تظهر وتنزل من الأعلى ثم تستقر
+        actions: isCall ? [
+            { action: 'answer_call', title: '📞 رد' },
+            { action: 'reject_call', title: '❌ رفض' }
+        ] : [
+            { action: 'open', title: 'فتح المحادثة' }
+        ],
+        data: { url: payload.data?.url || './clint_2.html', type: isCall ? 'call' : 'message' }
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// التفاعل عند النقر على إشعار المتصفح لفتح الصفحة مباشرة
+// التعامل مع النقر على الإشعار أو أزرار التفاعل
 self.addEventListener('notificationclick', (event) => {
+    const action = event.action;
     event.notification.close();
     const targetUrl = event.notification.data?.url || './clint_2.html';
 
@@ -39,7 +51,13 @@ self.addEventListener('notificationclick', (event) => {
             for (let i = 0; i < clientList.length; i++) {
                 let client = clientList[i];
                 if ('focus' in client) {
-                    return client.focus();
+                    client.focus();
+                    if (action === 'answer_call') {
+                        client.postMessage({ type: 'TRIGGER_ANSWER_CALL' });
+                    } else if (action === 'reject_call') {
+                        client.postMessage({ type: 'TRIGGER_REJECT_CALL' });
+                    }
+                    return;
                 }
             }
             if (clients.openWindow) {
