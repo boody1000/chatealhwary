@@ -156,14 +156,21 @@
     let unreadCounts = {}, previousMessagesCounts = {}, isFirstLoad = true, allRoomsCache = [];
     let isMuted = false;
 
+    // دالة جلب خوادم الاتصال مع دعم الحماية الكاملة لبيانات المحمول (TURN/STUN)
     async function getMeteredIceServers() {
         if (cachedIceServers) return cachedIceServers;
         try {
             const res = await fetch("https://alhwary.metered.live/api/v1/turn/credentials?apiKey=6079dfbbdcf8564255625baf8471629ed765");
+            if (!res.ok) throw new Error();
             cachedIceServers = await res.json();
             return cachedIceServers;
         } catch (e) {
-            return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+            return { 
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ] 
+            };
         }
     }
 
