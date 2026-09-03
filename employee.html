@@ -314,7 +314,6 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
     let localStream = null;
     let cachedIceServers = null;
 
-    // جلب خوادم Metered TURN Server ديناميكياً باستخدام مفتاح API الخاص بك
     async function getMeteredIceServers() {
         if (cachedIceServers) return cachedIceServers;
         try {
@@ -323,7 +322,6 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
             return cachedIceServers;
         } catch (error) {
             console.error("Error fetching Metered TURN credentials:", error);
-            // Fallback احتياطي في حال عدم الاتصال بالانترنت لجلب الـ API
             return {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
@@ -804,17 +802,17 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
       const iceServersConfig = await getMeteredIceServers();
       peerConnection = new RTCPeerConnection(iceServersConfig);
       
+      // تصحيح استقبال التراكس وربط الـ Stream وتشغيل الصوت بشكل مضمون
       peerConnection.ontrack = (event) => { 
         stopRinging();
         const remoteAudio = document.getElementById("empRemoteAudio");
         if (event.streams && event.streams[0]) {
             remoteAudio.srcObject = event.streams[0];
         } else {
-            let inboundStream = new MediaStream();
-            inboundStream.addTrack(event.track);
+            let inboundStream = new MediaStream([event.track]);
             remoteAudio.srcObject = inboundStream;
         }
-        remoteAudio.play().catch(e => {});
+        remoteAudio.play().catch(e => console.log("Audio play error:", e));
       };
 
       peerConnection.onicecandidate = (event) => {
