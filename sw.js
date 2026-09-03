@@ -14,50 +14,31 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// معالجة الرسائل والمكالمات في الخلفية لتظهر بشكل إشعار رسائل ومكالمات حقيقي مثل الماسنجر
+// استقبال الإشعارات في الخلفية التامة (حتى لو المتصفح مغلق)
 messaging.onBackgroundMessage((payload) => {
-    const isCall = payload.data?.type === 'call' || payload.notification?.title?.includes('مكالمة');
-    
-    const notificationTitle = payload.notification?.title || (isCall ? '📞 مكالمة صوتية واردة' : 'رسالة جديدة - الهواري للزواج');
+    const notificationTitle = payload.notification?.title || 'رسالة جديدة - الهواري للزواج';
     const notificationOptions = {
-        body: payload.notification?.body || (isCall ? 'لديك مكالمة واردة الآن...' : 'لديك رسالة جديدة في الشات'),
+        body: payload.notification?.body || 'لديك رسالة جديدة في الشات',
         icon: './22.jpg',
         badge: './22.jpg',
-        // تفعيل الاهتزاز والخصائص لتجنب اعتبار الإشعار مشغل صوتي (MP3)
-        vibrate: isCall ? [500, 200, 500, 200, 500] : [200, 100, 200],
-        tag: isCall ? ('incoming-call-' + Date.now()) : 'hawary-chat-msg',
+        vibrate: [300, 100, 300, 100, 300],
+        tag: 'hawary-chat-msg',
         renotify: true,
-        requireInteraction: isCall ? true : false, // المكالمة تظل ثابتة، والرسالة تظهر وتنزل من الأعلى ثم تستقر
-        actions: isCall ? [
-            { action: 'answer_call', title: '📞 رد' },
-            { action: 'reject_call', title: '❌ رفض' }
-        ] : [
-            { action: 'open', title: 'فتح المحادثة' }
-        ],
-        data: { url: payload.data?.url || './clint_2.html', type: isCall ? 'call' : 'message' }
+        data: { url: payload.data?.url || './clint_2.html' }
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// التعامل مع النقر على الإشعار أو أزرار التفاعل
 self.addEventListener('notificationclick', (event) => {
-    const action = event.action;
     event.notification.close();
     const targetUrl = event.notification.data?.url || './clint_2.html';
-
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             for (let i = 0; i < clientList.length; i++) {
                 let client = clientList[i];
-                if ('focus' in client) {
-                    client.focus();
-                    if (action === 'answer_call') {
-                        client.postMessage({ type: 'TRIGGER_ANSWER_CALL' });
-                    } else if (action === 'reject_call') {
-                        client.postMessage({ type: 'TRIGGER_REJECT_CALL' });
-                    }
-                    return;
+                if (client.url.includes('clint_2.html') && 'focus' in client) {
+                    return client.focus();
                 }
             }
             if (clients.openWindow) {
