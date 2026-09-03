@@ -16,12 +16,18 @@ const messaging = firebase.messaging();
 
 // استقبال الإشعارات في الخلفية التامة (حتى لو المتصفح مغلق)
 messaging.onBackgroundMessage((payload) => {
-    const notificationTitle = payload.notification?.title || 'رسالة جديدة - الهواري للزواج';
+    // جلب العنوان ونص الرسالة القادمين من الـ Payload أو السيرفر
+    const notificationTitle = payload.notification?.title || payload.data?.title || 'رسالة جديدة - الهواري للزواج';
+    const notificationBody = payload.notification?.body || payload.data?.body || 'لديك رسالة جديدة في الشات';
+
     const notificationOptions = {
-        body: payload.notification?.body || 'لديك رسالة جديدة في الشات',
-        icon: './22.jpg', // تأكد أن ملف الصورة موجود في نفس مسار الـ sw.js أو استبدله برابط كامل مثل https://yourdomain.com/22.jpg
+        body: notificationBody,
+        icon: './22.jpg', // تأكد أن مسار الصورة صحيح
         badge: './22.jpg',
-        vibrate: [300, 100, 300, 100, 300],
+        dir: 'rtl', // لجعل اتجاه النص عربي بشكل صحيح
+        vibrate: [300, 100, 300, 100, 300], // اهتزاز الموبايل
+        tag: 'chat-message-tag', // لمنع تكرار الإشعارات المزعجة وتحديثها
+        renotify: true, // إصدار تنبيه صوتي حتى لو كان هناك إشعار سابق بنفس الـ tag
         data: { url: payload.data?.url || './clint_2.html' }
     };
 
