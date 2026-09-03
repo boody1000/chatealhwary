@@ -14,7 +14,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// استقبال الإشعارات في الخلفية التامة (حتى لو المتصفح مغلق)
+// استقبال الإشعارات في الخلفية التامة وعرضها كإشعار مرئي وصوتي
 messaging.onBackgroundMessage((payload) => {
     const notificationTitle = payload.notification?.title || 'رسالة جديدة - الهواري للزواج';
     const notificationOptions = {
@@ -22,7 +22,7 @@ messaging.onBackgroundMessage((payload) => {
         icon: './22.jpg',
         badge: './22.jpg',
         vibrate: [300, 100, 300, 100, 300],
-        data: { url: payload.data?.url || './clint.html' }
+        data: { url: payload.data?.url || './clint_2.html' }
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
@@ -30,12 +30,12 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const targetUrl = event.notification.data?.url || './clint.html';
+    const targetUrl = event.notification.data?.url || './clint_2.html';
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             for (let i = 0; i < clientList.length; i++) {
                 let client = clientList[i];
-                if (client.url.includes('clint.html') && 'focus' in client) {
+                if (client.url.includes('clint_2.html') && 'focus' in client) {
                     return client.focus();
                 }
             }
