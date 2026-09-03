@@ -70,7 +70,8 @@
 
           <div class="relative shrink-0">
             <img id="currentAvatar" src="22.jpg" class="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border border-amber-500/40" alt="User">
-            <span class="absolute bottom-0 left-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 border-2 border-slate-900 rounded-full"></span>
+            <!-- مؤشر حالة العميل الأخضر أو الرمادي ديناميكياً مثل المسنجر -->
+            <span id="headerClientStatusDot" class="absolute bottom-0 left-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-slate-500 border-2 border-slate-900 rounded-full transition-colors"></span>
           </div>
           <div class="min-w-0 pr-1">
             <h3 id="currentName" class="text-xs sm:text-sm font-bold text-slate-200 truncate">اسم العميل</h3>
@@ -175,7 +176,6 @@
       });
     }
 
-    // تفعيل إذن الإشعارات وتشغيل الصوت تلقائياً فور أول تفاعل للموظف مع الصفحة
     function autoEnableNotificationsAndAudio() {
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission().then(permission => {
@@ -194,7 +194,6 @@
       }
     }
 
-    // ربط التفعيل التلقائي بأول نقرة أو لمسة في الصفحة
     document.addEventListener('click', autoEnableNotificationsAndAudio, { once: true });
     document.addEventListener('touchstart', autoEnableNotificationsAndAudio, { once: true });
 
@@ -326,6 +325,7 @@
             let totalMessagesCount = 0;
             let lockedBy = null;
             let lastTimestamp = 0;
+            let clientStatus = "offline"; // الحالة الافتراضية
 
             if (unreadCounts[roomKey] === undefined) {
               unreadCounts[roomKey] = 0;
@@ -342,6 +342,11 @@
 
               if(msgChild.key === 'lockedBy') {
                 lockedBy = msgChild.val();
+                return;
+              }
+
+              if(msgChild.key === 'status') {
+                clientStatus = msgChild.val() || "offline";
                 return;
               }
 
@@ -367,7 +372,7 @@
 
             previousMessagesCounts[roomKey] = totalMessagesCount;
 
-            roomsArray.push({ roomKey, originalName, lastMessageText, lockedBy, lastTimestamp, totalMessagesCount });
+            roomsArray.push({ roomKey, originalName, lastMessageText, lockedBy, lastTimestamp, totalMessagesCount, clientStatus });
           });
 
           roomsArray.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
@@ -401,11 +406,16 @@
           ? `<span class="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30 truncate max-w-[100px]">مع: ${escapeHtml(room.lockedBy)}</span>` 
           : '';
 
+        // نقطة الحالة (أخضر لمتصل، رمادي لغير متصل) مثل المسنجر تماماً في قائمة الجانب
+        const isOnline = room.clientStatus === 'online';
+        const dotColorClass = isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-slate-500';
+        const statusTextLabel = isOnline ? 'متصل الآن' : 'غير متصل';
+
         const chatItemHTML = `
           <div onclick="switchChat('${escapeHtml(room.roomKey)}', '${escapeHtml(room.originalName)}')" class="p-3.5 sm:p-4 hover:bg-slate-800/80 cursor-pointer transition flex items-center space-x-3 space-x-reverse border-b border-slate-800/50">
             <div class="relative shrink-0">
               <img src="22.jpg" class="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border border-amber-500/40" alt="User">
-              <span class="absolute bottom-0 left-0 w-3 h-3 bg-green-500 border-2 border-slate-900 rounded-full"></span>
+              <span class="absolute bottom-0 left-0 w-3 h-3 ${dotColorClass} border-2 border-slate-900 rounded-full transition-colors"></span>
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between mb-1">
@@ -416,6 +426,7 @@
                 <p class="text-xs text-slate-400 truncate flex-1">${escapeHtml(room.lastMessageText)}</p>
                 ${lockBadge}
               </div>
+              <span class="text-[10px] ${isOnline ? 'text-emerald-400' : 'text-slate-500'} font-medium mt-0.5 block">${statusTextLabel}</span>
             </div>
           </div>
         `;
@@ -518,12 +529,24 @@
         if (snapshot.exists()) {
           snapshot.forEach((childSnapshot) => {
             if(childSnapshot.key === 'call') return;
+            if(childSnapshot.key === 'status') {
+              const statusVal = childSnapshot.val();
+              const statusDot = document.getElementById('headerClientStatusDot');
+              if (statusDot) {
+                if (statusVal === 'online') {
+                  statusDot.className = "absolute bottom-0 left-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-emerald-500 border-2 border-slate-900 rounded-full transition-colors animate-pulse";
+                  document.getElementById('chatLockStatus').innerText = "متصل الآن";
+                } else {
+                  statusDot.className = "absolute bottom-0 left-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-slate-500 border-2 border-slate-900 rounded-full transition-colors";
+                  document.getElementById('chatLockStatus').innerText = "غير متصل (Offline)";
+                }
+              }
+              return;
+            }
             if(childSnapshot.key === 'lockedBy') {
               const locker = childSnapshot.val();
               if(locker && locker !== currentEmpName) {
                 document.getElementById('chatLockStatus').innerText = `⚠️ قيد الرد بواسطة: ${locker}`;
-              } else if(locker === currentEmpName) {
-                document.getElementById('chatLockStatus').innerText = "✅ متصل وتحت إدارتك";
               }
               return;
             }
