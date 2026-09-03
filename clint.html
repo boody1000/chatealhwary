@@ -511,7 +511,7 @@
                     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, 
                     video: false 
                 });
-                await createPeerConnection();
+                await createPeerConnection(currentClientKey);
                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
                 const offer = await peerConnection.createOffer({ offerToReceiveAudio: true });
@@ -551,14 +551,7 @@
             });
 
             // الاستماع للـ ICE Candidates الخاصة بالطرف الآخر وإضافتها للاتصال
-            onValue(ref(db, `single_chat_room/${clientKey}/call/candidates`), (snapshot) => {
-                snapshot.forEach((child) => {
-                    const cand = child.val();
-                    if (peerConnection && cand) {
-                        peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(e => {});
-                    }
-                });
-            });
+            listenForCandidates(clientKey);
         }
 
         window.answerIncomingCall = async function() {
@@ -574,7 +567,7 @@
                     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, 
                     video: false 
                 });
-                await createPeerConnection();
+                await createPeerConnection(currentClientKey);
 
                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
@@ -586,6 +579,7 @@
                     type: answer.type, sdp: answer.sdp
                 });
 
+                listenForCandidates(currentClientKey);
                 startTimer();
                 document.getElementById("callStatusText").innerText = "المكالمة جارية...";
             } catch (err) {
@@ -594,15 +588,14 @@
             }
         };
 
-        async function createPeerConnection() {
+        async function createPeerConnection(roomKey) {
             if (peerConnection) return;
             const iceServersConfig = await getMeteredIceServers();
             peerConnection = new RTCPeerConnection(iceServersConfig);
             
-            // تجميع وإرسال الـ ICE Candidates تلقائياً لقاعدة البيانات لتجاوز جدران الحماية (NAT)
             peerConnection.onicecandidate = (event) => {
-                if (event.candidate && currentClientKey) {
-                    push(ref(db, `single_chat_room/${currentClientKey}/call/candidates`), event.candidate.toJSON());
+                if (event.candidate && roomKey) {
+                    push(ref(db, `single_chat_room/${roomKey}/call/candidates`), event.candidate.toJSON());
                 }
             };
 
@@ -624,6 +617,17 @@
                     peerConnection.restartIce();
                 }
             };
+        }
+
+        function listenForCandidates(roomKey) {
+            onValue(ref(db, `single_chat_room/${roomKey}/call/candidates`), (snapshot) => {
+                snapshot.forEach((child) => {
+                    const cand = child.val();
+                    if (peerConnection && cand) {
+                        peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(e => {});
+                    }
+                });
+            });
         }
 
         function showCallScreen(statusText, isIncoming) {
