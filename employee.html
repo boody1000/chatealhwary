@@ -802,17 +802,25 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
       const iceServersConfig = await getMeteredIceServers();
       peerConnection = new RTCPeerConnection(iceServersConfig);
       
-      // تصحيح استقبال التراكس وربط الـ Stream وتشغيل الصوت بشكل مضمون
+      // حل مشكلة الصوت: ضمان إلغاء الكتم صراحة وتشغيل العنصر
       peerConnection.ontrack = (event) => { 
         stopRinging();
         const remoteAudio = document.getElementById("empRemoteAudio");
+        remoteAudio.muted = false;
+        
         if (event.streams && event.streams[0]) {
             remoteAudio.srcObject = event.streams[0];
         } else {
-            let inboundStream = new MediaStream([event.track]);
+            let inboundStream = new MediaStream();
+            inboundStream.addTrack(event.track);
             remoteAudio.srcObject = inboundStream;
         }
-        remoteAudio.play().catch(e => console.log("Audio play error:", e));
+        
+        remoteAudio.play().then(() => {
+            console.log("Audio playing successfully");
+        }).catch(e => {
+            console.error("Audio play error:", e);
+        });
       };
 
       peerConnection.onicecandidate = (event) => {
