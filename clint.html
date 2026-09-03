@@ -148,7 +148,7 @@
         import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
+            navigator.serviceWorker.register('./sw_2.js')
             .then(reg => console.log('ServiceWorker active successfully', reg))
             .catch(err => console.log('ServiceWorker failed', err));
         }
@@ -290,10 +290,10 @@
                 });
             }
             
-            // إظهار البانر الذي ينزل من أعلى الشاشة مثل الماسنجر
+            // إظهار البانر العائم داخل الصفحة
             showMessengerBanner(senderName, msgText);
 
-            // إرسال الإشعار لملف الـ Service Worker (sw.js) ليظهر في شريط إشعارات الهاتف الرسمي كواتساب
+            // إرسال الإشعار لملف الـ Service Worker (sw_2.js) ليعمل في شريط إشعارات الهاتف الرسمي
             const notificationTitle = `${senderName} - الهواري للتعارف والزواج`;
             const notificationBody = msgText;
 
@@ -305,18 +305,6 @@
                         body: notificationBody,
                         url: './clint_2.html'
                     });
-                } else {
-                    try {
-                        const notification = new Notification(notificationTitle, {
-                            body: notificationBody,
-                            icon: './22.jpg',
-                            badge: './22.jpg'
-                        });
-                        notification.onclick = function() {
-                            window.focus();
-                            notification.close();
-                        };
-                    } catch (err) {}
                 }
             }
         }
@@ -326,11 +314,9 @@
             document.getElementById("bannerSenderName").innerText = senderName;
             document.getElementById("bannerMessageText").innerText = msgText;
 
-            // إزالة الحركات القديمة وتفعيل انيميشن النزول من الأعلى
             banner.classList.remove("banner-hide", "opacity-0", "pointer-events-none");
             banner.classList.add("banner-show");
 
-            // إخفاء البانر تلقائياً بعد 4 ثوانٍ بحركة الصعود للأعلى
             if (window.bannerTimeout) clearTimeout(window.bannerTimeout);
             window.bannerTimeout = setTimeout(() => {
                 banner.classList.remove("banner-show");
