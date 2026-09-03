@@ -156,19 +156,38 @@
     let unreadCounts = {}, previousMessagesCounts = {}, isFirstLoad = true, allRoomsCache = [];
     let isMuted = false;
 
-    // دالة جلب خوادم الاتصال مع دعم الحماية الكاملة لبيانات المحمول (TURN/STUN)
+    // دالة جلب خوادم الاتصال مع الدمج الكامل لخوادم STUN الاحتياطية لتجاوز قيود بيانات المحمول
     async function getMeteredIceServers() {
         if (cachedIceServers) return cachedIceServers;
         try {
             const res = await fetch("https://alhwary.metered.live/api/v1/turn/credentials?apiKey=6079dfbbdcf8564255625baf8471629ed765");
             if (!res.ok) throw new Error();
-            cachedIceServers = await res.json();
+            const data = await res.json();
+            
+            const extraStunServers = [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' },
+                { urls: 'stun:stun4.l.google.com:19302' },
+                { urls: 'stun:global.stun.twilio.com:3478' }
+            ];
+
+            if (data && data.iceServers) {
+                data.iceServers = data.iceServers.concat(extraStunServers);
+            } else {
+                data = { iceServers: extraStunServers };
+            }
+
+            cachedIceServers = data;
             return cachedIceServers;
         } catch (e) {
             return { 
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:global.stun.twilio.com:3478' }
                 ] 
             };
         }
