@@ -1,4 +1,4 @@
-// استيراد مكتبات Firebase متوافقة مع Service Worker
+// استيراد مكتبات Firebase متوافقة مع Service Worker للعمل عند إغلاق التطبيق
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js');
 
@@ -14,7 +14,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// استقبال الإشعارات في الخلفية التامة مع أزرار المكالمات وتجنب اختفاء الشريط
+// استقبال الإشعارات والمكالمات عندما يكون التطبيق مغلقاً كلياً في الخلفية
 messaging.onBackgroundMessage((payload) => {
     const isCall = payload.data?.type === 'call' || payload.notification?.title?.includes('مكالمة');
     
@@ -24,8 +24,8 @@ messaging.onBackgroundMessage((payload) => {
         icon: './22.jpg',
         badge: './22.jpg',
         vibrate: [500, 200, 500, 200, 500, 200, 500, 200],
-        tag: 'incoming-call-' + Date.now(), // تگ متجدد لضمان عدم استبدال أو مسح الإشعار من الشريط
-        requireInteraction: true, // يضمن بقاء الإشعار ظاهراً حتى يتفاعل معه المستخدم
+        tag: 'incoming-call-' + Date.now(), // يضمن ظهور الإشعار في الشريط وثباته مثل الماسنجر
+        requireInteraction: true, // يمنع اختفاء الإشعار تلقائياً
         dir: 'rtl',
         lang: 'ar',
         actions: [
@@ -38,7 +38,7 @@ messaging.onBackgroundMessage((payload) => {
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// التعامل مع النقر على الإشعار أو أزرار التفاعل (الرد / الرفض)
+// التعامل مع الضغط على أزرار التفاعل من شريط الإشعارات
 self.addEventListener('notificationclick', (event) => {
     const action = event.action;
     event.notification.close();
