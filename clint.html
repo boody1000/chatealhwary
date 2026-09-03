@@ -210,7 +210,6 @@
             const userStatusRef = ref(db, `single_chat_room/${clientKey}/status`);
             const userClientRef = ref(db, `single_chat_room/${clientKey}/client_info`);
 
-            // تحديث الحالة عند الاتصال المباشر وضبطها للقطع التلقائي offline عند إغلاق التبويب
             set(userStatusRef, "online");
             onDisconnect(userStatusRef).set("offline");
 
@@ -237,6 +236,7 @@
             try {
                 const permission = await Notification.requestPermission();
                 if (permission === 'granted') {
+                    // تم تعديل اسم ملف Service Worker هنا ليطابق firebase-messaging-sw.js تماماً
                     const tokenOptions = { serviceWorkerRegistration: await navigator.serviceWorker.register('./firebase-messaging-sw.js') };
                     const token = await getToken(messaging, tokenOptions);
                     if (token) {
