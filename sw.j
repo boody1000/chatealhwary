@@ -1,4 +1,4 @@
-// استيراد مكتبات Firebase متوافقة مع Service Worker[cite: 6]
+// استيراد مكتبات Firebase متوافقة مع Service Worker
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js');
 
@@ -14,22 +14,22 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// استقبال الإشعارات في الخلفية التامة مع أزرار المكالمات[cite: 6]
+// استقبال الإشعارات في الخلفية التامة مع أزرار المكالمات
 messaging.onBackgroundMessage((payload) => {
     const isCall = payload.data?.type === 'call' || payload.notification?.title?.includes('مكالمة');
     
-    const notificationTitle = payload.notification?.title || (isCall ? '📞 مكالمة صوتية واردة' : 'رسالة جديدة - الهواري للزواج');[cite: 6]
+    const notificationTitle = payload.notification?.title || (isCall ? '📞 مكالمة صوتية واردة' : 'رسالة جديدة - الهواري للزواج');
     const notificationOptions = {
-        body: payload.notification?.body || (isCall ? 'لديك مكالمة واردة الآن...' : 'لديك رسالة جديدة في الشات'),[cite: 6]
-        icon: './22.jpg',[cite: 6]
-        badge: './22.jpg',[cite: 6]
-        vibrate: [300, 150, 300, 150, 300, 150, 300],[cite: 6]
+        body: payload.notification?.body || (isCall ? 'لديك مكالمة واردة الآن...' : 'لديك رسالة جديدة في الشات'),
+        icon: './22.jpg',
+        badge: './22.jpg',
+        vibrate: [300, 150, 300, 150, 300, 150, 300],
         requireInteraction: true,
         actions: [
             { action: 'answer_call', title: '📞 رد' },
             { action: 'reject_call', title: '❌ إغلاق / رفض' }
         ],
-        data: { url: payload.data?.url || './clint_2.html' }[cite: 6]
+        data: { url: payload.data?.url || './clint_2.html' }
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
@@ -39,7 +39,7 @@ messaging.onBackgroundMessage((payload) => {
 self.addEventListener('notificationclick', (event) => {
     const action = event.action;
     event.notification.close();
-    const targetUrl = event.notification.data?.url || './clint_2.html';[cite: 6]
+    const targetUrl = event.notification.data?.url || './clint_2.html';
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
@@ -56,7 +56,7 @@ self.addEventListener('notificationclick', (event) => {
                 }
             }
             if (clients.openWindow) {
-                return clients.openWindow(targetUrl);[cite: 6]
+                return clients.openWindow(targetUrl);
             }
         })
     );
