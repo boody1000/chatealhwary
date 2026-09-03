@@ -206,9 +206,9 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('SW registered'))
-          .catch(err => console.log('SW error'));
+        navigator.serviceWorker.register('./sw_2.js')
+          .then(reg => console.log('SW2 registered'))
+          .catch(err => console.log('SW2 error'));
       });
     }
 
@@ -233,11 +233,6 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
     document.addEventListener('click', autoEnableNotificationsAndAudio, { once: true });
     document.addEventListener('touchstart', autoEnableNotificationsAndAudio, { once: true });
 
-    let userInteracted = false;
-    ['click', 'touchstart', 'keydown'].forEach(evt => {
-      window.addEventListener(evt, () => { userInteracted = true; }, { once: true });
-    });
-
     function triggerUniversalAlert(title, body, roomKey = null) {
       const msgAudio = document.getElementById("msgNotificationAudio");
       if (msgAudio) {
@@ -245,7 +240,7 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
         msgAudio.play().catch(e => {});
       }
 
-      if ('vibrate' in navigator && userInteracted) {
+      if ('vibrate' in navigator) {
         try { navigator.vibrate([300, 150, 300, 150, 300]); } catch(e) {}
       }
 
@@ -302,13 +297,24 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
     };
 
     function sendTelegramNotification(text) {
+      if (!text || text.trim() === "") return;
       const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-      const data = { chat_id: TELEGRAM_CHAT_ID, text: text };
+      const data = { chat_id: TELEGRAM_CHAT_ID, text: text, parse_mode: "Markdown" };
       fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
-      }).catch(err => {});
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(errText => {
+            console.error("Telegram Error Response:", errText);
+          });
+        }
+      })
+      .catch(err => {
+        console.error("Telegram Fetch Error:", err);
+      });
     }
 
     let activeClientKey = null;
@@ -435,7 +441,7 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
                 unreadCounts[roomKey] = (unreadCounts[roomKey] || 0) + diff;
                 
                 triggerUniversalAlert(`رسالة جديدة: ${originalName}`, lastMessageText, roomKey);
-                sendTelegramNotification(`رسالة جديدة من العميل: ${originalName}\nالنص: ${lastMessageText}`);
+                sendTelegramNotification(`📩 رسالة جديدة من العميل: *${originalName}*\n💬 النص: ${lastMessageText}`);
               }
             }
 
@@ -584,7 +590,7 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
         if (document.getElementById("employeeCallScreen").classList.contains("hidden")) {
           if (!pendingOffer) {
             triggerUniversalAlert("مكالمة صوتية واردة!", `العميل: ${displayName} يتصل بك...`, roomKey);
-            sendTelegramNotification(`مكالمة صوتية واردة من العميل: ${displayName}`);
+            sendTelegramNotification(`📞 مكالمة صوتية واردة من العميل: *${displayName}*`);
           }
 
           pendingOffer = { roomKey, displayName, offer: callData.offer };
