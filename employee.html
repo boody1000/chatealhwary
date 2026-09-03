@@ -206,9 +206,9 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw_2.js')
-          .then(reg => console.log('SW2 registered'))
-          .catch(err => console.log('SW2 error'));
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SW registered'))
+          .catch(err => console.log('SW error'));
       });
     }
 
@@ -233,6 +233,11 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
     document.addEventListener('click', autoEnableNotificationsAndAudio, { once: true });
     document.addEventListener('touchstart', autoEnableNotificationsAndAudio, { once: true });
 
+    let userInteracted = false;
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+      window.addEventListener(evt, () => { userInteracted = true; }, { once: true });
+    });
+
     function triggerUniversalAlert(title, body, roomKey = null) {
       const msgAudio = document.getElementById("msgNotificationAudio");
       if (msgAudio) {
@@ -240,7 +245,7 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
         msgAudio.play().catch(e => {});
       }
 
-      if ('vibrate' in navigator) {
+      if ('vibrate' in navigator && userInteracted) {
         try { navigator.vibrate([300, 150, 300, 150, 300]); } catch(e) {}
       }
 
@@ -893,7 +898,7 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
       if (!isClientMsg) {
         messageHTML = `<div class="flex flex-col items-end w-full"><div class="bg-amber-600 text-white p-3 rounded-2xl rounded-tl-none max-w-[85%] sm:max-w-md text-xs sm:text-sm shadow-md"><span class="block text-[9px] sm:text-[10px] text-amber-200 font-bold mb-1">${escapeHtml(sender)} (أنت)</span><span class="break-words">${escapeHtml(text)}</span><span class="block text-[9px] sm:text-[10px] text-amber-200 mt-1 text-left">${timeNow}</span></div></div>`;
       } else {
-        messageHTML = `<div class="flex flex-col items-start w-full"><div class="bg-slate-800 text-slate-100 border border-slate-700 p-3 rounded-2xl rounded-tr-none max-w-[85%] sm:max-w-md text-xs sm:text-sm shadow-md"><span class="block text-[9px] sm:text-[10px] text-amber-400 font-bold mb-1">${escapeHtml(sender)} (عميل)</span><span class="break-words">${escapeHtml(text)}</span><span class="block text-[9px] sm:text-[10px] text-slate-400 mt-1 text-left">${timeNow}</span></div>`;
+        messageHTML = `<div class="flex flex-col items-start w-full"><div class="bg-slate-800 text-slate-100 border border-slate-700 p-3 rounded-2xl rounded-tr-none max-w-[85%] sm:max-w-md text-xs sm:text-sm shadow-md"><span class="block text-[9px] sm:text-[10px] text-amber-400 font-bold mb-1">${escapeHtml(sender)} (عميل)</span><span class="break-words">${escapeHtml(text)}</span><span class="block text-[9px] sm:text-[10px] text-slate-400 mt-1 text-left">${timeNow}</span></div></div>`;
       }
       container.insertAdjacentHTML('beforeend', messageHTML);
       container.scrollTop = container.scrollHeight;
