@@ -206,12 +206,10 @@
             }
         });
 
-        // دالة تتبع وتحديث حالة العميل (Online / Offline)
         function setupUserPresence(clientKey) {
             const userStatusRef = ref(db, `single_chat_room/${clientKey}/status`);
             const userClientRef = ref(db, `single_chat_room/${clientKey}/client_info`);
 
-            // ضبط الحالة لـ online وتفعيل الخروج التلقائي عند انقطاع الاتصال
             set(userStatusRef, "online");
             onDisconnect(userStatusRef).set("offline");
 
@@ -221,7 +219,6 @@
             });
             onDisconnect(userClientRef).update({ lastSeen: Date.now() });
 
-            // مراقبة مغادرة الصفحة أو وضعها في الخلفية
             document.addEventListener("visibilitychange", () => {
                 if (document.visibilityState === "hidden") {
                     set(userStatusRef, "offline");
@@ -230,7 +227,6 @@
                 }
             });
 
-            // احتياطي عند إغلاق التبويب نهائياً
             window.addEventListener("pagehide", () => {
                 set(userStatusRef, "offline");
             });
@@ -442,7 +438,7 @@
                 createPeerConnection();
                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-                await peerConnection.setRemoteDescription(new RTCIceCredential(incomingOfferData) || new RTCSessionDescription(incomingOfferData));
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingOfferData));
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
 
