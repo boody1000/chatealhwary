@@ -1,4 +1,4 @@
-// Service Worker المتكامل لإدارة الإشعارات في الخلفية - شركة الهواري للزواج[cite: 3]
+// Service Worker المتكامل لإدارة الإشعارات في الخلفية - شركة الهواري للزواج
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -8,23 +8,23 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(clients.claim());
 });
 
-// استقبال أمر إظهار الإشعار من صفحة الشات الرئيسية أو المكالمات[cite: 3]
+// استقبال أمر إظهار الإشعار من صفحة الشات أو المكالمات
 self.addEventListener('message', (event) => {
     if (event.data) {
         if (event.data.type === 'SHOW_NOTIFICATION') {
-            const title = event.data.title || 'رسالة جديدة - شركة الهواري للزواج';[cite: 3]
+            const title = event.data.title || 'رسالة جديدة - شركة الهواري للزواج';
             const options = {
-                body: event.data.body || 'لديك رسالة جديدة في الشات',[cite: 3]
-                icon: './22.jpg',[cite: 3]
-                badge: './22.jpg',[cite: 3]
-                vibrate: [300, 100, 300, 100, 300],[cite: 3]
-                tag: 'hawary-chat-msg',[cite: 3]
-                renotify: true,[cite: 3]
-                requireInteraction: false,[cite: 3]
+                body: event.data.body || 'لديك رسالة جديدة في الشات',
+                icon: './22.jpg',
+                badge: './22.jpg',
+                vibrate: [300, 100, 300, 100, 300],
+                tag: 'hawary-chat-msg',
+                renotify: true,
+                requireInteraction: false,
                 actions: [
-                    { action: 'open', title: 'فتح المحادثة' }[cite: 3]
+                    { action: 'open', title: 'فتح المحادثة' }
                 ],
-                data: { url: event.data.url || self.location.origin }[cite: 3]
+                data: { url: event.data.url || self.location.origin }
             };
 
             event.waitUntil(
@@ -32,20 +32,20 @@ self.addEventListener('message', (event) => {
             );
         } else if (event.data.type === 'SHOW_CALL_NOTIFICATION') {
             // إشعار المكالمة الواردة مع أزرار الرد والرفض كلوحة اتصال مصغرة
-            const title = event.data.title || '📞 مكالمة صوتية واردة';[cite: 3]
+            const title = event.data.title || '📞 مكالمة صوتية واردة';
             const options = {
-                body: event.data.body || 'لديك مكالمة واردة الآن...',[cite: 3]
-                icon: './22.jpg',[cite: 3]
-                badge: './22.jpg',[cite: 3]
-                vibrate: [300, 150, 300, 150, 300, 150, 300],[cite: 3]
-                tag: 'incoming-call',[cite: 3]
-                renotify: true,[cite: 3]
-                requireInteraction: true, // يظل الإشعار ظاهراً وثابتاً حتى يتفاعل معه المستخدم
+                body: event.data.body || 'لديك مكالمة واردة الآن...',
+                icon: './22.jpg',
+                badge: './22.jpg',
+                vibrate: [300, 150, 300, 150, 300, 150, 300],
+                tag: 'incoming-call',
+                renotify: true,
+                requireInteraction: true, // يبقى ثابتاً حتى يتفاعل المستخدم
                 actions: [
                     { action: 'answer_call', title: '📞 رد' },
                     { action: 'reject_call', title: '❌ إغلاق / رفض' }
                 ],
-                data: { url: event.data.url || self.location.origin }[cite: 3]
+                data: { url: event.data.url || self.location.origin }
             };
 
             event.waitUntil(
@@ -55,12 +55,12 @@ self.addEventListener('message', (event) => {
     }
 });
 
-// عند الضغط على الإشعار أو أزرار (رد / رفض)
+// عند الضغط على الإشعار أو أزرار التفاعل (رد / رفض)
 self.addEventListener('notificationclick', (event) => {
     const action = event.action;
     event.notification.close();
     
-    const targetUrl = event.notification.data.url || './clint_2.html';[cite: 3]
+    const targetUrl = event.notification.data.url || './clint_2.html';
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
@@ -77,7 +77,7 @@ self.addEventListener('notificationclick', (event) => {
                 }
             }
             if (clients.openWindow) {
-                return clients.openWindow(targetUrl);[cite: 3]
+                return clients.openWindow(targetUrl);
             }
         })
     );
