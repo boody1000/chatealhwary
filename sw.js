@@ -1,4 +1,4 @@
-// استيراد مكتبات Firebase متوافقة مع Service Worker للعمل عند إغلاق التطبيق والمتصفح
+// استيراد مكتبات Firebase متوافقة مع Service Worker
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js');
 
@@ -14,37 +14,23 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// معالجة الرسائل والإشعارات في الخلفية التامة عند إغلاق المتصفح أو التطبيق
+// استقبال الإشعارات في الخلفية وتوليد إشعار المتصفح بالطريقة القياسية
 messaging.onBackgroundMessage((payload) => {
-    const isCall = payload.data?.type === 'call' || payload.notification?.title?.includes('مكالمة');
-    
-    const notificationTitle = payload.notification?.title || (isCall ? '📞 مكالمة صوتية واردة...' : 'رسالة جديدة - شركة الهواري للزواج');
+    const notificationTitle = payload.notification?.title || payload.data?.title || 'رسالة جديدة';
     const notificationOptions = {
-        body: payload.notification?.body || (isCall ? 'اضغط للرد أو الرفض' : 'لديك رسالة جديدة في الشات'),
+        body: payload.notification?.body || payload.data?.body || 'لديك رسالة جديدة',
         icon: './22.jpg',
         badge: './22.jpg',
-        vibrate: isCall ? [500, 200, 500, 200, 500, 200, 500, 200] : [300, 100, 300, 100, 300],
-        tag: isCall ? ('incoming-call-' + Date.now()) : 'hawary-chat-msg',
+        tag: 'hawary-chat-msg',
         renotify: true,
-        // إشعار الرسائل يظهر من الأعلى ويختفي طبيعياً، والمكالمة تظل ثابتة
-        requireInteraction: isCall ? true : false, 
-        dir: 'rtl',
-        lang: 'ar',
-        actions: isCall ? [
-            { action: 'answer_call', title: '📞 رد' },
-            { action: 'reject_call', title: '❌ رفض' }
-        ] : [
-            { action: 'open', title: 'فتح المحادثة' }
-        ],
-        data: { url: payload.data?.url || './clint_2.html', type: isCall ? 'call' : 'message' }
+        data: { url: payload.data?.url || './clint_2.html' }
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// التعامل مع النقر على الإشعار أو أزرار التفاعل المباشرة
+// التفاعل عند النقر على إشعار المتصفح لفتح الصفحة مباشرة
 self.addEventListener('notificationclick', (event) => {
-    const action = event.action;
     event.notification.close();
     const targetUrl = event.notification.data?.url || './clint_2.html';
 
@@ -53,13 +39,7 @@ self.addEventListener('notificationclick', (event) => {
             for (let i = 0; i < clientList.length; i++) {
                 let client = clientList[i];
                 if ('focus' in client) {
-                    client.focus();
-                    if (action === 'answer_call') {
-                        client.postMessage({ type: 'TRIGGER_ANSWER_CALL' });
-                    } else if (action === 'reject_call') {
-                        client.postMessage({ type: 'TRIGGER_REJECT_CALL' });
-                    }
-                    return;
+                    return client.focus();
                 }
             }
             if (clients.openWindow) {
