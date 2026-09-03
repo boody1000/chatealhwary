@@ -16,8 +16,6 @@
 </head>
 <body class="bg-[#0e1621] text-white font-sans h-[100dvh] overflow-hidden telegram-bg">
 
-  <div id="toastContainer" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-md flex flex-col gap-2 pointer-events-none"></div>
-
   <div class="flex h-full w-full relative overflow-hidden">
     
     <section id="sidebarPage" class="w-full h-full bg-[#17212b] border-r border-[#232e3c] flex flex-col z-20 absolute inset-0">
@@ -113,6 +111,11 @@
       </div>
       <h2 id="empCallStatus" class="text-lg font-bold mb-1">المكالمة جارية مع العميل</h2>
       <p class="text-xs text-[#8796a5]" id="empCallTimer">00:00</p>
+      
+      <!-- زر طوارئ لتفعيل الصوت يدويًا للموظف -->
+      <button id="forceEmpAudioBtn" onclick="forcePlayEmpAudio()" class="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg animate-bounce">
+        <i class="fa-solid fa-volume-high"></i> اضغط هنا لتفعيل سماع الصوت الآن
+      </button>
     </div>
     
     <div class="flex items-center gap-6 mb-12">
@@ -156,14 +159,11 @@
         try {
             const res = await fetch("https://alhwary.metered.live/api/v1/turn/credentials?apiKey=6079dfbbdcf8564255625baf8471629ed765");
             if (!res.ok) throw new Error();
-            const data = await res.json();
+            let data = await res.json();
             
             const extraStunServers = [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { urls: 'stun:stun3.l.google.com:19302' },
-                { urls: 'stun:stun4.l.google.com:19302' },
                 { urls: 'stun:global.stun.twilio.com:3478' }
             ];
 
@@ -179,7 +179,6 @@
             return { 
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:global.stun.twilio.com:3478' }
                 ] 
             };
@@ -340,14 +339,17 @@
 
       showEmployeeCallScreen();
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
         await createPeerConnection(activeClientKey);
         
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
-        document.getElementById("empRemoteAudio").play().catch(e => {});
+        
+        playEmpRemoteAudioStream();
+
         await update(ref(db, `single_chat_room/${activeClientKey}/call`), { answer: { type: answer.type, sdp: answer.sdp }, status: 'answered' });
+        listenForCandidates(activeClientKey);
         startEmpTimer();
       } catch(e) { employeeEndCall(); }
     };
@@ -357,18 +359,20 @@
       isEmpCallActiveOrRinging = true;
       showEmployeeCallScreen();
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
         await createPeerConnection(activeClientKey);
         
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         await set(ref(db, `single_chat_room/${activeClientKey}/call`), { offer: { type: offer.type, sdp: offer.sdp }, caller: 'employee' });
         
+        listenForCandidates(activeClientKey);
+
         onValue(ref(db, `single_chat_room/${activeClientKey}/call`), async snap => {
           const data = snap.val();
           if (data && data.answer && peerConnection && peerConnection.signalingState === "have-local-offer") {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-            document.getElementById("empRemoteAudio").play().catch(e => {});
+            playEmpRemoteAudioStream();
             startEmpTimer();
           }
         });
@@ -380,6 +384,9 @@
     async function createPeerConnection(roomKey) {
       if (peerConnection) return;
       const config = await getMeteredIceServers();
+      config.bundlePolicy = 'max-bundle';
+      config.rtcpMuxPolicy = 'require';
+
       peerConnection = new RTCPeerConnection(config);
       
       if (localStream) {
@@ -394,16 +401,54 @@
       
       peerConnection.ontrack = e => { 
           const remoteAudio = document.getElementById("empRemoteAudio");
-          remoteAudio.srcObject = e.streams[0]; 
-          remoteAudio.play().catch(err => {
-              console.log("Audio play blocked, waiting for interaction");
-          });
+          if (e.streams && e.streams[0]) {
+              remoteAudio.srcObject = e.streams[0];
+          } else {
+              let inboundStream = new MediaStream();
+              inboundStream.addTrack(e.track);
+              remoteAudio.srcObject = inboundStream;
+          }
+          playEmpRemoteAudioStream();
       };
+    }
+
+    function playEmpRemoteAudioStream() {
+      const remoteAudio = document.getElementById("empRemoteAudio");
+      remoteAudio.muted = false;
+      remoteAudio.volume = 1.0;
+      let playPromise = remoteAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // المتصفح يمنع التشغيل التلقائي حتى يتم الضغط على الزر
+        });
+      }
+    }
+
+    window.forcePlayEmpAudio = function() {
+      const remoteAudio = document.getElementById("empRemoteAudio");
+      remoteAudio.muted = false;
+      remoteAudio.volume = 1.0;
+      remoteAudio.play().then(() => {
+        document.getElementById("forceEmpAudioBtn").style.display = "none";
+      }).catch(e => {
+        alert("يرجى التأكد من رفع صوت الهاتف وربط السماعات");
+      });
+    };
+
+    function listenForCandidates(roomKey) {
+      onValue(ref(db, `single_chat_room/${roomKey}/call/candidates`), snap => {
+        snap.forEach(c => { 
+          if (peerConnection && c.val() && peerConnection.remoteDescription) {
+            peerConnection.addIceCandidate(new RTCIceCandidate(c.val())).catch(e => {}); 
+          }
+        });
+      });
     }
 
     function showEmployeeCallScreen() {
       document.getElementById("employeeCallScreen").classList.remove("hidden");
       document.getElementById("employeeCallScreen").classList.add("flex");
+      document.getElementById("forceEmpAudioBtn").style.display = "block";
       empSeconds = 0;
     }
 
