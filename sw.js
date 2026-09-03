@@ -1,4 +1,4 @@
-// استيراد مكتبات Firebase متوافقة مع Service Worker
+// استيراد مكتبات Firebase متوافقة مع Service Worker[cite: 6]
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js');
 
@@ -14,15 +14,15 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// استقبال الإشعارات في الخلفية التامة (حتى لو المتصفح مغلق)
+// استقبال الإشعارات في الخلفية التامة (حتى لو المتصفح مغلق)[cite: 6]
 messaging.onBackgroundMessage((payload) => {
-    const notificationTitle = payload.notification?.title || 'رسالة جديدة - الهواري للزواج';
+    const notificationTitle = payload.notification?.title || 'رسالة جديدة - الهواري للزواج';[cite: 6]
     const notificationOptions = {
-        body: payload.notification?.body || 'لديك رسالة جديدة في الشات',
-        icon: './22.jpg',
-        badge: './22.jpg',
-        vibrate: [300, 100, 300, 100, 300],
-        data: { url: payload.data?.url || './clint_2.html' }
+        body: payload.notification?.body || 'لديك رسالة جديدة في الشات',[cite: 6]
+        icon: './22.jpg',[cite: 6]
+        badge: './22.jpg',[cite: 6]
+        vibrate: [300, 100, 300, 100, 300],[cite: 6]
+        data: { url: payload.data?.url || './clint_2.html' }[cite: 6]
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
@@ -30,12 +30,12 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const targetUrl = event.notification.data?.url || './clint_2.html';
+    const targetUrl = event.notification.data?.url || './clint_2.html';[cite: 6]
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             for (let i = 0; i < clientList.length; i++) {
                 let client = clientList[i];
-                if (client.url.includes('clint_2.html') && 'focus' in client) {
+                if (client.url.includes('clint_2.html') && 'focus' in client) {[cite: 6]
                     return client.focus();
                 }
             }
