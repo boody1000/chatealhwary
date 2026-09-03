@@ -1,4 +1,4 @@
-// استيراد مكتبات Firebase متوافقة مع Service Worker للعمل عند إغلاق التطبيق
+// استيراد مكتبات Firebase متوافقة مع Service Worker
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js');
 
@@ -14,7 +14,6 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// استقبال الإشعارات والمكالمات عندما يكون التطبيق مغلقاً كلياً في الخلفية
 messaging.onBackgroundMessage((payload) => {
     const isCall = payload.data?.type === 'call' || payload.notification?.title?.includes('مكالمة');
     
@@ -23,22 +22,23 @@ messaging.onBackgroundMessage((payload) => {
         body: payload.notification?.body || (isCall ? 'شركة الهواري للزواج - اضغط للرد أو الرفض' : 'لديك رسالة جديدة في الشات'),
         icon: './22.jpg',
         badge: './22.jpg',
-        vibrate: [500, 200, 500, 200, 500, 200, 500, 200],
-        tag: 'incoming-call-' + Date.now(), // يضمن ظهور الإشعار في الشريط وثباته مثل الماسنجر
-        requireInteraction: true, // يمنع اختفاء الإشعار تلقائياً
+        vibrate: isCall ? [500, 200, 500, 200, 500, 200, 500, 200] : [300, 100, 300],
+        tag: isCall ? ('incoming-call-' + Date.now()) : 'hawary-chat-msg', // رسائل تظهر وتستقر، مكالمات بـ Tag متجدد
+        requireInteraction: isCall ? true : false, // تفعيل النزول من الأعلى للرسائل والاستقرار بالشريط
         dir: 'rtl',
         lang: 'ar',
-        actions: [
-            { action: 'answer_call', title: '📞 رد على المكالمة' },
-            { action: 'reject_call', title: '❌ إنهاء / رفض' }
+        actions: isCall ? [
+            { action: 'answer_call', title: '📞 رد' },
+            { action: 'reject_call', title: '❌ رفض' }
+        ] : [
+            { action: 'open', title: 'فتح المحادثة' }
         ],
-        data: { url: payload.data?.url || './clint_2.html', type: 'call' }
+        data: { url: payload.data?.url || './clint_2.html', type: isCall ? 'call' : 'message' }
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// التعامل مع الضغط على أزرار التفاعل من شريط الإشعارات
 self.addEventListener('notificationclick', (event) => {
     const action = event.action;
     event.notification.close();
