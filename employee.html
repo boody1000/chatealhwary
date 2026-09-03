@@ -154,6 +154,7 @@
     let activeClientKey = null, activeClientDisplayName = null, currentEmpName = "موظف الدعم", empCleanId = "default_emp";
     let peerConnection = null, localStream = null, cachedIceServers = null, empTimerInterval = null, empSeconds = 0, pendingOffer = null;
     let unreadCounts = {}, previousMessagesCounts = {}, isFirstLoad = true, allRoomsCache = [];
+    let isMuted = false;
 
     async function getMeteredIceServers() {
         if (cachedIceServers) return cachedIceServers;
@@ -320,11 +321,14 @@
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         await createPeerConnection(activeClientKey);
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-        await update(ref(db, `single_chat_room/${activeClientKey}/call`), { answer: { type: answer.type, sdp: answer.sdp }, status: 'answered' });
-        startEmpTimer();
+        
+        if (peerConnection.signalingState === "stable") {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            await update(ref(db, `single_chat_room/${activeClientKey}/call`), { answer: { type: answer.type, sdp: answer.sdp }, status: 'answered' });
+            startEmpTimer();
+        }
       } catch(e) { employeeEndCall(); }
     };
 
@@ -341,20 +345,32 @@
         
         onValue(ref(db, `single_chat_room/${activeClientKey}/call`), async snap => {
           const data = snap.val();
-          if (data && data.answer && peerConnection && !peerConnection.currentRemoteDescription) {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-            startEmpTimer();
+          if (data && data.answer && peerConnection) {
+            if (peerConnection.signalingState === "have-local-offer") {
+              await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+              startEmpTimer();
+            }
           }
         });
-      } catch(e) { employeeEndCall(); }
+      } catch(e) { 
+        employeeEndCall(); 
+      }
     };
 
     async function createPeerConnection(roomKey) {
       if (peerConnection) return;
       const config = await getMeteredIceServers();
       peerConnection = new RTCPeerConnection(config);
-      peerConnection.onicecandidate = e => { if(e.candidate) push(ref(db, `single_chat_room/${roomKey}/call/candidates`), e.candidate.toJSON()); };
-      peerConnection.ontrack = e => { document.getElementById("empRemoteAudio").srcObject = e.streams[0]; };
+      
+      peerConnection.onicecandidate = e => { 
+          if(e.candidate) push(ref(db, `single_chat_room/${roomKey}/call/candidates`), e.candidate.toJSON()); 
+      };
+      
+      peerConnection.ontrack = e => { 
+          const remoteAudio = document.getElementById("empRemoteAudio");
+          remoteAudio.srcObject = e.streams[0]; 
+          remoteAudio.play().catch(err => {});
+      };
     }
 
     function showEmployeeCallScreen() {
@@ -384,6 +400,14 @@
       if (localStream) localStream.getTracks().forEach(t => t.stop());
       if (peerConnection) { peerConnection.close(); peerConnection = null; }
     }
+
+    window.toggleMuteMic = function() {
+      isMuted = !isMuted;
+      if (localStream && localStream.getAudioTracks().length > 0) {
+        localStream.getAudioTracks()[0].enabled = !isMuted;
+      }
+      document.getElementById("muteIcon").className = isMuted ? "fa-solid fa-microphone-slash text-red-400" : "fa-solid fa-microphone";
+    };
 
     window.openTransferModal = function() {
       const modal = document.getElementById('transferModal');
