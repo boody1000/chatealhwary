@@ -1,4 +1,4 @@
-// Service Worker المتكامل لإدارة الإشعارات في الخلفية - شركة الهواري للزواج
+// Service Worker المحدث لضمان بقاء إشعارات المكالمات في الشريط وعدم اختفائها
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -8,32 +8,57 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(clients.claim());
 });
 
-// استقبال أمر إظهار الإشعار من صفحة الشات الرئيسية
 self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-        const title = event.data.title || 'رسالة جديدة - شركة الهواري للزواج';
-        const options = {
-            body: event.data.body || 'لديك رسالة جديدة في الشات',
-            icon: './22.jpg', // تأكد أن هذه الصورة موجودة في مشروعك
-            badge: './22.jpg',
-            vibrate: [300, 100, 300, 100, 300], // اهتزاز قوي ومتكرر لجذب الانتباه مثل الواتساب
-            tag: 'hawary-chat-msg', // منع تكرار الإشعارات المزعجة وتحديثها
-            renotify: true, // إصدار تنبيه صوتي/اهتزاز حتى لو كان هناك إشعار سابق
-            requireInteraction: false, // لضمان ظهور البانر من الأعلى كـ Heads-up والاستقرار بالشريط
-            actions: [
-                { action: 'open', title: 'فتح المحادثة' }
-            ],
-            data: { url: event.data.url || self.location.origin }
-        };
+    if (event.data) {
+        if (event.data.type === 'SHOW_NOTIFICATION') {
+            const title = event.data.title || 'رسالة جديدة - شركة الهواري للزواج';
+            const options = {
+                body: event.data.body || 'لديك رسالة جديدة في الشات',
+                icon: './22.jpg',
+                badge: './22.jpg',
+                vibrate: [300, 100, 300, 100, 300],
+                tag: 'hawary-chat-' + Date.now(), // تگ متجدد لمنع التداخل
+                renotify: true,
+                requireInteraction: false,
+                actions: [
+                    { action: 'open', title: 'فتح المحادثة' }
+                ],
+                data: { url: event.data.url || self.location.origin }
+            };
 
-        event.waitUntil(
-            self.registration.showNotification(title, options)
-        );
+            event.waitUntil(
+                self.registration.showNotification(title, options)
+            );
+        } else if (event.data.type === 'SHOW_CALL_NOTIFICATION') {
+            // إشعار مكالمة واردة بـ Tag فريد لضمان عدم اختفائه من الشريط
+            const title = event.data.title || '📞 مكالمة صوتية واردة...';
+            const options = {
+                body: event.data.body || 'شركة الهواري للزواج - اضغط للرد أو الرفض',
+                icon: './22.jpg',
+                badge: './22.jpg',
+                vibrate: [500, 200, 500, 200, 500, 200, 500, 200],
+                tag: 'incoming-call-' + Date.now(), // يضمن بقاء كل مكالمة وعدم مسحها تلقائياً
+                renotify: true,
+                requireInteraction: true, // اجبار الإشعار على البقاء ظاهراً في الشريط حتى يتفاعل المستخدم
+                dir: 'rtl',
+                lang: 'ar',
+                actions: [
+                    { action: 'answer_call', title: '📞 رد على المكالمة' },
+                    { action: 'reject_call', title: '❌ إنهاء / رفض' }
+                ],
+                data: { url: event.data.url || self.location.origin, type: 'call' }
+            };
+
+            event.waitUntil(
+                self.registration.showNotification(title, options)
+            );
+        }
     }
 });
 
-// عند الضغط على الإشعار الخارجي أو بانر النزول، يفتح الموقع أو يعيد التركيز عليه فوراً
+// التعامل مع أزرار الرد والرفض
 self.addEventListener('notificationclick', (event) => {
+    const action = event.action;
     event.notification.close();
     
     const targetUrl = event.notification.data.url || './clint_2.html';
@@ -42,12 +67,16 @@ self.addEventListener('notificationclick', (event) => {
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             for (let i = 0; i < clientList.length; i++) {
                 let client = clientList[i];
-                // إذا كانت النافذة مفتوحة مسبقاً يتم عمل التركيز عليها
-                if (client.url.includes('clint_2.html') && 'focus' in client) {
-                    return client.focus();
+                if ('focus' in client) {
+                    client.focus();
+                    if (action === 'answer_call') {
+                        client.postMessage({ type: 'TRIGGER_ANSWER_CALL' });
+                    } else if (action === 'reject_call') {
+                        client.postMessage({ type: 'TRIGGER_REJECT_CALL' });
+                    }
+                    return;
                 }
             }
-            // إذا كان المتصفح مغلقاً، يتم فتح الرابط تلقائياً
             if (clients.openWindow) {
                 return clients.openWindow(targetUrl);
             }
