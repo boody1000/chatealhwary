@@ -165,6 +165,7 @@
         let isMuted = false, isSpeakerOn = true, callTimerInterval = null, secondsElapsed = 0;
         let peerConnection = null, localStream = null, incomingOfferData = null, cachedIceServers = null;
 
+        // دالة جلب خوادم الاتصال مع الحماية الكاملة لبيانات المحمول (TURN/STUN)
         async function getMeteredIceServers() {
             if (cachedIceServers) return cachedIceServers;
             try {
@@ -173,7 +174,12 @@
                 cachedIceServers = await response.json();
                 return cachedIceServers;
             } catch (error) {
-                return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+                return { 
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ] 
+                };
             }
         }
 
@@ -285,7 +291,7 @@
                     showCallScreen("مكالمة واردة...", true);
                     ringAudio.play().catch(e => {});
                 }
-                if (data.answer && peerConnection && !peerConnection.currentRemoteDescription) {
+                if (data.answer && peerConnection && peerConnection.signalingState === "have-local-offer") {
                     if (!ringAudio.paused) ringAudio.pause();
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
                     startTimer();
@@ -322,9 +328,7 @@
             
             peerConnection.ontrack = e => {
                 remoteAudio.srcObject = e.streams[0];
-                remoteAudio.play().catch(err => {
-                    console.log("Audio autoplay restricted, forcing play...");
-                });
+                remoteAudio.play().catch(err => {});
             };
         }
 
