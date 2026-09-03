@@ -26,12 +26,12 @@
         </div>
         <div class="min-w-0">
           <h3 class="text-xs font-bold text-white truncate">الدعم الفني - شركة الهواري</h3>
-          <span id="supportStatusText" class="text-[10px] text-[#8796a5] block">جاري التحقق من الموظفين...</span>
+          <span id="supportStatusText" class="text-[10px] text-[#8796a5] block">جاري التحقق...</span>
         </div>
       </div>
       
       <div class="flex items-center gap-2">
-        <button id="startCallBtn" onclick="clientStartCall()" class="w-9 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center transition" title="اتصال صوتي بالمطعم/الدعم">
+        <button id="startCallBtn" onclick="clientStartCall()" class="w-9 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center transition" title="اتصال صوتي">
           <i class="fa-solid fa-phone text-xs"></i>
         </button>
       </div>
@@ -72,9 +72,9 @@
       <h2 id="clientCallStatus" class="text-lg font-bold mb-1">المكالمة جارية مع الدعم</h2>
       <p class="text-xs text-[#8796a5]" id="clientCallTimer">00:00</p>
       
-      <!-- زر طوارئ لتفعيل الصوت يدويًا في متصفحات الجوال -->
-      <button id="forceAudioBtn" onclick="forcePlayAudio()" class="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold hidden shadow-lg animate-pulse">
-        <i class="fa-solid fa اضغط هنا لتفعيل سماع الصوت"></i> اضغط هنا لسماع الطرف الآخر
+      <!-- زر طوارئ إلزامي لضمان عمل سماع الصوت في المتصفحات -->
+      <button id="forceAudioBtn" onclick="forcePlayAudio()" class="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg animate-bounce">
+        <i class="fa-solid fa-volume-high"></i> اضغط هنا لتفعيل سماع الصوت الآن
       </button>
     </div>
     
@@ -123,9 +123,6 @@
             const extraStunServers = [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun2.l.google.com:19302' },
-                { urls: 'stun:stun3.l.google.com:19302' },
-                { urls: 'stun:stun4.l.google.com:19302' },
                 { urls: 'stun:global.stun.twilio.com:3478' }
             ];
 
@@ -141,7 +138,6 @@
             return { 
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:global.stun.twilio.com:3478' }
                 ] 
             };
@@ -200,7 +196,7 @@
       document.getElementById("incomingCallModal").style.display = "none";
       showClientCallScreen();
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
         await createPeerConnection();
         
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
@@ -220,7 +216,7 @@
       isClientCallActiveOrRinging = true;
       showClientCallScreen();
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
         await createPeerConnection();
         
         const offer = await peerConnection.createOffer();
@@ -245,6 +241,9 @@
     async function createPeerConnection() {
       if (peerConnection) return;
       const config = await getMeteredIceServers();
+      config.bundlePolicy = 'max-bundle';
+      config.rtcpMuxPolicy = 'require';
+      
       peerConnection = new RTCPeerConnection(config);
       
       if (localStream) {
@@ -259,27 +258,38 @@
       
       peerConnection.ontrack = e => { 
           const remoteAudio = document.getElementById("clientRemoteAudio");
-          remoteAudio.srcObject = e.streams[0]; 
+          if (e.streams && e.streams[0]) {
+              remoteAudio.srcObject = e.streams[0];
+          } else {
+              let inboundStream = new MediaStream();
+              inboundStream.addTrack(e.track);
+              remoteAudio.srcObject = inboundStream;
+          }
           playRemoteAudioStream();
       };
     }
 
     function playRemoteAudioStream() {
       const remoteAudio = document.getElementById("clientRemoteAudio");
+      remoteAudio.muted = false;
+      remoteAudio.volume = 1.0;
       let playPromise = remoteAudio.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          // إظهار زر تفعيل يدوي في حال حظر المتصفح التشغيل التلقائي
-          document.getElementById("forceAudioBtn").classList.remove("hidden");
+          // المتصفح يمنع التشغيل التلقائي حتى يتم الضغط على الزر
         });
       }
     }
 
     window.forcePlayAudio = function() {
       const remoteAudio = document.getElementById("clientRemoteAudio");
+      remoteAudio.muted = false;
+      remoteAudio.volume = 1.0;
       remoteAudio.play().then(() => {
-        document.getElementById("forceAudioBtn").classList.add("hidden");
-      }).catch(e => alert("يرجى رفع مستوى صوت الهاتف والتأكد من الاتصال"));
+        document.getElementById("forceAudioBtn").style.display = "none";
+      }).catch(e => {
+        alert("يرجى التأكد من رفع صوت الهاتف وربط السماعات");
+      });
     };
 
     function listenForCandidates() {
@@ -295,6 +305,7 @@
     function showClientCallScreen() {
       document.getElementById("clientCallScreen").classList.remove("hidden");
       document.getElementById("clientCallScreen").classList.add("flex");
+      document.getElementById("forceAudioBtn").style.display = "block";
       clientSeconds = 0;
     }
 
@@ -317,7 +328,6 @@
       document.getElementById("clientCallScreen").classList.remove("flex");
       document.getElementById("clientCallScreen").classList.add("hidden");
       document.getElementById("incomingCallModal").style.display = "none";
-      document.getElementById("forceAudioBtn").classList.add("hidden");
       if (clientTimerInterval) clearInterval(clientTimerInterval);
       if (localStream) localStream.getTracks().forEach(t => t.stop());
       if (peerConnection) { peerConnection.close(); peerConnection = null; }
