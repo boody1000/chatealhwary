@@ -19,11 +19,9 @@ messaging.onBackgroundMessage((payload) => {
     const notificationTitle = payload.notification?.title || 'رسالة جديدة - الهواري للزواج';
     const notificationOptions = {
         body: payload.notification?.body || 'لديك رسالة جديدة في الشات',
-        icon: './22.jpg',
+        icon: './22.jpg', // تأكد أن ملف الصورة موجود في نفس مسار الـ sw.js أو استبدله برابط كامل مثل https://yourdomain.com/22.jpg
         badge: './22.jpg',
         vibrate: [300, 100, 300, 100, 300],
-        tag: 'hawary-chat-msg',
-        renotify: true,
         data: { url: payload.data?.url || './clint_2.html' }
     };
 
