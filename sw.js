@@ -1,4 +1,4 @@
-// استيراد مكتبات Firebase متوافقة مع Service Worker
+// استيراد مكتبات Firebase متوافقة مع Service Worker للعمل في الخلفية التامة
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js');
 
@@ -23,8 +23,8 @@ messaging.onBackgroundMessage((payload) => {
         icon: './22.jpg',
         badge: './22.jpg',
         vibrate: isCall ? [500, 200, 500, 200, 500, 200, 500, 200] : [300, 100, 300],
-        tag: isCall ? ('incoming-call-' + Date.now()) : 'hawary-chat-msg', // رسائل تظهر وتستقر، مكالمات بـ Tag متجدد
-        requireInteraction: isCall ? true : false, // تفعيل النزول من الأعلى للرسائل والاستقرار بالشريط
+        tag: isCall ? ('incoming-call-' + Date.now()) : 'hawary-chat-msg',
+        requireInteraction: isCall ? true : false, // للرسائل تنزل من الأعلى ثم تستقر، للمكالمات تظل ثابتة
         dir: 'rtl',
         lang: 'ar',
         actions: isCall ? [
