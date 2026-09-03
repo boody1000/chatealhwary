@@ -22,7 +22,6 @@
 </head>
 <body class="bg-[#0e1621] text-[#f5f5f5] h-[100dvh] flex flex-col font-sans relative overflow-hidden telegram-bg">
 
-    <!-- رأس المحادثة على طراز تليجرام -->
     <header class="bg-[#17212b] border-b border-[#232e3c] px-4 py-2.5 flex items-center justify-between z-10 shrink-0 shadow-sm">
         <div class="flex items-center gap-3">
             <div class="relative cursor-pointer">
@@ -43,7 +42,6 @@
         </div>
     </header>
 
-    <!-- صندوق عرض الرسائل (على شكل تليجرام) -->
     <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col max-w-4xl w-full mx-auto z-10">
         <div class="text-center text-[#8796a5] my-auto text-xs bg-[#17212b]/80 p-5 rounded-xl border border-[#232e3c] shadow-lg max-w-sm mx-auto">
             <img src="22.jpg" alt="Logo" class="w-14 h-14 mx-auto rounded-full object-cover mb-2 border border-[#2b5278]">
@@ -52,7 +50,6 @@
         </div>
     </div>
 
-    <!-- شريط الإرسال (Telegram Input Bar) -->
     <footer class="bg-[#17212b] border-t border-[#232e3c] p-3 z-10 shrink-0">
         <form id="messageForm" onsubmit="sendMessage(event)" class="max-w-4xl mx-auto flex items-center gap-2">
             <input id="messageInput" type="text" placeholder="اكتب رسالة..." 
@@ -63,7 +60,6 @@
         </form>
     </footer>
 
-    <!-- نافذة إدخال البيانات الأولية (البدء) -->
     <div id="nameModal" class="fixed inset-0 bg-[#0e1621]/95 z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-md rounded-2xl p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto">
             <div class="flex flex-col items-center text-center mb-4">
@@ -109,7 +105,6 @@
         </div>
     </div>
 
-    <!-- شاشة المكالمات الصوتية بتصميم تليجرام -->
     <div id="callScreen" class="fixed inset-0 bg-[#0e1621]/95 z-50 hidden flex-col items-center justify-between p-8 text-white">
         <div class="flex flex-col items-center mt-12">
             <div class="w-28 h-28 bg-[#17212b] rounded-full flex items-center justify-center overflow-hidden mb-4 border-2 border-[#2b5278] shadow-2xl animate-pulse">
@@ -137,8 +132,7 @@
         </div>
     </div>
     
-    <!-- عناصر الصوت المخفية لدعم الموبايل -->
-    <audio id="remoteAudio" autoplay playsinline controls style="display:none;"></audio>
+    <audio id="remoteAudio" autoplay playsinline></audio>
     <audio id="ringAudio" src="ran.mp3" preload="auto" loop></audio>
     <audio id="msgSound" src="mes.mp3" preload="auto"></audio>
 
@@ -164,8 +158,8 @@
         
         let isMuted = false, isSpeakerOn = true, callTimerInterval = null, secondsElapsed = 0;
         let peerConnection = null, localStream = null, incomingOfferData = null, cachedIceServers = null;
+        let isCallActiveOrRinging = false;
 
-        // دالة جلب خوادم الاتصال مع الدمج الكامل لخوادم STUN الاحتياطية وتجاوز جدران حماية المحمول
         async function getMeteredIceServers() {
             if (cachedIceServers) return cachedIceServers;
             try {
@@ -290,6 +284,8 @@
         }
 
         window.startCall = async function() {
+            if (isCallActiveOrRinging) return;
+            isCallActiveOrRinging = true;
             showCallScreen("جارِ الاتصال...", false);
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -304,8 +300,12 @@
         function listenForIncomingCalls(clientKey) {
             onValue(ref(db, `single_chat_room/${clientKey}/call`), async (snapshot) => {
                 const data = snapshot.val();
-                if (!data) { closeCallUI(); return; }
-                if (data.caller === 'employee' && !data.answer) {
+                if (!data) { 
+                    if (isCallActiveOrRinging) closeCallUI(); 
+                    return; 
+                }
+                if (data.caller === 'employee' && !data.answer && !isCallActiveOrRinging) {
+                    isCallActiveOrRinging = true;
                     incomingOfferData = data.offer;
                     showCallScreen("مكالمة واردة...", true);
                     ringAudio.play().catch(e => {});
@@ -354,7 +354,7 @@
         function listenForCandidates(roomKey) {
             onValue(ref(db, `single_chat_room/${roomKey}/call/candidates`), snap => {
                 snap.forEach(c => { 
-                    if (peerConnection && c.val()) {
+                    if (peerConnection && c.val() && peerConnection.remoteDescription) {
                         peerConnection.addIceCandidate(new RTCIceCandidate(c.val())).catch(e => {}); 
                     }
                 });
@@ -392,6 +392,7 @@
         };
 
         function closeCallUI() {
+            isCallActiveOrRinging = false;
             if (!ringAudio.paused) ringAudio.pause();
             document.getElementById("callScreen").classList.remove("flex");
             document.getElementById("callScreen").classList.add("hidden");
