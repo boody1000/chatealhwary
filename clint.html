@@ -72,7 +72,7 @@
         </div>
     </div>
 
-    <!-- إشعار الرسائل العائم -->
+    <!-- إشعار الرسائل العائم داخل الصفحة -->
     <div id="msgNotificationBanner" class="fixed top-4 left-1/2 -translate-x-1/2 bg-slate-950/95 border border-amber-500/50 text-white px-4 py-3 rounded-2xl shadow-2xl z-50 text-xs font-bold opacity-0 pointer-events-none flex items-center gap-3 backdrop-blur-lg max-w-md w-[90%]">
         <img src="22.jpg" alt="Logo" class="w-10 h-10 rounded-full object-cover border-2 border-amber-500 shadow-md shrink-0">
         <div class="flex-1 overflow-hidden">
@@ -144,12 +144,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, push, onValue, set, remove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw_2.js')
-            .then(reg => console.log('ServiceWorker active on GitHub', reg))
-            .catch(err => console.log('ServiceWorker failed', err));
-        }
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -164,6 +159,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const messaging = getMessaging(app);
 
         let currentClientKey = localStorage.getItem('messenger_hawary_key');
         let originalDisplayName = localStorage.getItem('messenger_hawary_name');
@@ -184,9 +180,6 @@
         let lastMessageCount = 0;
 
         function autoEnableSystemFeatures() {
-            if ("Notification" in window && Notification.permission === "default") {
-                Notification.requestPermission();
-            }
             [ringAudio, msgSound].forEach(audio => {
                 if(audio) {
                     audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(e => {});
@@ -205,10 +198,37 @@
                 document.getElementById("clientDisplayHeader").innerText = "العميل: " + originalDisplayName;
                 initChatSession(currentClientKey, originalDisplayName);
                 listenForIncomingCalls(currentClientKey);
+                requestFCMToken(currentClientKey);
             } else {
                 document.getElementById("nameModal").classList.remove("hidden");
                 document.getElementById("nameModal").classList.add("flex");
             }
+        });
+
+        // طلب وتفعيل FCM Token للإشعارات الحقيقية
+        async function requestFCMToken(clientKey) {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    // استبدل المفتاح أدناه بمفتاح Web Push VAPID الخاص بك من لوحة تحكم Firebase Console
+                    const vapidKeyString = "ضع_مفتاح_VAPID_هنا_إن_وجد_أو_اتركه_فارغاً_حسب_اعداداتك"; 
+                    
+                    const tokenOptions = vapidKeyString.length > 20 ? { vapidKey: vapidKeyString, serviceWorkerRegistration: await navigator.serviceWorker.register('./firebase-messaging-sw.js') } : { serviceWorkerRegistration: await navigator.serviceWorker.register('./firebase-messaging-sw.js') };
+                    
+                    const token = await getToken(messaging, tokenOptions);
+                    if (token) {
+                        await set(ref(db, `single_chat_room/${clientKey}/fcm_token`), token);
+                        console.log("FCM Token saved successfully.");
+                    }
+                }
+            } catch (error) {
+                console.log('FCM Token error:', error);
+            }
+        }
+
+        // استقبال الرسائل إذا كانت الصفحة مفتوحة حالياً في الواجهة (Foreground)
+        onMessage(messaging, (payload) => {
+            playMessageAlert(payload.notification?.body || "لديك رسالة جديدة", payload.notification?.title || "الهواري للتعارف والزواج");
         });
 
         window.saveUserName = function() {
@@ -229,6 +249,7 @@
 
             initChatSession(currentClientKey, originalDisplayName);
             listenForIncomingCalls(currentClientKey);
+            requestFCMToken(currentClientKey);
         };
 
         function initChatSession(clientKey, displayName) {
@@ -238,7 +259,7 @@
                 let messagesArray = [];
                 if (snapshot.exists()) {
                     snapshot.forEach((childSnapshot) => {
-                        if(childSnapshot.key === 'call') return;
+                        if(childSnapshot.key === 'call' || childSnapshot.key === 'fcm_token') return;
                         const msg = childSnapshot.val();
                         if(!msg || !msg.text) return;
                         messagesArray.push(msg);
@@ -271,27 +292,9 @@
         function playMessageAlert(msgText, senderName) {
             if (msgSound) {
                 msgSound.currentTime = 0;
-                msgSound.play().catch(e => {
-                    autoEnableSystemFeatures();
-                    msgSound.play().catch(err => {});
-                });
+                msgSound.play().catch(e => {});
             }
-            
             showMessengerBanner(senderName, msgText);
-
-            const notificationTitle = `${senderName} - الهواري للتعارف والزواج`;
-            const notificationBody = msgText;
-
-            if ("Notification" in window && Notification.permission === "granted") {
-                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                    navigator.serviceWorker.controller.postMessage({
-                        type: 'SHOW_NOTIFICATION',
-                        title: notificationTitle,
-                        body: notificationBody,
-                        url: './clint_2.html'
-                    });
-                }
-            }
         }
 
         function showMessengerBanner(senderName, msgText) {
@@ -382,7 +385,7 @@
                     showCallScreen("مكالمة واردة...", true);
                     if (ringAudio) {
                         ringAudio.currentTime = 0;
-                        ringAudio.play().catch(e => { autoEnableSystemFeatures(); ringAudio.play().catch(err => {}); });
+                        ringAudio.play().catch(e => { ringAudio.play().catch(err => {}); });
                     }
                 }
 
