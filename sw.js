@@ -14,29 +14,48 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// استقبال الإشعارات في الخلفية التامة (حتى لو المتصفح مغلق)
+// استقبال الإشعارات في الخلفية التامة مع أزرار المكالمات وتجنب اختفاء الشريط
 messaging.onBackgroundMessage((payload) => {
-    const notificationTitle = payload.notification?.title || 'رسالة جديدة - الهواري للزواج';
+    const isCall = payload.data?.type === 'call' || payload.notification?.title?.includes('مكالمة');
+    
+    const notificationTitle = payload.notification?.title || (isCall ? '📞 مكالمة صوتية واردة...' : 'رسالة جديدة - الهواري للزواج');
     const notificationOptions = {
-        body: payload.notification?.body || 'لديك رسالة جديدة في الشات',
+        body: payload.notification?.body || (isCall ? 'شركة الهواري للزواج - اضغط للرد أو الرفض' : 'لديك رسالة جديدة في الشات'),
         icon: './22.jpg',
         badge: './22.jpg',
-        vibrate: [300, 100, 300, 100, 300],
-        data: { url: payload.data?.url || './clint_2.html' }
+        vibrate: [500, 200, 500, 200, 500, 200, 500, 200],
+        tag: 'incoming-call-' + Date.now(), // تگ متجدد لضمان عدم استبدال أو مسح الإشعار من الشريط
+        requireInteraction: true, // يضمن بقاء الإشعار ظاهراً حتى يتفاعل معه المستخدم
+        dir: 'rtl',
+        lang: 'ar',
+        actions: [
+            { action: 'answer_call', title: '📞 رد على المكالمة' },
+            { action: 'reject_call', title: '❌ إنهاء / رفض' }
+        ],
+        data: { url: payload.data?.url || './clint_2.html', type: 'call' }
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+// التعامل مع النقر على الإشعار أو أزرار التفاعل (الرد / الرفض)
 self.addEventListener('notificationclick', (event) => {
+    const action = event.action;
     event.notification.close();
     const targetUrl = event.notification.data?.url || './clint_2.html';
+
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             for (let i = 0; i < clientList.length; i++) {
                 let client = clientList[i];
-                if (client.url.includes('clint_2.html') && 'focus' in client) {
-                    return client.focus();
+                if ('focus' in client) {
+                    client.focus();
+                    if (action === 'answer_call') {
+                        client.postMessage({ type: 'TRIGGER_ANSWER_CALL' });
+                    } else if (action === 'reject_call') {
+                        client.postMessage({ type: 'TRIGGER_REJECT_CALL' });
+                    }
+                    return;
                 }
             }
             if (clients.openWindow) {
