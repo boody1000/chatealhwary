@@ -71,6 +71,11 @@
       </div>
       <h2 id="clientCallStatus" class="text-lg font-bold mb-1">المكالمة جارية مع الدعم</h2>
       <p class="text-xs text-[#8796a5]" id="clientCallTimer">00:00</p>
+      
+      <!-- زر طوارئ لتفعيل الصوت يدويًا في متصفحات الجوال -->
+      <button id="forceAudioBtn" onclick="forcePlayAudio()" class="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold hidden shadow-lg animate-pulse">
+        <i class="fa-solid fa اضغط هنا لتفعيل سماع الصوت"></i> اضغط هنا لسماع الطرف الآخر
+      </button>
     </div>
     
     <div class="flex items-center gap-6 mb-12">
@@ -148,7 +153,6 @@
       set(clientStatusRef, 'online');
       onDisconnect(clientStatusRef).set('offline');
 
-      // مراقبة حالة الموظفين
       onValue(ref(db, 'online_employees'), snap => {
         const dot = document.getElementById('supportStatusDot');
         const txt = document.getElementById('supportStatusText');
@@ -161,7 +165,6 @@
         }
       });
 
-      // جلب الرسائل
       onValue(ref(db, `single_chat_room/${roomKey}`), (snapshot) => {
         const container = document.getElementById('messageContainer');
         container.innerHTML = '';
@@ -197,14 +200,14 @@
       document.getElementById("incomingCallModal").style.display = "none";
       showClientCallScreen();
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
         await createPeerConnection();
         
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         
-        document.getElementById("clientRemoteAudio").play().catch(err => {});
+        playRemoteAudioStream();
 
         await update(ref(db, `single_chat_room/${roomKey}/call`), { answer: { type: answer.type, sdp: answer.sdp }, status: 'answered' });
         listenForCandidates();
@@ -217,7 +220,7 @@
       isClientCallActiveOrRinging = true;
       showClientCallScreen();
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
         await createPeerConnection();
         
         const offer = await peerConnection.createOffer();
@@ -230,7 +233,7 @@
           const data = snap.val();
           if (data && data.answer && peerConnection && peerConnection.signalingState === "have-local-offer") {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-            document.getElementById("clientRemoteAudio").play().catch(err => {});
+            playRemoteAudioStream();
             startClientTimer();
           }
         });
@@ -257,9 +260,27 @@
       peerConnection.ontrack = e => { 
           const remoteAudio = document.getElementById("clientRemoteAudio");
           remoteAudio.srcObject = e.streams[0]; 
-          remoteAudio.play().catch(err => {});
+          playRemoteAudioStream();
       };
     }
+
+    function playRemoteAudioStream() {
+      const remoteAudio = document.getElementById("clientRemoteAudio");
+      let playPromise = remoteAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // إظهار زر تفعيل يدوي في حال حظر المتصفح التشغيل التلقائي
+          document.getElementById("forceAudioBtn").classList.remove("hidden");
+        });
+      }
+    }
+
+    window.forcePlayAudio = function() {
+      const remoteAudio = document.getElementById("clientRemoteAudio");
+      remoteAudio.play().then(() => {
+        document.getElementById("forceAudioBtn").classList.add("hidden");
+      }).catch(e => alert("يرجى رفع مستوى صوت الهاتف والتأكد من الاتصال"));
+    };
 
     function listenForCandidates() {
       onValue(ref(db, `single_chat_room/${roomKey}/call/candidates`), snap => {
@@ -296,6 +317,7 @@
       document.getElementById("clientCallScreen").classList.remove("flex");
       document.getElementById("clientCallScreen").classList.add("hidden");
       document.getElementById("incomingCallModal").style.display = "none";
+      document.getElementById("forceAudioBtn").classList.add("hidden");
       if (clientTimerInterval) clearInterval(clientTimerInterval);
       if (localStream) localStream.getTracks().forEach(t => t.stop());
       if (peerConnection) { peerConnection.close(); peerConnection = null; }
