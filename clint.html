@@ -144,7 +144,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, push, onValue, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -159,7 +158,15 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const messaging = getMessaging(app);
+
+        // تسجيل الـ Service Worker للإشعارات في الخلفية
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+              .then(reg => console.log('Client Service Worker registered'))
+              .catch(err => console.log('Client SW registration error', err));
+          });
+        }
 
         let currentClientKey = localStorage.getItem('messenger_hawary_key');
         let originalDisplayName = localStorage.getItem('messenger_hawary_name');
@@ -180,6 +187,12 @@
         let lastMessageCount = 0;
 
         function autoEnableSystemFeatures() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    console.log("Notification permission status:", permission);
+                });
+            }
+
             [ringAudio, msgSound].forEach(audio => {
                 if(audio) {
                     audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(e => {});
@@ -198,7 +211,6 @@
                 document.getElementById("clientDisplayHeader").innerText = "العميل: " + originalDisplayName;
                 initChatSession(currentClientKey, originalDisplayName);
                 listenForIncomingCalls(currentClientKey);
-                requestFCMToken(currentClientKey);
                 setupUserPresence(currentClientKey);
             } else {
                 document.getElementById("nameModal").classList.remove("hidden");
@@ -232,25 +244,6 @@
             });
         }
 
-        async function requestFCMToken(clientKey) {
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-                    const token = await getToken(messaging, { serviceWorkerRegistration: registration });
-                    if (token) {
-                        await set(ref(db, `single_chat_room/${clientKey}/fcm_token`), token);
-                    }
-                }
-            } catch (error) {
-                console.log('FCM Token error:', error);
-            }
-        }
-
-        onMessage(messaging, (payload) => {
-            playMessageAlert(payload.notification?.body || "لديك رسالة جديدة", payload.notification?.title || "الهواري للتعارف والزواج");
-        });
-
         window.saveUserName = function() {
             const inputVal = document.getElementById("userNameInput").value.trim();
             if (!inputVal) { alert("يرجى كتابة اسمك للمتابعة"); return; }
@@ -269,7 +262,6 @@
 
             initChatSession(currentClientKey, originalDisplayName);
             listenForIncomingCalls(currentClientKey);
-            requestFCMToken(currentClientKey);
             setupUserPresence(currentClientKey);
         };
 
@@ -280,7 +272,7 @@
                 let messagesArray = [];
                 if (snapshot.exists()) {
                     snapshot.forEach((childSnapshot) => {
-                        if(childSnapshot.key === 'call' || childSnapshot.key === 'fcm_token' || childSnapshot.key === 'status' || childSnapshot.key === 'client_info') return;
+                        if(childSnapshot.key === 'call' || childSnapshot.key === 'fcm_token' || childSnapshot.key === 'status' || childSnapshot.key === 'client_info' || childSnapshot.key === 'lockedBy') return;
                         const msg = childSnapshot.val();
                         if(!msg || !msg.text) return;
                         messagesArray.push(msg);
@@ -315,6 +307,23 @@
                 msgSound.currentTime = 0;
                 msgSound.play().catch(e => {});
             }
+
+            if ('vibrate' in navigator) {
+                try { navigator.vibrate([300, 150, 300, 150, 300]); } catch(e) {}
+            }
+
+            // إرسال أمر إشعار لـ ServiceWorker ليعمل في الخلفية أو حتى لو المتصفح مصغر
+            if ('Notification' in window && Notification.permission === 'granted') {
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'SHOW_NOTIFICATION',
+                        title: senderName || 'الهواري للتعارف والزواج',
+                        body: msgText,
+                        url: window.location.href
+                    });
+                }
+            }
+
             showMessengerBanner(senderName, msgText);
         }
 
