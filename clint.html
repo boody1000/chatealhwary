@@ -72,7 +72,6 @@
       <h2 id="clientCallStatus" class="text-lg font-bold mb-1">المكالمة جارية مع الدعم</h2>
       <p class="text-xs text-[#8796a5]" id="clientCallTimer">00:00</p>
       
-      <!-- زر طوارئ إلزامي لضمان عمل سماع الصوت في المتصفحات -->
       <button id="forceAudioBtn" onclick="forcePlayAudio()" class="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg animate-bounce">
         <i class="fa-solid fa-volume-high"></i> اضغط هنا لتفعيل سماع الصوت الآن
       </button>
@@ -120,6 +119,23 @@
             if (!response.ok) throw new Error();
             let data = await response.json();
             
+            // إجبار استخدام TCP وبورت 443 لتجاوز حظر داتا الموبايل
+            if (data && data.iceServers) {
+                data.iceServers = data.iceServers.map(server => {
+                    if (server.urls) {
+                        let urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+                        server.urls = urls.map(url => {
+                            if (url.startsWith('turn:') || url.startsWith('turns:')) {
+                                let cleanUrl = url.split('?')[0];
+                                return `${cleanUrl}:443?transport=tcp`;
+                            }
+                            return url;
+                        });
+                    }
+                    return server;
+                });
+            }
+
             const extraStunServers = [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
@@ -275,9 +291,7 @@
       remoteAudio.volume = 1.0;
       let playPromise = remoteAudio.play();
       if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // المتصفح يمنع التشغيل التلقائي حتى يتم الضغط على الزر
-        });
+        playPromise.catch(() => {});
       }
     }
 
