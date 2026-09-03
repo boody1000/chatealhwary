@@ -1,4 +1,4 @@
-// Service Worker المتكامل لإدارة الإشعارات في الخلفية - شركة الهواري للزواج[cite: 3]
+// Service Worker المتكامل لإدارة الإشعارات في الخلفية - شركة الهواري للزواج
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
