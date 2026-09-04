@@ -130,7 +130,9 @@
     let unreadCounts = {}, previousMessagesCounts = {}, isFirstLoad = true, allRoomsCache = [];
     let callFrame = null;
     let callListenerRef = null;
-    const DAILY_ROOM_URL = "https://alhwarychate.daily.co/hawary_jhjh_198388_455906";
+    
+    // تم تحديث الرابط هنا أيضاً بالرابط الجديد الخاص بك
+    const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
     window.backToSidebar = function() {
       document.getElementById('chatPage').classList.add('hidden');
@@ -298,7 +300,7 @@
             }
             
             const container = document.getElementById('callContainer');
-            container.innerHTML = ''; // تفريغ الحاوية لمنع تداخل العناصر القديمة
+            container.innerHTML = '';
             
             callFrame = window.DailyIframe.createFrame(container, {
                 showLeaveButton: true,
