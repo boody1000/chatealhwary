@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="22.jpg" type="image/jpeg">
-    <!-- Daily.co Iframe SDK -->
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
 
     <style>
@@ -36,7 +35,6 @@
         </div>
         
         <div class="flex items-center gap-3">
-            <!-- أزرار الاتصال الصوتي والمرئي -->
             <button onclick="startCall('video')" class="w-9 h-9 bg-[#212f3d] hover:bg-[#2b5278] text-[#6ab2f2] hover:text-white rounded-full flex items-center justify-center transition border border-[#232e3c]" title="مكالمة فيديو">
                 <i class="fa-solid fa-video text-xs"></i>
             </button>
@@ -65,7 +63,7 @@
         </form>
     </footer>
 
-    <!-- نافذة الاتصال المنبثقة (Modal) -->
+    <!-- نافذة الاتصال -->
     <div id="callModal" class="fixed inset-0 bg-[#0e1621]/95 z-50 flex flex-col hidden">
         <div class="bg-[#17212b] border-b border-[#232e3c] px-4 py-3 flex items-center justify-between">
             <div class="flex items-center gap-2">
@@ -122,7 +120,6 @@
         </div>
     </div>
 
-    <!-- صوت رنين المكالمة الواردة -->
     <audio id="ringAudio" src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" preload="auto" loop></audio>
 
     <script type="module">
@@ -216,7 +213,6 @@
             });
         }
 
-        // الاستماع للمكالمات الواردة من الإدارة
         function listenToCalls(clientKey) {
             onValue(ref(db, `single_chat_room/${clientKey}/call`), (snapshot) => {
                 const callData = snapshot.val();
@@ -248,24 +244,28 @@
             openDailyCall(type);
         };
 
-        function openDailyCall(type) {
+        async function openDailyCall(type) {
             document.getElementById('callModal').classList.remove('hidden');
             document.getElementById('callModal').classList.add('flex');
             document.getElementById('callTitle').innerText = type === 'video' ? 'مكالمة فيديو جارية...' : 'مكالمة صوتية جارية...';
 
-            if (!callFrame) {
-                const container = document.getElementById('callContainer');
-                callFrame = window.DailyIframe.createFrame(container, {
-                    showLeaveButton: true,
-                    showFullscreenButton: true,
-                    iframeStyle: { width: '100%', height: '100%', border: '0', backgroundColor: '#000' }
+            try {
+                if (!callFrame) {
+                    const container = document.getElementById('callContainer');
+                    callFrame = window.DailyIframe.createFrame(container, {
+                        showLeaveButton: true,
+                        showFullscreenButton: true,
+                        iframeStyle: { width: '100%', height: '100%', border: '0', backgroundColor: '#000' }
+                    });
+                }
+                await callFrame.join({ 
+                    url: DAILY_ROOM_URL,
+                    audioSource: true,
+                    videoSource: type === 'video'
                 });
+            } catch (err) {
+                console.error("Daily call error:", err);
             }
-            callFrame.join({ 
-                url: DAILY_ROOM_URL,
-                audioSource: true,
-                videoSource: type === 'video'
-            });
         }
 
         window.endCall = async function() {
@@ -275,10 +275,16 @@
             closeDailyCall();
         };
 
-        function closeDailyCall() {
+        async function closeDailyCall() {
             if (callFrame) {
-                callFrame.leave();
+                try {
+                    await callFrame.destroy();
+                } catch(e) {
+                    try { await callFrame.leave(); } catch(err) {}
+                }
+                callFrame = null;
             }
+            document.getElementById('callContainer').innerHTML = '';
             document.getElementById('callModal').classList.add('hidden');
             document.getElementById('callModal').classList.remove('flex');
             document.getElementById('ringAudio').pause();
