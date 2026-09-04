@@ -320,7 +320,7 @@
       showEmployeeCallScreen();
 
       try {
-        activeCallRoomUrl = "https://alhwarychate.daily.co/" + activeClientKey.replace(/[^a-zA-Z0-9-_]/g, '_');
+        activeCallRoomUrl = "https://alhwarychate.daily.co/support-room";
 
         await set(ref(db, `single_chat_room/${activeClientKey}/call`), {
           roomUrl: activeCallRoomUrl,
