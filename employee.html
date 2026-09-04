@@ -153,7 +153,7 @@
     let unreadCounts = {}, previousMessagesCounts = {}, isFirstLoad = true, allRoomsCache = [];
     let isMuted = false, isEmpCallActiveOrRinging = false;
 
-    // دمج خوادم STUN العامة وخوادم Metered TURN معاً في إعدادات الـ WebRTC
+    // خوادم STUN و Metered TURN الحقيقية
     const rtcConfig = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -164,9 +164,14 @@
                 credential: 'openrelayproject' 
             },
             { 
-                urls: 'turn:alhwary.metered.ca:443?transport=tcp', 
-                username: 'حط_اليوزر_بتاعك_هنا', 
-                credential: 'حط_الباسورد_بتاعك_هنا' 
+                urls: 'turn:alhwary.metered.live:443?transport=tcp', 
+                username: '2a87406f32f8d0e5cb30b846', 
+                credential: '7KsW7ZWWa15vik94' 
+            },
+            { 
+                urls: 'turn:alhwary.metered.live:443?transport=udp', 
+                username: '2a87406f32f8d0e5cb30b846', 
+                credential: '7KsW7ZWWa15vik94' 
             }
         ],
         iceTransportPolicy: 'all'
@@ -175,7 +180,7 @@
     window.backToSidebar = function() {
       document.getElementById('chatPage').classList.add('hidden');
       document.getElementById('chatPage').classList.remove('flex');
-      document.getElementById('sidebarPage').classList.remove('hidden');
+      document.getElementById('sidebarPage').classList.remove('flex');
       document.getElementById('sidebarPage').classList.add('flex');
       if (activeClientKey) { set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), null); activeClientKey = null; }
     };
