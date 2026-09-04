@@ -190,7 +190,7 @@
       showClientCallScreen();
 
       try {
-        activeCallRoomUrl = "https://alhwarychate.daily.co/" + roomKey.replace(/[^a-zA-Z0-9-_]/g, '_');
+        activeCallRoomUrl = "https://alhwarychate.daily.co/support-room";
 
         await set(ref(db, `single_chat_room/${roomKey}/call`), {
           roomUrl: activeCallRoomUrl,
@@ -236,7 +236,10 @@
       if (ringAudio) ringAudio.pause();
 
       const callScreen = document.getElementById("clientCallScreen");
-      if (callScreen) { callScreen.classList.remove("flex"); callScreen.classList.add("hidden"); }
+      if (callScreen) {
+        callScreen.classList.remove("flex");
+        callScreen.classList.add("hidden");
+      }
 
       const incomingModal = document.getElementById("clientIncomingCallModal");
       if (incomingModal) incomingModal.style.display = "none";
