@@ -143,7 +143,10 @@
         let originalDisplayName = localStorage.getItem('telegram_hawary_name');
         let chatRefInstance = null;
         let callFrame = null;
-        const DAILY_ROOM_URL = "https://alhwarychate.daily.co/hawary_jhjh_198388_455906";
+        
+        // تم تحديث الرابط هنا بالتحديد بالرابط الجديد الخاص بك
+        const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
+        
         const messagesContainer = document.getElementById("chatMessages");
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -256,7 +259,7 @@
                 }
                 
                 const container = document.getElementById('callContainer');
-                container.innerHTML = ''; // تفريغ الحاوية لمنع تداخل العناصر القديمة
+                container.innerHTML = '';
                 
                 callFrame = window.DailyIframe.createFrame(container, {
                     showLeaveButton: true,
