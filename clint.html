@@ -35,11 +35,11 @@
         </div>
         
         <div class="flex items-center gap-3">
-            <button onclick="startCall('video')" class="w-9 h-9 bg-[#212f3d] hover:bg-[#2b5278] text-[#6ab2f2] hover:text-white rounded-full flex items-center justify-center transition border border-[#232e3c]" title="مكالمة فيديو">
-                <i class="fa-solid fa-video text-xs"></i>
+            <button onclick="startCall('video')" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-3.5 py-1.5 rounded-full flex items-center gap-2 text-xs font-semibold transition shadow" title="مكالمة فيديو">
+                <i class="fa-solid fa-video"></i> فيديو
             </button>
-            <button onclick="startCall('audio')" class="w-9 h-9 bg-[#212f3d] hover:bg-[#2b5278] text-[#6ab2f2] hover:text-white rounded-full flex items-center justify-center transition border border-[#232e3c]" title="مكالمة صوتية">
-                <i class="fa-solid fa-phone text-xs"></i>
+            <button onclick="startCall('audio')" class="bg-[#212f3d] hover:bg-[#2b5278] text-[#6ab2f2] hover:text-white px-3.5 py-1.5 rounded-full flex items-center gap-2 text-xs font-semibold transition border border-[#232e3c]" title="مكالمة صوتية">
+                <i class="fa-solid fa-phone"></i> صوت
             </button>
             <span id="clientDisplayHeader" class="text-xs bg-[#232e3c] text-[#8796a5] px-3 py-1.5 rounded-full hidden sm:inline-block"></span>
         </div>
@@ -63,18 +63,53 @@
         </form>
     </footer>
 
-    <!-- نافذة الاتصال -->
+    <!-- نافذة الاتصال الجاري (عندما تتصل أنت ويقوم الطرف الآخر بالرد) -->
     <div id="callModal" class="fixed inset-0 bg-[#0e1621]/95 z-50 flex flex-col hidden">
         <div class="bg-[#17212b] border-b border-[#232e3c] px-4 py-3 flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-                <span id="callTitle" class="text-xs font-bold text-white">مكالمة جارية...</span>
+                <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
+                <span id="callTitle" class="text-xs font-bold text-white">المكالمة جارية...</span>
             </div>
             <button onclick="endCall()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition">إنهاء المكالمة</button>
         </div>
         <div id="callContainer" class="flex-1 w-full h-full bg-black relative"></div>
     </div>
 
+    <!-- نافذة استقبال مكالمة واردة (رنين + قبول أو رفض) -->
+    <div id="incomingCallModal" class="fixed inset-0 bg-[#0e1621]/90 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center">
+            <div class="relative mb-4">
+                <img src="22.jpg" alt="Caller" class="w-20 h-20 rounded-full object-cover border-4 border-[#2b5278] animate-pulse">
+            </div>
+            <h3 id="incomingCallerName" class="text-base font-bold text-white mb-1">مكالمة واردة...</h3>
+            <p id="incomingCallType" class="text-xs text-[#6ab2f2] mb-6">يرغب في بدء مكالمة فيديو</p>
+            
+            <div class="flex items-center gap-4 w-full">
+                <button onclick="rejectCall()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow">
+                    <i class="fa-solid fa-phone-slash"></i> رفض
+                </button>
+                <button onclick="acceptCall()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow">
+                    <i class="fa-solid fa-phone"></i> قبول
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة انتظار الرد (جارٍ الاتصال...) -->
+    <div id="outgoingCallModal" class="fixed inset-0 bg-[#0e1621]/90 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center">
+            <div class="relative mb-4">
+                <img src="22.jpg" alt="Calling" class="w-20 h-20 rounded-full object-cover border-4 border-[#2b5278] animate-bounce">
+            </div>
+            <h3 class="text-base font-bold text-white mb-1">جاري الاتصال...</h3>
+            <p class="text-xs text-[#8796a5] mb-6">في انتظار رد الطرف الآخر</p>
+            <button onclick="cancelOutgoingCall()" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl text-xs font-bold transition shadow">
+                إلغاء المكالمة
+            </button>
+        </div>
+    </div>
+
+    <!-- نافذة التسجيل للعميل -->
     <div id="nameModal" class="fixed inset-0 bg-[#0e1621]/95 z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-md rounded-2xl p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto">
             <div class="flex flex-col items-center text-center mb-4">
@@ -82,11 +117,10 @@
                 <h3 class="text-base font-bold text-white mb-1">تسجيل الدخول - تليجرام الهواري</h3>
                 <p class="text-xs text-[#8796a5]">أدخل بياناتك لفتح حساب ومراسلة الإدارة فوراً</p>
             </div>
-            
             <div class="space-y-3">
                 <div>
                     <label class="block text-xs font-semibold text-[#8796a5] mb-1">الاسم الكامل <span class="text-red-400">*</span></label>
-                    <input id="userNameInput" type="text" placeholder="مثال: أحمد محمود" class="w-full bg-[#212f3d] border border-[#232e3c] text-white px-4 py-2.5 rounded-xl text-xs focus:outline-none focus:border-[#2b5278]">
+                    <input id="userNameInput" type="text" placeholder="مثال: أحمد محمود" class="w-full bg-[#212f3d] border border-[#232e3c] text-white px-4 py-2.5 rounded-xl text-xs focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-[#8796a5] mb-1">رقم الهاتف <span class="text-red-400">*</span></label>
@@ -120,7 +154,8 @@
         </div>
     </div>
 
-    <audio id="ringAudio" src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" preload="auto" loop></audio>
+    <!-- عنصر الصوت للرنين -->
+    <audio id="ringtoneAudio" loop src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -143,11 +178,10 @@
         let originalDisplayName = localStorage.getItem('telegram_hawary_name');
         let chatRefInstance = null;
         let callFrame = null;
-        
-        // تم تحديث الرابط هنا بالتحديد بالرابط الجديد الخاص بك
+        let pendingCallType = 'video';
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
-        
         const messagesContainer = document.getElementById("chatMessages");
+        const ringtone = document.getElementById("ringtoneAudio");
 
         window.addEventListener('DOMContentLoaded', () => {
             if (currentClientKey && originalDisplayName) {
@@ -155,7 +189,7 @@
                 document.getElementById("clientDisplayHeader").innerText = originalDisplayName;
                 initChatSession(currentClientKey, originalDisplayName);
                 setupUserPresence(currentClientKey);
-                listenToCalls(currentClientKey);
+                listenToCallStatus(currentClientKey);
             } else {
                 document.getElementById("nameModal").classList.remove("hidden");
                 document.getElementById("nameModal").classList.add("flex");
@@ -192,7 +226,7 @@
 
             initChatSession(currentClientKey, originalDisplayName);
             setupUserPresence(currentClientKey);
-            listenToCalls(currentClientKey);
+            listenToCallStatus(currentClientKey);
 
             const welcomeMsg = `مرحباً، أنا ${originalDisplayName}. هاتف: ${phoneVal} - العمر: ${ageVal} - الإقامة: ${locationVal}`;
             push(ref(db, 'single_chat_room/' + currentClientKey), { text: welcomeMsg, sender: originalDisplayName, senderRole: "client", timestamp: Date.now() });
@@ -216,21 +250,27 @@
             });
         }
 
-        function listenToCalls(clientKey) {
+        function listenToCallStatus(clientKey) {
             onValue(ref(db, `single_chat_room/${clientKey}/call`), (snapshot) => {
                 const callData = snapshot.val();
-                if (callData && callData.status === 'ringing' && callData.caller === 'employee') {
-                    document.getElementById('ringAudio').play().catch(e => {});
-                    if (confirm(`مكالمة ${callData.type === 'video' ? 'فيديو' : 'صوتية'} واردة من الإدارة. هل تريد الرد؟`)) {
-                        document.getElementById('ringAudio').pause();
-                        update(ref(db, `single_chat_room/${clientKey}/call`), { status: 'active' });
-                        openDailyCall(callData.type);
-                    } else {
-                        document.getElementById('ringAudio').pause();
-                        update(ref(db, `single_chat_room/${clientKey}/call`), { status: 'ended' });
-                    }
-                } else if (callData && callData.status === 'ended') {
-                    document.getElementById('ringAudio').pause();
+                if (!callData) return;
+
+                if (callData.status === 'ringing' && callData.caller !== originalDisplayName) {
+                    pendingCallType = callData.type;
+                    document.getElementById('incomingCallerName').innerText = callData.caller;
+                    document.getElementById('incomingCallType').innerText = callData.type === 'video' ? 'يرغب في بدء مكالمة فيديو' : 'يرغب في بدء مكالمة صوتية';
+                    document.getElementById('incomingCallModal').classList.remove('hidden');
+                    document.getElementById('incomingCallModal').classList.add('flex');
+                    ringtone.play().catch(e => {});
+                } else if (callData.status === 'active') {
+                    stopRingtone();
+                    document.getElementById('incomingCallModal').classList.add('hidden');
+                    document.getElementById('outgoingCallModal').classList.add('hidden');
+                    openDailyCall(callData.type);
+                } else if (callData.status === 'ended' || callData.status === 'rejected') {
+                    stopRingtone();
+                    document.getElementById('incomingCallModal').classList.add('hidden');
+                    document.getElementById('outgoingCallModal').classList.add('hidden');
                     closeDailyCall();
                 }
             });
@@ -238,14 +278,40 @@
 
         window.startCall = async function(type) {
             if (!currentClientKey) return;
+            pendingCallType = type;
             await set(ref(db, `single_chat_room/${currentClientKey}/call`), {
                 status: 'ringing',
                 type: type,
-                caller: 'client',
+                caller: originalDisplayName,
                 timestamp: Date.now()
             });
-            openDailyCall(type);
+            document.getElementById('outgoingCallModal').classList.remove('hidden');
+            document.getElementById('outgoingCallModal').classList.add('flex');
+            ringtone.play().catch(e => {});
         };
+
+        window.acceptCall = async function() {
+            stopRingtone();
+            document.getElementById('incomingCallModal').classList.add('hidden');
+            await update(ref(db, `single_chat_room/${currentClientKey}/call`), { status: 'active' });
+        };
+
+        window.rejectCall = async function() {
+            stopRingtone();
+            document.getElementById('incomingCallModal').classList.add('hidden');
+            await update(ref(db, `single_chat_room/${currentClientKey}/call`), { status: 'rejected' });
+        };
+
+        window.cancelOutgoingCall = async function() {
+            stopRingtone();
+            document.getElementById('outgoingCallModal').classList.add('hidden');
+            await update(ref(db, `single_chat_room/${currentClientKey}/call`), { status: 'ended' });
+        };
+
+        function stopRingtone() {
+            ringtone.pause();
+            ringtone.currentTime = 0;
+        }
 
         async function openDailyCall(type) {
             document.getElementById('callModal').classList.remove('hidden');
@@ -257,7 +323,6 @@
                     try { await callFrame.destroy(); } catch(e) {}
                     callFrame = null;
                 }
-                
                 const container = document.getElementById('callContainer');
                 container.innerHTML = '';
                 
@@ -286,17 +351,12 @@
 
         async function closeDailyCall() {
             if (callFrame) {
-                try {
-                    await callFrame.destroy();
-                } catch(e) {
-                    try { await callFrame.leave(); } catch(err) {}
-                }
+                try { await callFrame.destroy(); } catch(e) {}
                 callFrame = null;
             }
             document.getElementById('callContainer').innerHTML = '';
             document.getElementById('callModal').classList.add('hidden');
             document.getElementById('callModal').classList.remove('flex');
-            document.getElementById('ringAudio').pause();
         }
 
         window.sendMessage = async function(event) {
