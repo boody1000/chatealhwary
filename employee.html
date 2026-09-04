@@ -7,6 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" href="22.jpg" type="image/jpeg">
+  <!-- مكتبة Daily.co الجاهزة للمكالمات السحابية السريعة -->
+  <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
   <style>
    ::-webkit-scrollbar { width: 4px; }
    ::-webkit-scrollbar-track { background: #0e1621; }
@@ -111,10 +113,6 @@
       </div>
       <h2 id="empCallStatus" class="text-lg font-bold mb-1">المكالمة جارية مع العميل</h2>
       <p class="text-xs text-[#8796a5]" id="empCallTimer">00:00</p>
-      
-      <button id="forceEmpAudioBtn" onclick="forcePlayEmpAudio()" class="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg animate-bounce">
-        <i class="fa-solid fa-volume-high"></i> اضغط هنا لتفعيل السماعة الخارجية
-      </button>
     </div>
     
     <div class="flex items-center gap-6 mb-12">
@@ -127,7 +125,6 @@
     </div>
   </div>
 
-  <audio id="empRemoteAudio" autoplay playsinline></audio>
   <audio id="empRingAudio" src="ran.mp3" preload="auto" loop></audio>
   <audio id="msgNotificationAudio" src="mes.mp3" preload="auto"></audio>
 
@@ -145,30 +142,20 @@
         appId: "1:524067560260:web:adc87a02eadf098d5a5511"
     };
 
+    const DAILY_API_KEY = "3e719443ab9ead791404a2aa56ac0549283b63f076fe8d3cd6880158527b3703";
+
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
     let activeClientKey = null, activeClientDisplayName = null, currentEmpName = "موظف الدعم", empCleanId = "default_emp";
-    let peerConnection = null, localStream = null, empTimerInterval = null, empSeconds = 0, pendingOffer = null;
+    let callObject = null, empTimerInterval = null, empSeconds = 0, pendingRoomUrl = null;
     let unreadCounts = {}, previousMessagesCounts = {}, isFirstLoad = true, allRoomsCache = [];
     let isMuted = false, isEmpCallActiveOrRinging = false;
-
-    // خوادم STUN القوية لضمان الاتصال
-    const rtcConfig = {
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' }
-        ],
-        iceTransportPolicy: 'all'
-    };
 
     window.backToSidebar = function() {
       document.getElementById('chatPage').classList.add('hidden');
       document.getElementById('chatPage').classList.remove('flex');
-      document.getElementById('sidebarPage').classList.remove('flex');
+      document.getElementById('sidebarPage').classList.remove('hidden');
       document.getElementById('sidebarPage').classList.add('flex');
       if (activeClientKey) { set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), null); activeClientKey = null; }
     };
@@ -295,9 +282,10 @@
     };
 
     function checkIncomingCallForRoom(roomKey, displayName, callData) {
-      if (callData && callData.offer && callData.caller === 'client' && !callData.answer && !isEmpCallActiveOrRinging) {
+      if (callData && callData.roomUrl && callData.caller === 'client' && !isEmpCallActiveOrRinging) {
         isEmpCallActiveOrRinging = true;
-        pendingOffer = { roomKey, displayName, offer: callData.offer };
+        pendingRoomUrl = callData.roomUrl;
+        pendingOffer = { roomKey, displayName };
         document.getElementById("incomingCallerName").innerText = `العميل: ${displayName} يتصل بك...`;
         document.getElementById("incomingCallModal").style.display = "flex";
         document.getElementById("empRingAudio").play().catch(e => {});
@@ -318,108 +306,45 @@
       document.getElementById('chatPage').classList.add('flex');
 
       showEmployeeCallScreen();
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        await createPeerConnection(activeClientKey);
-        
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-
-        await update(ref(db, `single_chat_room/${activeClientKey}/call`), { answer: { type: answer.type, sdp: answer.sdp }, status: 'answered' });
-        listenForCandidates(activeClientKey);
-        startEmpTimer();
-      } catch(e) { 
-        console.error("خطأ أثناء قبول المكالمة:", e);
-        employeeEndCall(); 
-      }
+      await joinDailyRoom(pendingRoomUrl);
+      startEmpTimer();
     };
 
     window.employeeStartCall = async function() {
       if (!activeClientKey || isEmpCallActiveOrRinging) return;
       isEmpCallActiveOrRinging = true;
       showEmployeeCallScreen();
+
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        await createPeerConnection(activeClientKey);
-        
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        await set(ref(db, `single_chat_room/${activeClientKey}/call`), { offer: { type: offer.type, sdp: offer.sdp }, caller: 'employee' });
-        
-        listenForCandidates(activeClientKey);
-
-        onValue(ref(db, `single_chat_room/${activeClientKey}/call`), async snap => {
-          const data = snap.val();
-          if (data && data.answer && peerConnection && peerConnection.signalingState === "have-local-offer") {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-            startEmpTimer();
-          }
+        // إنشاء غرفة مؤقتة للمكالمة عبر سحابة Daily.co
+        const res = await fetch("https://api.daily.co/v1/rooms", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${DAILY_API_KEY}`
+          },
+          body: JSON.stringify({ properties: { exp: Math.floor(Date.now() / 1000) + 3600 } })
         });
-      } catch(e) { 
-        console.error("خطأ أثناء بدء الاتصال:", e);
-        employeeEndCall(); 
+        const roomData = await res.json();
+        if (!roomData.url) throw new Error("تعذر إنشاء غرفة الاتصال");
+
+        await set(ref(db, `single_chat_room/${activeClientKey}/call`), { roomUrl: roomData.url, caller: 'employee' });
+        await joinDailyRoom(roomData.url);
+        startEmpTimer();
+      } catch(e) {
+        employeeEndCall();
       }
     };
 
-    async function createPeerConnection(roomKey) {
-      if (peerConnection) return;
-      peerConnection = new RTCPeerConnection(rtcConfig);
-      
-      peerConnection.oniceconnectionstatechange = () => {
-          console.log("📌 ICE Status:", peerConnection.iceConnectionState);
-      };
-
-      peerConnection.onicecandidate = e => { 
-          if(e.candidate) {
-              push(ref(db, `single_chat_room/${roomKey}/call/candidates`), e.candidate.toJSON()); 
-          }
-      };
-      
-      if (localStream) {
-          localStream.getTracks().forEach(track => {
-              peerConnection.addTrack(track, localStream);
-          });
-      }
-
-      peerConnection.ontrack = e => { 
-          const remoteAudio = document.getElementById("empRemoteAudio");
-          if (e.streams && e.streams[0]) {
-              remoteAudio.srcObject = e.streams[0];
-          } else {
-              let inboundStream = new MediaStream();
-              inboundStream.addTrack(e.track);
-              remoteAudio.srcObject = inboundStream;
-          }
-          forcePlayEmpAudio();
-      };
-    }
-
-    window.forcePlayEmpAudio = function() {
-      const remoteAudio = document.getElementById("empRemoteAudio");
-      remoteAudio.muted = false;
-      remoteAudio.volume = 1.0;
-      remoteAudio.play().then(() => {
-        document.getElementById("forceEmpAudioBtn").style.display = "none";
-      }).catch(e => {
-        console.warn("تنبيه التشغيل التلقائي:", e);
-      });
-    };
-
-    function listenForCandidates(roomKey) {
-      onValue(ref(db, `single_chat_room/${roomKey}/call/candidates`), snap => {
-        snap.forEach(c => { 
-          if (peerConnection && c.val() && peerConnection.remoteDescription) {
-            peerConnection.addIceCandidate(new RTCIceCandidate(c.val())).catch(err => {}); 
-          }
-        });
-      });
+    async function joinDailyRoom(url) {
+      callObject = window.Daily.createCallObject({ audioSource: true, videoSource: false });
+      callObject.on("left-meeting", () => { closeEmpCallUI(); });
+      await callObject.join({ url });
     }
 
     function showEmployeeCallScreen() {
       document.getElementById("employeeCallScreen").classList.remove("hidden");
       document.getElementById("employeeCallScreen").classList.add("flex");
-      document.getElementById("forceEmpAudioBtn").style.display = "block";
       empSeconds = 0;
     }
 
@@ -431,7 +356,8 @@
       }, 1000);
     }
 
-    window.employeeEndCall = function() {
+    window.employeeEndCall = async function() {
+      if (callObject) { await callObject.leave(); callObject.destroy(); callObject = null; }
       if (activeClientKey) remove(ref(db, `single_chat_room/${activeClientKey}/call`));
       closeEmpCallUI();
     };
@@ -443,15 +369,13 @@
       document.getElementById("employeeCallScreen").classList.add("hidden");
       document.getElementById("incomingCallModal").style.display = "none";
       if (empTimerInterval) clearInterval(empTimerInterval);
-      if (localStream) localStream.getTracks().forEach(t => t.stop());
-      if (peerConnection) { peerConnection.close(); peerConnection = null; }
+      if (callObject) { callObject.destroy(); callObject = null; }
     }
 
     window.toggleMuteMic = function() {
+      if (!callObject) return;
       isMuted = !isMuted;
-      if (localStream && localStream.getAudioTracks().length > 0) {
-        localStream.getAudioTracks()[0].enabled = !isMuted;
-      }
+      callObject.setLocalAudio(!isMuted);
       document.getElementById("muteIcon").className = isMuted ? "fa-solid fa-microphone-slash text-red-400" : "fa-solid fa-microphone";
     };
 
