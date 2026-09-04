@@ -3,69 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ماسيجير - لوحة الموظف</title>
+  <title>ماسيجير - المحادثة الفورية</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" href="22.jpg" type="image/jpeg">
   <script src="https://unpkg.com/@daily-co/daily-js"></script>
-  <style>
-   ::-webkit-scrollbar { width: 4px; }
-   ::-webkit-scrollbar-track { background: #0e1621; }
-   ::-webkit-scrollbar-thumb { background: #232e3c; border-radius: 4px; }
-  </style>
 </head>
-<body class="bg-[#0e1621] text-white font-sans h-[100dvh] overflow-hidden flex">
+<body class="bg-[#0e1621] text-white font-sans h-[100dvh] overflow-hidden flex flex-col">
 
-  <!-- القائمة الجانبية للعملاء -->
-  <aside class="w-80 border-l border-[#232e3c] bg-[#17212b] flex flex-col h-full">
-    <div class="p-4 border-b border-[#232e3c] flex items-center justify-between">
-      <h2 class="font-bold text-xs text-[#6ab2f2]"><i class="fa-solid fa-comments ml-2"></i>محادثات العملاء</h2>
-    </div>
-    <div id="clientsList" class="flex-1 overflow-y-auto divide-y divide-[#232e3c]/40">
-      <div class="p-4 text-center text-[#8796a5] text-xs">جاري البحث عن محادثات...</div>
-    </div>
-  </aside>
-
-  <!-- نافذة الدردشة الرئيسية -->
-  <main class="flex-1 h-full flex flex-col bg-[#0e1621] relative">
-    <header class="h-14 border-b border-[#232e3c] px-4 flex items-center justify-between bg-[#17212b]">
-      <div class="flex items-center space-x-3 space-x-reverse min-w-0">
-        <img id="activeAvatar" src="22.jpg" class="w-9 h-9 rounded-full object-cover">
-        <div class="min-w-0">
-          <h3 id="activeClientName" class="text-xs font-bold text-white truncate">اختر محادثة</h3>
-          <span id="activeClientStatus" class="text-[10px] text-[#8796a5] block">غير متصل</span>
-        </div>
+  <header class="h-14 border-b border-[#232e3c] px-4 flex items-center justify-between bg-[#17212b]">
+    <div class="flex items-center space-x-3 space-x-reverse">
+      <img src="22.jpg" class="w-9 h-9 rounded-full object-cover">
+      <div>
+        <h3 class="text-xs font-bold text-white">الدعم الفني</h3>
+        <span class="text-[10px] text-emerald-400 block">متصل الآن</span>
       </div>
-      <div id="callButtonsArea" class="flex items-center gap-2 hidden">
-        <button onclick="startCall('video')" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-3 py-1.5 rounded-full text-xs font-semibold"><i class="fa-solid fa-video ml-1"></i> فيديو</button>
-        <button onclick="startCall('audio')" class="bg-[#212f3d] hover:bg-[#2b5278] text-[#6ab2f2] hover:text-white px-3 py-1.5 rounded-full text-xs font-semibold border border-[#232e3c]"><i class="fa-solid fa-phone ml-1"></i> صوت</button>
-      </div>
-    </header>
-
-    <div id="messageContainer" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2 text-sm">
-      <div class="text-center text-[#8796a5] my-auto bg-[#17212b] p-4 rounded-xl border border-[#232e3c] max-w-sm mx-auto text-xs">اختر عميلاً من القائمة لبدء المراسلة</div>
     </div>
-
-    <div class="p-3 border-t border-[#232e3c] bg-[#17212b]">
-      <form id="messageForm" class="flex items-center space-x-2 space-x-reverse hidden" onsubmit="sendMessage(event)">
-        <input type="text" id="messageInput" placeholder="اكتب رسالتك..." autocomplete="off" class="flex-1 bg-[#212f3d] text-white rounded-full px-4 py-2.5 text-xs focus:outline-none">
-        <button type="submit" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-5 py-2.5 rounded-full text-xs font-semibold">إرسال</button>
-      </form>
+    <div class="flex items-center gap-2">
+      <button onclick="startCall('video')" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-3 py-1.5 rounded-full text-xs font-semibold"><i class="fa-solid fa-video ml-1"></i> فيديو</button>
+      <button onclick="startCall('audio')" class="bg-[#212f3d] hover:bg-[#2b5278] text-[#6ab2f2] hover:text-white px-3 py-1.5 rounded-full text-xs font-semibold border border-[#232e3c]"><i class="fa-solid fa-phone ml-1"></i> صوت</button>
     </div>
-  </main>
+  </header>
 
-  <!-- شاشة المكالمة للموظف -->
+  <div id="messageContainer" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2 text-sm">
+    <div class="text-center text-[#8796a5] my-auto bg-[#17212b] p-4 rounded-xl border border-[#232e3c] max-w-sm mx-auto text-xs">جاري الاتصال بالدعم الفني...</div>
+  </div>
+
+  <div class="p-3 border-t border-[#232e3c] bg-[#17212b]">
+    <form class="flex items-center space-x-2 space-x-reverse" onsubmit="sendMessage(event)">
+      <input type="text" id="messageInput" placeholder="اكتب رسالتك..." autocomplete="off" class="flex-1 bg-[#212f3d] text-white rounded-full px-4 py-2.5 text-xs focus:outline-none">
+      <button type="submit" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-5 py-2.5 rounded-full text-xs font-semibold">إرسال</button>
+    </form>
+  </div>
+
+  <!-- شاشة المكالمة للعميل -->
   <div id="callScreen" class="fixed inset-0 bg-[#0f172a] z-50 flex flex-col items-center justify-between py-12 px-6 hidden">
     <div class="flex flex-col items-center text-center z-20 mt-4">
-        <h2 id="callerNameText" class="text-white text-xl font-bold mb-1">المكالمة</h2>
-        <p id="callStatusText" class="text-slate-400 text-xs">جاري الاتصال...</p>
+        <h2 id="callerNameText" class="text-white text-xl font-bold mb-1">الدعم الفني</h2>
+        <p id="callStatusText" class="text-slate-400 text-xs">مكالمة واردة...</p>
     </div>
     <div class="relative flex items-center justify-center my-auto">
         <div class="absolute w-36 h-36 bg-blue-500/20 rounded-full animate-ping"></div>
         <img src="22.jpg" class="w-28 h-28 rounded-full object-cover border-4 border-slate-700 shadow-2xl relative z-10">
         <div id="videoContainer" class="absolute inset-0 w-full h-full rounded-full overflow-hidden hidden z-20 bg-black"></div>
     </div>
-    <div class="flex items-center gap-6 z-20 mb-4">
+    <div id="incomingButtons" class="flex items-center gap-8 z-20 mb-4 hidden">
+        <button onclick="rejectCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-xl shadow-lg"><i class="fa-solid fa-phone-slash"></i></button>
+        <button onclick="acceptCall()" class="w-16 h-16 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center text-xl shadow-lg animate-bounce"><i class="fa-solid fa-phone"></i></button>
+    </div>
+    <div id="activeButtons" class="flex items-center gap-6 z-20 mb-4 hidden">
         <button onclick="endCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-xl shadow-lg"><i class="fa-solid fa-phone-slash"></i></button>
     </div>
   </div>
@@ -87,112 +73,99 @@
         appId: "1:524067560260:web:adc87a02eadf098d5a5511"
     }));
 
-    let activeRoom = null;
-    let msgUnsub = null;
-    let callUnsub = null;
+    let clientName = localStorage.getItem('clientName');
+    if (!clientName) {
+        clientName = 'عميل_' + Math.floor(1000 + Math.random() * 9000);
+        localStorage.setItem('clientName', clientName);
+    }
+    const roomKey = clientName.trim().replace(/\s+/g, '_');
     let callFrame = null;
     const DAILY_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
     const ringtone = document.getElementById("ringtone");
 
-    // جلب قائمة العملاء
-    onValue(ref(db, 'chats'), (snapshot) => {
-        const list = document.getElementById('clientsList');
-        list.innerHTML = '';
-        if (!snapshot.exists()) {
-            list.innerHTML = '<div class="p-4 text-center text-[#8796a5] text-xs">لا توجد محادثات</div>';
+    // تسجيل بيانات العميل
+    set(ref(db, `chats/${roomKey}/info`), { name: clientName });
+
+    // استقبال الرسائل
+    onValue(ref(db, `chats/${roomKey}/messages`), (snap) => {
+        const box = document.getElementById('messageContainer');
+        box.innerHTML = '';
+        if (!snap.exists()) {
+            box.innerHTML = '<div class="text-center text-[#8796a5] my-auto text-xs">أهلاً بك! اكتب رسالتك لبدء المحادثة.</div>';
             return;
         }
-        snapshot.forEach((child) => {
-            const roomKey = child.key;
-            const data = child.val();
-            const name = data.info?.name || roomKey;
-            list.insertAdjacentHTML('beforeend', `
-                <div onclick="selectClient('${roomKey}', '${name}')" class="p-3 hover:bg-[#212f3d] cursor-pointer transition flex items-center space-x-3 space-x-reverse ${activeRoom === roomKey ? 'bg-[#2b5278]/40 border-r-4 border-[#6ab2f2]' : ''}">
-                    <img src="22.jpg" class="w-10 h-10 rounded-full object-cover">
-                    <div class="min-w-0 flex-1">
-                        <h4 class="text-xs font-bold text-white truncate">${name}</h4>
-                        <p class="text-[11px] text-[#8796a5] truncate">انقر للعرض</p>
+        snap.forEach((mSnap) => {
+            const msg = mSnap.val();
+            const isClient = msg.sender === clientName;
+            box.insertAdjacentHTML('beforeend', `
+                <div class="flex flex-col items-${isClient ? 'end' : 'start'} w-full mb-1">
+                    <div class="bg-[${isClient ? '#2b5278' : '#182533'}] text-white p-2.5 px-3.5 rounded-2xl max-w-md text-xs shadow border border-[#232e3c]">
+                        <span class="block text-[9px] text-[#6ab2f2] font-bold mb-0.5">${msg.sender}</span>
+                        <span>${msg.text}</span>
                     </div>
                 </div>
             `);
         });
+        box.scrollTop = box.scrollHeight;
     });
 
-    window.selectClient = function(roomKey, clientName) {
-        activeRoom = roomKey;
-        document.getElementById('activeClientName').innerText = clientName;
-        document.getElementById('activeClientStatus').innerText = "متصل";
-        document.getElementById('messageForm').classList.remove('hidden');
-        document.getElementById('callButtonsArea').classList.remove('hidden');
-
-        if (msgUnsub) msgUnsub();
-        if (callUnsub) callUnsub();
-
-        // مراقبة الرسائل
-        msgUnsub = onValue(ref(db, `chats/${roomKey}/messages`), (snap) => {
-            const box = document.getElementById('messageContainer');
-            box.innerHTML = '';
-            if (!snap.exists()) {
-                box.innerHTML = '<div class="text-center text-[#8796a5] my-auto text-xs">ابدأ المحادثة الآن</div>';
-                return;
-            }
-            snap.forEach((mSnap) => {
-                const msg = mSnap.val();
-                const isEmp = msg.sender === 'الدعم الفني';
-                box.insertAdjacentHTML('beforeend', `
-                    <div class="flex flex-col items-${isEmp ? 'end' : 'start'} w-full mb-1">
-                        <div class="bg-[${isEmp ? '#2b5278' : '#182533'}] text-white p-2.5 px-3.5 rounded-2xl max-w-md text-xs shadow border border-[#232e3c]">
-                            <span class="block text-[9px] text-[#6ab2f2] font-bold mb-0.5">${msg.sender}</span>
-                            <span>${msg.text}</span>
-                        </div>
-                    </div>
-                `);
-            });
-            box.scrollTop = box.scrollHeight;
-        });
-
-        // مراقبة المكالمات
-        callUnsub = onValue(ref(db, `chats/${roomKey}/call`), (snap) => {
-            const call = snap.val();
-            if (!call) return;
-            if (call.status === 'ringing' && call.caller !== 'الدعم الفني') {
-                document.getElementById('callerNameText').innerText = clientName;
-                document.getElementById('callStatusText').innerText = 'مكالمة واردة...';
-                document.getElementById('callScreen').classList.remove('hidden');
-                document.getElementById('callScreen').classList.add('flex');
-                ringtone.play().catch(e=>{});
-            } else if (call.status === 'active') {
-                ringtone.pause();
-                openCall(call.type);
-            } else if (call.status === 'ended' || call.status === 'rejected') {
-                closeCallUI();
-            }
-        });
-    };
+    // استقبال المكالمات
+    onValue(ref(db, `chats/${roomKey}/call`), (snap) => {
+        const call = snap.val();
+        if (!call) return;
+        if (call.status === 'ringing' && call.caller !== clientName) {
+            document.getElementById('incomingButtons').classList.remove('hidden');
+            document.getElementById('activeButtons').classList.add('hidden');
+            document.getElementById('callScreen').classList.remove('hidden');
+            document.getElementById('callScreen').classList.add('flex');
+            ringtone.play().catch(e=>{});
+        } else if (call.status === 'active') {
+            ringtone.pause();
+            document.getElementById('incomingButtons').classList.add('hidden');
+            document.getElementById('activeButtons').classList.remove('hidden');
+            openCall(call.type);
+        } else if (call.status === 'ended' || call.status === 'rejected') {
+            closeCallUI();
+        }
+    });
 
     window.sendMessage = async function(e) {
         e.preventDefault();
         const input = document.getElementById('messageInput');
-        if (!input.value.trim() || !activeRoom) return;
-        await push(ref(db, `chats/${activeRoom}/messages`), {
+        if (!input.value.trim()) return;
+        await push(ref(db, `chats/${roomKey}/messages`), {
             text: input.value.trim(),
-            sender: 'الدعم الفني',
+            sender: clientName,
             time: Date.now()
         });
         input.value = '';
     };
 
     window.startCall = async function(type) {
-        if (!activeRoom) return;
-        await set(ref(db, `chats/${activeRoom}/call`), { status: 'ringing', type: type, caller: 'الدعم الفني' });
+        await set(ref(db, `chats/${roomKey}/call`), { status: 'ringing', type: type, caller: clientName });
+        document.getElementById('incomingButtons').classList.add('hidden');
+        document.getElementById('activeButtons').classList.remove('hidden');
         document.getElementById('callScreen').classList.remove('hidden');
         document.getElementById('callScreen').classList.add('flex');
         ringtone.play().catch(e=>{});
     };
 
+    window.acceptCall = async function() {
+        ringtone.pause();
+        document.getElementById('incomingButtons').classList.add('hidden');
+        document.getElementById('activeButtons').classList.remove('hidden');
+        await update(ref(db, `chats/${roomKey}/call`), { status: 'active' });
+    };
+
+    window.rejectCall = async function() {
+        ringtone.pause();
+        await update(ref(db, `chats/${roomKey}/call`), { status: 'rejected' });
+        closeCallUI();
+    };
+
     window.endCall = async function() {
         ringtone.pause();
-        if (activeRoom) await update(ref(db, `chats/${activeRoom}/call`), { status: 'ended' });
+        await update(ref(db, `chats/${roomKey}/call`), { status: 'ended' });
         closeCallUI();
     };
 
