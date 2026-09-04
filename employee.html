@@ -6,7 +6,6 @@
   <title>تليجرام - لوحة تحكم الموظفين</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- مكتبة Daily.co للاتصالات -->
   <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
   <link rel="icon" href="22.jpg" type="image/jpeg">
   <style>
@@ -111,7 +110,7 @@
       <div class="w-24 h-24 bg-[#17212b] rounded-full flex items-center justify-center overflow-hidden mb-4 border-2 border-emerald-500 animate-pulse">
         <img src="22.jpg" class="w-full h-full object-cover">
       </div>
-      <h2 id="empCallStatus" class="text-lg font-bold mb-1">المكالمة جارية مع العميل عبر Daily</h2>
+      <h2 id="empCallStatus" class="text-lg font-bold mb-1">المكالمة جارية مع العميل</h2>
       <p class="text-xs text-[#8796a5]" id="empCallTimer">00:00</p>
     </div>
     
@@ -305,11 +304,7 @@
           return;
         }
         
-        callFrame = DailyIframe.createCallObject({
-          audioSource: true,
-          videoSource: false
-        });
-
+        callFrame = DailyIframe.createCallObject({ audioSource: true, videoSource: false });
         await callFrame.join({ url: activeCallRoomUrl });
         startEmpTimer();
       } catch(e) {
@@ -325,8 +320,7 @@
       showEmployeeCallScreen();
 
       try {
-        // يمكنك استبدال الرابط أدناه برابط غرفة Daily ثابت أو ديناميكي خاص بك
-        activeCallRoomUrl = "https://your-domain.daily.co/" + activeClientKey;
+        activeCallRoomUrl = "https://alhwarychate.daily.co/" + activeClientKey.replace(/[^a-zA-Z0-9-_]/g, '_');
 
         await set(ref(db, `single_chat_room/${activeClientKey}/call`), {
           roomUrl: activeCallRoomUrl,
@@ -334,16 +328,12 @@
           sender: 'employee'
         });
 
-        callFrame = DailyIframe.createCallObject({
-          audioSource: true,
-          videoSource: false
-        });
-
+        callFrame = DailyIframe.createCallObject({ audioSource: true, videoSource: false });
         await callFrame.join({ url: activeCallRoomUrl });
         startEmpTimer();
       } catch(e) {
         console.error("Daily start error:", e);
-        alert("تعذر بدء المكالمة عبر Daily");
+        alert("تعذر بدء المكالمة");
         employeeEndCall();
       }
     };
@@ -364,17 +354,9 @@
 
     window.employeeEndCall = async function() {
       try {
-        if (callFrame) {
-          await callFrame.leave();
-          callFrame.destroy();
-          callFrame = null;
-        }
-        if (activeClientKey) {
-          await remove(ref(db, `single_chat_room/${activeClientKey}/call`));
-        }
-      } catch (err) {
-        console.error("End call error:", err);
-      }
+        if (callFrame) { await callFrame.leave(); callFrame.destroy(); callFrame = null; }
+        if (activeClientKey) { await remove(ref(db, `single_chat_room/${activeClientKey}/call`)); }
+      } catch (err) { console.error("End call error:", err); }
       closeEmpCallUI();
     };
 
@@ -384,10 +366,7 @@
       if (ringAudio) ringAudio.pause();
       
       const callScreen = document.getElementById("employeeCallScreen");
-      if (callScreen) {
-        callScreen.classList.remove("flex");
-        callScreen.classList.add("hidden");
-      }
+      if (callScreen) { callScreen.classList.remove("flex"); callScreen.classList.add("hidden"); }
       
       const incomingModal = document.getElementById("incomingCallModal");
       if (incomingModal) incomingModal.style.display = "none";
@@ -436,10 +415,7 @@
     window.rejectIncomingCall = function() {
       const ringAudio = document.getElementById("empRingAudio");
       if (ringAudio) ringAudio.pause();
-      
-      const incomingModal = document.getElementById("incomingCallModal");
-      if (incomingModal) incomingModal.style.display = "none";
-      
+      document.getElementById("incomingCallModal").style.display = "none";
       if (activeClientKey) remove(ref(db, `single_chat_room/${activeClientKey}/call`));
       isEmpCallActiveOrRinging = false;
     };
