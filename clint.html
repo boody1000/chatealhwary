@@ -17,7 +17,6 @@
 </head>
 <body class="bg-[#0e1621] text-white font-sans h-[100dvh] overflow-hidden telegram-bg flex flex-col">
 
-  <!-- هيدر المحادثة -->
   <header class="h-14 border-b border-[#232e3c] px-4 flex items-center justify-between bg-[#17212b] z-20">
     <div class="flex items-center space-x-3 space-x-reverse min-w-0">
       <div class="relative">
@@ -29,16 +28,9 @@
         <span class="text-[10px] text-emerald-400 block">متصل الآن</span>
       </div>
     </div>
-    
-    <div class="flex items-center gap-2">
-      <button onclick="startDailyCall()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-full flex items-center gap-2 text-xs transition shadow" title="مكالمة صوتية مع الدعم">
-        <i class="fa-solid fa-phone text-xs"></i>
-        <span>مكالمة صوتية</span>
-      </button>
-    </div>
   </header>
 
-  <!-- شاشة المكالمة الجارية -->
+  <!-- شاشة المكالمة الجارية للعميل -->
   <div id="callContainer" class="hidden fixed inset-0 bg-[#0e1621]/95 z-50 flex flex-col items-center justify-center p-4">
     <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center">
         <div class="relative w-24 h-24 mb-4">
@@ -50,7 +42,6 @@
         <p class="text-xs text-[#8796a5] mb-2">متصل الآن</p>
         <span id="micStatusIndicator" class="text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-medium mb-6">الميكروفون يعمل</span>
         
-        <!-- عنصر الصوت المخفي -->
         <div id="dailyCallFrame" class="hidden"></div>
         
         <div class="flex items-center justify-center gap-4 w-full mt-4">
@@ -64,7 +55,7 @@
     </div>
   </div>
 
-  <!-- شاشة المكالمة الواردة للعميل -->
+  <!-- شاشة تنبيه المكالمة الواردة من الموظف -->
   <div id="incomingCallModal" class="hidden fixed inset-0 bg-[#0e1621]/95 z-50 flex flex-col items-center justify-center p-4">
     <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center animate-bounce">
         <div class="w-24 h-24 mb-4 relative">
@@ -84,12 +75,10 @@
     </div>
   </div>
 
-  <!-- حاوية الرسائل -->
   <div id="messageContainer" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2 text-sm">
     <div class="text-center text-[#8796a5] my-auto bg-[#17212b] p-4 rounded-xl border border-[#232e3c] max-w-sm mx-auto text-xs">أهلاً بك، اكتب رسالتك وسيتواصل معك أحد الموظفين قريباً.</div>
   </div>
 
-  <!-- نموذج إرسال الرسائل -->
   <div class="p-3 border-t border-[#232e3c] bg-[#17212b] z-20">
     <form id="messageForm" class="flex items-center space-x-2 space-x-reverse" onsubmit="sendMessage(event)">
       <input type="text" id="messageInput" placeholder="اكتب رسالتك هنا..." autocomplete="off" class="flex-1 bg-[#212f3d] border border-transparent text-white rounded-full px-4 py-2.5 text-xs focus:outline-none">
@@ -116,7 +105,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // توليد أو جلب معرف فريد للعميل من التخزين المحلي
     let currentClientKey = localStorage.getItem('clientUniqueKey');
     if (!currentClientKey) {
         const storedName = localStorage.getItem('userName') || ('عميل_' + Math.floor(Math.random() * 10000));
@@ -126,15 +114,12 @@
     const clientDisplayName = currentClientKey.replace(/_/g, ' ');
 
     let callFrame = null;
-    const DAILY_API_KEY = "f344f7ad262fd3681378f82726aec1545e5b07c1f705cae852bce093e0044e99";
 
     window.addEventListener('DOMContentLoaded', () => {
-      // تعيين حالة العميل إلى متصل
       const statusRef = ref(db, `single_chat_room/${currentClientKey}/status`);
       set(statusRef, 'online');
       onDisconnect(statusRef).set('offline');
 
-      // الاستماع للرسائل الواردة
       onValue(ref(db, 'single_chat_room/' + currentClientKey), (snapshot) => {
         const container = document.getElementById('messageContainer');
         container.innerHTML = '';
@@ -151,7 +136,7 @@
         container.scrollTop = container.scrollHeight;
       });
 
-      // الاستماع للمكالمات الواردة من الموظف
+      // الاستماع لطلبات الاتصال من الموظف
       onValue(ref(db, `single_chat_room/${currentClientKey}/call`), (snapshot) => {
         const callData = snapshot.val();
         if (callData && callData.action === 'start' && callData.roomUrl && callData.sender === 'employee') {
@@ -177,56 +162,6 @@
       input.value = '';
     };
 
-    window.startDailyCall = async function() {
-      // تنظيف اسم الغرفة ليكون متوافقاً 100% مع شروط Daily (أحرف إنجليزية، أرقام، شرطة سفلى فقط)
-      const cleanRoomId = currentClientKey.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
-      const roomName = "hawary_" + cleanRoomId + "_" + Date.now().toString().slice(-6);
-      
-      try {
-        const createRes = await fetch('https://api.daily.co/v1/rooms', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${DAILY_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-                name: roomName, 
-                properties: { 
-                    exp: Math.floor(Date.now() / 1000) + 3600,
-                    enable_screenshare: false,
-                    start_video_off: true,
-                    start_audio_off: false
-                } 
-            })
-        });
-        
-        let data = await createRes.json();
-        
-        if (!createRes.ok) {
-            const getRes = await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${DAILY_API_KEY}` }
-            });
-            data = await getRes.json();
-        }
-
-        const urlToJoin = data.url;
-        if (urlToJoin) {
-            set(ref(db, `single_chat_room/${currentClientKey}/call`), { 
-                action: 'start', 
-                roomUrl: urlToJoin, 
-                sender: 'client' 
-            });
-            joinDailyCallWithGesture(urlToJoin);
-        } else {
-            alert("تعذر إنشاء رابط المكالمة، يرجى المحاولة لاحقاً.");
-        }
-      } catch (err) {
-        console.error("خطأ في الاتصال بـ Daily API:", err);
-        alert("حدث خطأ شبكي أثناء محاولة بدء المكالمة.");
-      }
-    };
-
     function showIncomingCallModal(url) {
         const modal = document.getElementById('incomingCallModal');
         modal.classList.remove('hidden');
@@ -248,77 +183,28 @@
     };
 
     function joinDailyCallWithGesture(url) {
-      const modal = document.getElementById('incomingCallModal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-
       document.getElementById('callContainer').classList.remove('hidden');
       document.getElementById('callContainer').classList.add('flex');
 
       if (!callFrame) {
           const containerElement = document.getElementById('dailyCallFrame');
           callFrame = window.DailyIframe.createFrame(containerElement, {
-              showLeaveButton: false,
-              showFullscreenButton: false,
-              audioSource: true,
-              videoSource: false
-          });
-
-          callFrame.on('participant-joined', (event) => {
-              if (!event.participant.local) {
-                  callFrame.setParticipantAudio(event.participant.session_id, true);
-              }
-          });
-
-          callFrame.on('track-started', (event) => {
-              if (event.track.kind === 'audio' && !event.participant.local) {
-                  const audioElement = new Audio();
-                  audioElement.srcObject = new MediaStream([event.track]);
-                  audioElement.play().catch(e => console.log("تشغيل الصوت:", e));
-              }
+              showLeaveButton: false, audioSource: true, videoSource: false
           });
       }
-      
-      callFrame.join({ 
-          url: url, 
-          startVideoOff: true, 
-          startAudioOff: false 
-      }).then(() => {
+      callFrame.join({ url: url, startVideoOff: true, startAudioOff: false }).then(() => {
           callFrame.setLocalAudio(true);
-          updateMicUIState(false);
-      }).catch((error) => {
-          console.error("خطأ الانضمام للمكالمة:", error);
-          alert("يرجى السماح للمتصفح بالوصول إلى الميكروفون.");
-      });
+      }).catch(err => console.log(err));
     }
 
     window.toggleMute = function() {
       if (!callFrame) return;
       const localAudio = callFrame.localAudio();
       callFrame.setLocalAudio(!localAudio);
-      updateMicUIState(localAudio);
     };
 
-    function updateMicUIState(isCurrentlyMuted) {
-        const micIcon = document.getElementById('micIcon');
-        const indicator = document.getElementById('micStatusIndicator');
-        
-        if (isCurrentlyMuted) {
-            micIcon.className = "fa-solid fa-microphone-slash text-lg text-red-400";
-            indicator.className = "text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-medium mb-6";
-            indicator.innerText = "الميكروفون مكتوم";
-        } else {
-            micIcon.className = "fa-solid fa-microphone text-lg text-emerald-400";
-            indicator.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-medium mb-6";
-            indicator.innerText = "الميكروفون يعمل";
-        }
-    }
-
     window.leaveDailyCall = function(updateDb = true) {
-      if (callFrame) {
-          callFrame.destroy();
-          callFrame = null;
-      }
+      if (callFrame) { callFrame.destroy(); callFrame = null; }
       document.getElementById('callContainer').classList.add('hidden');
       document.getElementById('callContainer').classList.remove('flex');
       document.getElementById('incomingCallModal').classList.add('hidden');
