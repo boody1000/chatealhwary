@@ -19,6 +19,7 @@
 <body class="bg-[#0e1621] text-white font-sans h-[100dvh] overflow-hidden telegram-bg">
 
   <div class="flex h-full w-full relative overflow-hidden">
+    
     <main class="w-full h-full flex flex-col bg-[#0e1621] z-30 absolute inset-0">
       <header class="h-14 border-b border-[#232e3c] px-4 flex items-center justify-between bg-[#17212b]">
         <div class="flex items-center space-x-3 space-x-reverse min-w-0">
@@ -53,6 +54,7 @@
         </form>
       </div>
     </main>
+
   </div>
 
   <!-- شاشة المكالمة للعميل -->
@@ -124,7 +126,7 @@
     window.addEventListener('DOMContentLoaded', () => {
         let savedName = localStorage.getItem('clientName');
         if (!savedName) {
-            savedName = 'عميل_' + Math.floor(1000 + Math.random() * 9000);
+            savedName = 'العميل_' + Math.floor(1000 + Math.random() * 9000);
             localStorage.setItem('clientName', savedName);
         }
         clientDisplayName = savedName;
