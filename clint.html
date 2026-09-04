@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تليجرام - دردشة العميل والدعم</title>
+  <title>تليجرام - التواصل مع الدعم</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" href="22.jpg" type="image/jpeg">
@@ -16,37 +16,39 @@
 </head>
 <body class="bg-[#0e1621] text-white font-sans h-[100dvh] overflow-hidden telegram-bg">
 
-  <div class="flex flex-col h-full w-full relative overflow-hidden">
+  <div class="flex h-full w-full relative overflow-hidden">
     
-    <header class="h-14 border-b border-[#232e3c] px-4 flex items-center justify-between bg-[#17212b] z-20">
-      <div class="flex items-center space-x-3 space-x-reverse min-w-0">
-        <div class="relative">
-          <img src="22.jpg" class="w-9 h-9 rounded-full object-cover">
-          <span id="supportStatusDot" class="absolute bottom-0 left-0 w-2.5 h-2.5 bg-slate-500 border-2 border-[#17212b] rounded-full"></span>
+    <main id="chatPage" class="w-full h-full flex flex-col bg-[#0e1621] z-30 absolute inset-0">
+      <header class="h-14 border-b border-[#232e3c] px-4 flex items-center justify-between bg-[#17212b]">
+        <div class="flex items-center space-x-3 space-x-reverse min-w-0">
+          <div class="relative">
+            <img id="currentAvatar" src="22.jpg" class="w-9 h-9 rounded-full object-cover">
+            <span id="headerClientStatusDot" class="absolute bottom-0 left-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#17212b] rounded-full"></span>
+          </div>
+          <div class="min-w-0">
+            <h3 id="currentName" class="text-xs font-bold text-white truncate">خدمة العملاء</h3>
+            <span id="chatLockStatus" class="text-[10px] text-[#6ab2f2] block">متصل بالدعم</span>
+          </div>
         </div>
-        <div class="min-w-0">
-          <h3 class="text-xs font-bold text-white truncate">الدعم الفني - شركة الهواري</h3>
-          <span id="supportStatusText" class="text-[10px] text-[#8796a5] block">جاري التحقق...</span>
+        
+        <div class="flex items-center gap-2">
+          <button id="callEmployeeBtn" onclick="clientStartCall()" class="w-9 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center transition" title="اتصال صوتي بالمصلحة">
+            <i class="fa-solid fa-phone text-xs"></i>
+          </button>
         </div>
-      </div>
-      
-      <div class="flex items-center gap-2">
-        <button id="startCallBtn" onclick="clientStartCall()" class="w-9 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center transition" title="اتصال صوتي">
-          <i class="fa-solid fa-phone text-xs"></i>
-        </button>
-      </div>
-    </header>
+      </header>
 
-    <div id="messageContainer" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2 text-sm z-10">
-      <div class="text-center text-[#8796a5] my-auto bg-[#17212b] p-4 rounded-xl border border-[#232e3c] max-w-sm mx-auto text-xs">مرحباً بك، أكتب رسالتك وسيرد عليك موظف الدعم فوراً</div>
-    </div>
+      <div id="messageContainer" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2 text-sm">
+        <div class="text-center text-[#8796a5] my-auto bg-[#17212b] p-4 rounded-xl border border-[#232e3c] max-w-sm mx-auto text-xs">أهلاً بك، اكتب رسالتك وسيرد عليك موظف الدعم فوراً</div>
+      </div>
 
-    <div class="p-3 border-t border-[#232e3c] bg-[#17212b] z-20">
-      <form id="messageForm" class="flex items-center space-x-2 space-x-reverse" onsubmit="sendMessage(event)">
-        <input type="text" id="messageInput" placeholder="اكتب رسالتك هنا..." autocomplete="off" class="flex-1 bg-[#212f3d] border border-transparent text-white rounded-full px-4 py-2.5 text-xs focus:outline-none">
-        <button type="submit" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-5 py-2.5 rounded-full text-xs font-semibold transition">إرسال</button>
-      </form>
-    </div>
+      <div class="p-3 border-t border-[#232e3c] bg-[#17212b]">
+        <form id="messageForm" class="flex items-center space-x-2 space-x-reverse" onsubmit="sendMessage(event)">
+          <input type="text" id="messageInput" placeholder="اكتب رسالتك هنا..." autocomplete="off" class="flex-1 bg-[#212f3d] border border-transparent text-white rounded-full px-4 py-2.5 text-xs focus:outline-none">
+          <button type="submit" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-5 py-2.5 rounded-full text-xs font-semibold transition">إرسال</button>
+        </form>
+      </div>
+    </main>
 
   </div>
 
@@ -56,7 +58,7 @@
         <img src="22.jpg" class="w-full h-full rounded-full object-cover">
       </div>
       <h3 class="text-sm font-bold mb-1">مكالمة صوتية واردة!</h3>
-      <p id="incomingCallerName" class="text-xs text-emerald-400 mb-5">موظف الدعم يتصل بك الآن...</p>
+      <p id="incomingCallerName" class="text-xs text-emerald-400 mb-5">الموظف يتصل بك الآن...</p>
       <div class="flex items-center gap-3 w-full">
         <button onclick="rejectIncomingCall()" class="flex-1 bg-red-600 hover:bg-red-700 py-2.5 rounded-xl font-semibold text-xs">رفض</button>
         <button onclick="acceptIncomingCall()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 py-2.5 rounded-xl font-semibold text-xs">رد</button>
@@ -69,10 +71,10 @@
       <div class="w-24 h-24 bg-[#17212b] rounded-full flex items-center justify-center overflow-hidden mb-4 border-2 border-emerald-500 animate-pulse">
         <img src="22.jpg" class="w-full h-full object-cover">
       </div>
-      <h2 id="clientCallStatus" class="text-lg font-bold mb-1">المكالمة جارية مع الدعم</h2>
+      <h2 id="clientCallStatus" class="text-lg font-bold mb-1">المكالمة جارية مع الموظف</h2>
       <p class="text-xs text-[#8796a5]" id="clientCallTimer">00:00</p>
       
-      <button id="forceAudioBtn" onclick="forcePlayAudio()" class="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg animate-bounce">
+      <button id="forceClientAudioBtn" onclick="forcePlayClientAudio()" class="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg animate-bounce">
         <i class="fa-solid fa-volume-high"></i> اضغط هنا لتفعيل السماعة الخارجية
       </button>
     </div>
@@ -107,15 +109,13 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    let clientName = localStorage.getItem('clientName') || "العميل_" + Math.floor(Math.random() * 1000);
-    let roomKey = clientName.replace(/\s+/g, '_');
-    let peerConnection = null, localStream = null, cachedIceServers = null, clientTimerInterval = null, clientSeconds = 0, pendingOffer = null;
+    let clientRoomKey = null, clientDisplayName = "زائر كريم";
+    let peerConnection = null, localStream = null, clientTimerInterval = null, clientSeconds = 0, pendingOffer = null;
     let isClientMuted = false, isClientCallActiveOrRinging = false;
 
-    async function getMeteredIceServers() {
-        if (cachedIceServers) return cachedIceServers;
-        
-        let iceServersList = [
+    // دمج خوادم STUN العامة وخوادم Metered TURN معاً في صفحة العميل أيضاً
+    const rtcConfig = {
+        iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
             { 
@@ -124,84 +124,58 @@
                 credential: 'openrelayproject' 
             },
             { 
-                urls: 'turns:openrelay.metered.ca:443?transport=tcp', 
-                username: 'openrelayproject', 
-                credential: 'openrelayproject' 
+                urls: 'turn:alhwary.metered.ca:443?transport=tcp', 
+                username: 'حط_اليوزر_بتاعك_هنا', 
+                credential: 'حط_الباسورد_بتاعك_هنا' 
             }
-        ];
-
-        try {
-            const response = await fetch("https://alhwary.metered.live/api/v1/turn/credentials?apiKey=6079dfbbdcf8564255625baf8471629ed765");
-            if (response.ok) {
-                let data = await response.json();
-                if (data && data.iceServers) {
-                    let meteredServers = data.iceServers.map(server => {
-                        if (server.urls) {
-                            let urls = Array.isArray(server.urls) ? server.urls : [server.urls];
-                            server.urls = urls.map(url => {
-                                if (url.startsWith('turn:') || url.startsWith('turns:')) {
-                                    let cleanUrl = url.split('?')[0];
-                                    return `${cleanUrl}:443?transport=tcp`;
-                                }
-                                return url;
-                            });
-                        }
-                        return server;
-                    });
-                    iceServersList = meteredServers.concat(iceServersList);
-                }
-            }
-        } catch (error) {
-            console.warn("تنبيه: تعذر جلب خوادم الـ Metered، سيتم الاعتماد على الخوادم البديلة.", error);
-        }
-
-        cachedIceServers = {
-            iceServers: iceServersList,
-            iceTransportPolicy: 'all'
-        };
-        return cachedIceServers;
-    }
+        ],
+        iceTransportPolicy: 'all'
+    };
 
     window.addEventListener('DOMContentLoaded', () => {
-      const clientStatusRef = ref(db, `single_chat_room/${roomKey}/status`);
-      set(clientStatusRef, 'online');
-      onDisconnect(clientStatusRef).set('offline');
+      const savedName = localStorage.getItem('clientName') || "زائر_" + Math.floor(Math.random() * 1000);
+      clientDisplayName = savedName;
+      document.getElementById('currentName').innerText = clientDisplayName;
+      clientRoomKey = clientDisplayName.replace(/\s+/g, '_');
 
-      onValue(ref(db, 'online_employees'), snap => {
-        const dot = document.getElementById('supportStatusDot');
-        const txt = document.getElementById('supportStatusText');
-        if (snap.exists() && snap.size > 0) {
-          dot.className = "absolute bottom-0 left-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#17212b] rounded-full";
-          txt.innerText = "الدعم متاح الآن";
-        } else {
-          dot.className = "absolute bottom-0 left-0 w-2.5 h-2.5 bg-slate-500 border-2 border-[#17212b] rounded-full";
-          txt.innerText = "غير متصل حالياً";
-        }
-      });
+      const clientStatusRef = ref(db, `single_chat_room/${clientRoomKey}/status`);
+      set(clientStatusRef, "online");
+      onDisconnect(clientStatusRef).set("offline");
 
-      onValue(ref(db, `single_chat_room/${roomKey}`), (snapshot) => {
+      // الاستماع للرسائل ومكالمات الموظف الواردة
+      onValue(ref(db, `single_chat_room/${clientRoomKey}`), (snapshot) => {
         const container = document.getElementById('messageContainer');
         container.innerHTML = '';
         if (snapshot.exists()) {
           snapshot.forEach((child) => {
-            if(['call','assignedTo','status','lockedBy','client_info'].includes(child.key)) {
-              if(child.key === 'call') checkIncomingCallFromEmployee(child.val());
+            if(child.key === 'call') {
+              checkIncomingCallFromEmployee(child.val());
               return;
             }
+            if(['assignedTo','status','lockedBy','client_info'].includes(child.key)) return;
             const msg = child.val();
             if(msg && msg.text) {
-              const isMe = (msg.sender === clientName || msg.senderRole === 'client');
-              appendMessageToUI(msg.text, msg.sender, msg.timestamp, isMe);
+              const isClientMsg = (msg.senderRole === 'client' || msg.sender === clientDisplayName);
+              appendMessageToUI(msg.text, msg.sender || clientDisplayName, msg.timestamp, isClientMsg);
             }
           });
         }
       });
     });
 
+    window.sendMessage = async function(event) {
+      event.preventDefault();
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      if(!text || !clientRoomKey) return;
+      await push(ref(db, `single_chat_room/${clientRoomKey}`), { text, sender: clientDisplayName, senderRole: "client", timestamp: Date.now() });
+      input.value = '';
+    };
+
     function checkIncomingCallFromEmployee(callData) {
       if (callData && callData.offer && callData.caller === 'employee' && !callData.answer && !isClientCallActiveOrRinging) {
         isClientCallActiveOrRinging = true;
-        pendingOffer = callData.offer;
+        pendingOffer = { offer: callData.offer };
         document.getElementById("incomingCallModal").style.display = "flex";
         document.getElementById("clientRingAudio").play().catch(e => {});
       } else if (!callData && isClientCallActiveOrRinging) {
@@ -214,37 +188,37 @@
       document.getElementById("incomingCallModal").style.display = "none";
       showClientCallScreen();
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
-        await createPeerConnection();
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        await createPeerConnection(clientRoomKey);
         
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
-        
-        await update(ref(db, `single_chat_room/${roomKey}/call`), { answer: { type: answer.type, sdp: answer.sdp }, status: 'answered' });
-        listenForCandidates();
+
+        await update(ref(db, `single_chat_room/${clientRoomKey}/call`), { answer: { type: answer.type, sdp: answer.sdp }, status: 'answered' });
+        listenForCandidates(clientRoomKey);
         startClientTimer();
-      } catch(e) { 
-        console.error("خطأ أثناء قبول المكالمة:", e);
-        clientEndCall(); 
+      } catch(e) {
+        console.error("خطأ قبول مكالمة العميل:", e);
+        clientEndCall();
       }
     };
 
     window.clientStartCall = async function() {
-      if (isClientCallActiveOrRinging) return;
+      if (!clientRoomKey || isClientCallActiveOrRinging) return;
       isClientCallActiveOrRinging = true;
       showClientCallScreen();
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
-        await createPeerConnection();
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        await createPeerConnection(clientRoomKey);
         
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
-        await set(ref(db, `single_chat_room/${roomKey}/call`), { offer: { type: offer.type, sdp: offer.sdp }, caller: 'client' });
+        await set(ref(db, `single_chat_room/${clientRoomKey}/call`), { offer: { type: offer.type, sdp: offer.sdp }, caller: 'client' });
         
-        listenForCandidates();
+        listenForCandidates(clientRoomKey);
 
-        onValue(ref(db, `single_chat_room/${roomKey}/call`), async snap => {
+        onValue(ref(db, `single_chat_room/${clientRoomKey}/call`), async snap => {
           const data = snap.val();
           if (data && data.answer && peerConnection && peerConnection.signalingState === "have-local-offer") {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
@@ -252,32 +226,22 @@
           }
         });
       } catch(e) {
-        console.error("خطأ أثناء بدء المكالمة:", e);
+        console.error("خطأ بدء مكالمة العميل:", e);
         clientEndCall();
       }
     };
 
-    async function createPeerConnection() {
+    async function createPeerConnection(roomKey) {
       if (peerConnection) return;
-      const config = await getMeteredIceServers();
-      config.bundlePolicy = 'max-bundle';
-      config.rtcpMuxPolicy = 'require';
-      
-      peerConnection = new RTCPeerConnection(config);
+      peerConnection = new RTCPeerConnection(rtcConfig);
       
       peerConnection.oniceconnectionstatechange = () => {
-          console.log("📌 [Client ICE Status]:", peerConnection.iceConnectionState);
-          if (peerConnection.iceConnectionState === 'failed' || peerConnection.iceConnectionState === 'disconnected') {
-              console.warn("⚠️ تحذير: فشل الاتصال المباشر أو عبر خوادم الـ TURN.");
-          }
+          console.log("📌 ICE Status (Client):", peerConnection.iceConnectionState);
       };
 
-      peerConnection.onicecandidate = e => { 
+      peerConnection.onicecandidate = e => {
           if(e.candidate) {
-              console.log("🔍 تم اكتشاف مرشح ICE جديد:", e.candidate.candidate);
-              push(ref(db, `single_chat_room/${roomKey}/call/candidates`), e.candidate.toJSON()); 
-          } else {
-              console.log("✅ انتهى جمع جميع مرشحات الـ ICE بنجاح.");
+              push(ref(db, `single_chat_room/${roomKey}/call/candidates`), e.candidate.toJSON());
           }
       };
       
@@ -287,7 +251,7 @@
           });
       }
 
-      peerConnection.ontrack = e => { 
+      peerConnection.ontrack = e => {
           const remoteAudio = document.getElementById("clientRemoteAudio");
           if (e.streams && e.streams[0]) {
               remoteAudio.srcObject = e.streams[0];
@@ -296,28 +260,26 @@
               inboundStream.addTrack(e.track);
               remoteAudio.srcObject = inboundStream;
           }
-          forcePlayAudio();
+          forcePlayClientAudio();
       };
     }
 
-    window.forcePlayAudio = function() {
+    window.forcePlayClientAudio = function() {
       const remoteAudio = document.getElementById("clientRemoteAudio");
       remoteAudio.muted = false;
       remoteAudio.volume = 1.0;
       remoteAudio.play().then(() => {
-        document.getElementById("forceAudioBtn").style.display = "none";
+        document.getElementById("forceClientAudioBtn").style.display = "none";
       }).catch(e => {
-        console.warn("تعذر تشغيل الصوت تلقائياً:", e);
+        console.warn("تنبيه التشغيل التلقائي للعميل:", e);
       });
     };
 
-    function listenForCandidates() {
+    function listenForCandidates(roomKey) {
       onValue(ref(db, `single_chat_room/${roomKey}/call/candidates`), snap => {
-        snap.forEach(c => { 
+        snap.forEach(c => {
           if (peerConnection && c.val() && peerConnection.remoteDescription) {
-            peerConnection.addIceCandidate(new RTCIceCandidate(c.val())).catch(err => {
-              console.error("خطأ في إضافة مرشح الـ ICE:", err);
-            }); 
+            peerConnection.addIceCandidate(new RTCIceCandidate(c.val())).catch(err => {});
           }
         });
       });
@@ -326,7 +288,7 @@
     function showClientCallScreen() {
       document.getElementById("clientCallScreen").classList.remove("hidden");
       document.getElementById("clientCallScreen").classList.add("flex");
-      document.getElementById("forceAudioBtn").style.display = "block";
+      document.getElementById("forceClientAudioBtn").style.display = "block";
       clientSeconds = 0;
     }
 
@@ -339,7 +301,7 @@
     }
 
     window.clientEndCall = function() {
-      remove(ref(db, `single_chat_room/${roomKey}/call`));
+      if (clientRoomKey) remove(ref(db, `single_chat_room/${clientRoomKey}/call`));
       closeClientCallUI();
     };
 
@@ -365,23 +327,14 @@
     window.rejectIncomingCall = function() {
       document.getElementById("clientRingAudio").pause();
       document.getElementById("incomingCallModal").style.display = "none";
-      remove(ref(db, `single_chat_room/${roomKey}/call`));
+      if (clientRoomKey) remove(ref(db, `single_chat_room/${clientRoomKey}/call`));
       isClientCallActiveOrRinging = false;
     };
 
-    window.sendMessage = async function(event) {
-      event.preventDefault();
-      const input = document.getElementById('messageInput');
-      const text = input.value.trim();
-      if(!text) return;
-      await push(ref(db, `single_chat_room/${roomKey}`), { text, sender: clientName, senderRole: "client", timestamp: Date.now() });
-      input.value = '';
-    };
-
-    function appendMessageToUI(text, sender, timestamp, isMe) {
+    function appendMessageToUI(text, sender, timestamp, isClientMsg) {
       const container = document.getElementById('messageContainer');
       const time = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'الآن';
-      const html = isMe 
+      const html = isClientMsg 
         ? `<div class="flex flex-col items-end w-full mb-1"><div class="bg-[#2b5278] text-white p-2.5 px-3.5 rounded-2xl rounded-tl-none max-w-md text-xs shadow"><span class="block text-[9px] text-[#8796a5] font-bold mb-0.5">${sender} (أنت)</span><span>${escapeHtml(text)}</span><span class="block text-[9px] text-[#8796a5] mt-1 text-left">${time}</span></div></div>`
         : `<div class="flex flex-col items-start w-full mb-1"><div class="bg-[#182533] text-white p-2.5 px-3.5 rounded-2xl rounded-tr-none max-w-md text-xs shadow border border-[#232e3c]"><span class="block text-[9px] text-[#6ab2f2] font-bold mb-0.5">${sender} (الدعم)</span><span>${escapeHtml(text)}</span><span class="block text-[9px] text-[#8796a5] mt-1 text-left">${time}</span></div></div>`;
       container.insertAdjacentHTML('beforeend', html);
