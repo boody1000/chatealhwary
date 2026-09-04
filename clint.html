@@ -19,7 +19,6 @@
 <body class="bg-[#0e1621] text-white font-sans h-[100dvh] overflow-hidden telegram-bg">
 
   <div class="flex h-full w-full relative overflow-hidden">
-    
     <main class="w-full h-full flex flex-col bg-[#0e1621] z-30 absolute inset-0">
       <header class="h-14 border-b border-[#232e3c] px-4 flex items-center justify-between bg-[#17212b]">
         <div class="flex items-center space-x-3 space-x-reverse min-w-0">
@@ -54,7 +53,6 @@
         </form>
       </div>
     </main>
-
   </div>
 
   <!-- شاشة المكالمة للعميل -->
@@ -115,8 +113,8 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    let clientRoomKey = "Default_Client";
-    let clientDisplayName = "زائر";
+    let clientRoomKey = "";
+    let clientDisplayName = "";
     let callFrame = null;
     let callListenerRef = null;
     const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
@@ -124,11 +122,16 @@
     let previousMessagesCount = 0, isFirstLoad = true;
 
     window.addEventListener('DOMContentLoaded', () => {
-        // جلب اسم العميل أو تعيين معرف افتراضي فريد
-        const savedName = localStorage.getItem('clientName') || 'العميل_' + Math.floor(Math.random() * 10000);
+        // تثبيت اسم العميل بحيث لا يتغير عشوائياً عند كل إعادة تحميل
+        let savedName = localStorage.getItem('clientName');
+        if (!savedName) {
+            savedName = 'عميل_' + Math.floor(1000 + Math.random() * 9000);
+            localStorage.setItem('clientName', savedName);
+        }
         clientDisplayName = savedName;
-        localStorage.setItem('clientName', clientDisplayName);
-        clientRoomKey = clientDisplayName.replace(/\s+/g, '_');
+        
+        // توحيد مفتاح الغرفة ليتوافق مع نظام قراءة الموظف (استبدال المسافات بشرطة سفلى)
+        clientRoomKey = clientDisplayName.trim().replace(/\s+/g, '_');
 
         const clientStatusRef = ref(db, `single_chat_room/${clientRoomKey}/status`);
         set(clientStatusRef, "online");
@@ -139,7 +142,7 @@
             lastSeen: Date.now()
         });
 
-        // الاستماع لمكالمات الفيديو أو الصوت الواردة
+        // الاستماع للمكالمات الواردة
         callListenerRef = ref(db, `single_chat_room/${clientRoomKey}/call`);
         onValue(callListenerRef, (snapshot) => {
             const callData = snapshot.val();
@@ -172,7 +175,7 @@
             }
         });
 
-        // جلب الرسائل
+        // جلب الرسائل من نفس الغرفة المحددة بدقة
         onValue(ref(db, `single_chat_room/${clientRoomKey}`), (snapshot) => {
             const container = document.getElementById('messageContainer');
             container.innerHTML = '';
@@ -190,10 +193,7 @@
                 });
 
                 if (!isFirstLoad && totalMsgs > previousMessagesCount) {
-                    const lastChild = Object.values(snapshot.val()).pop();
-                    if (lastChild && lastChild.senderRole === 'employee') {
-                        document.getElementById("msgNotificationAudio").play().catch(e => {});
-                    }
+                    document.getElementById("msgNotificationAudio").play().catch(e => {});
                 }
                 previousMessagesCount = totalMsgs;
                 isFirstLoad = false;
@@ -251,7 +251,6 @@
         }
 
         try {
-            // تدمير الإطار القديم بالكامل لمنع تراكم الـ WebGL Contexts والتعليق
             if (callFrame) {
                 try { 
                     await callFrame.leave();
@@ -282,7 +281,6 @@
 
     async function closeMessengerCall() {
         stopRingtone();
-        
         if (callFrame) {
             try { 
                 await callFrame.leave();
@@ -293,7 +291,7 @@
         
         const videoContainer = document.getElementById('messengerVideoContainer');
         if(videoContainer) {
-            videoContainer.innerHTML = ''; // تفريغ الذاكرة وتنظيف الـ WebGL elements بالكامل
+            videoContainer.innerHTML = '';
             videoContainer.classList.add('hidden');
         }
         
