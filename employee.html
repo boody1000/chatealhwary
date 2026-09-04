@@ -522,7 +522,7 @@
       backToSidebar();
     };
 
-    window.deleteCurrentChat = async function`() {
+    window.deleteCurrentChat = async function() {
       if (confirm("هل تريد حذف المحادثة بالكامل؟")) {
         await remove(ref(db, 'single_chat_room/' + activeClientKey));
         backToSidebar();
