@@ -44,26 +44,48 @@
         </div>
     </header>
 
-    <!-- واجهة المكالمة المصغرة مع مؤشرات الحالة الصوتية الواضحة -->
-    <div id="callContainer" class="hidden fixed bottom-4 left-4 bg-[#17212b] border border-[#232e3c] p-3.5 rounded-2xl shadow-2xl z-50 flex flex-col gap-2.5 w-64">
-        <div class="flex items-center justify-between border-b border-[#232e3c] pb-2">
-            <div class="flex items-center gap-2">
-                <span class="w-3 h-3 bg-emerald-500 rounded-full animate-ping"></span>
-                <span class="text-xs font-bold text-white">المكالمة جارية</span>
+    <!-- شاشة المكالمة المركزية النشطة (تشبه الهواتف) -->
+    <div id="callContainer" class="hidden fixed inset-0 bg-[#0e1621]/95 z-50 flex flex-col items-center justify-center p-4">
+        <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center">
+            <div class="relative w-24 h-24 mb-4">
+                <img src="22.jpg" alt="Logo" class="w-24 h-24 rounded-full object-cover border-4 border-[#2b5278] animate-pulse">
+                <span class="absolute bottom-0 right-0 w-5 h-5 bg-emerald-500 border-4 border-[#17212b] rounded-full"></span>
             </div>
-            <span id="micStatusIndicator" class="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-medium">الميكروفون يعمل</span>
+            
+            <h3 class="text-lg font-bold text-white mb-1">مكالمة صوتية نشطة</h3>
+            <p id="callStatusText" class="text-xs text-[#8796a5] mb-2">جاري الاتصال بالإدارة...</p>
+            <span id="micStatusIndicator" class="text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-medium mb-6">الميكروفون يعمل</span>
+            
+            <div id="dailyCallFrame" class="hidden"></div>
+            
+            <div class="flex items-center justify-center gap-4 w-full mt-4">
+                <button id="muteBtn" onclick="toggleMute()" class="w-14 h-14 bg-[#212f3d] hover:bg-[#2b5278] text-white rounded-full flex items-center justify-center transition shadow-lg" title="كتم الصوت">
+                    <i class="fa-solid fa-microphone text-lg text-emerald-400" id="micIcon"></i>
+                </button>
+                <button onclick="leaveDailyCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition shadow-xl" title="إنهاء المكالمة">
+                    <i class="fa-solid fa-phone-slash text-xl"></i>
+                </button>
+            </div>
         </div>
-        
-        <div id="dailyCallFrame" class="hidden"></div>
-        
-        <div class="flex items-center justify-between gap-2">
-            <button id="muteBtn" onclick="toggleMute()" class="flex-1 bg-[#212f3d] hover:bg-[#2b5278] text-white py-2 rounded-xl flex items-center justify-center gap-1.5 transition text-xs font-semibold" title="كتم الصوت">
-                <i class="fa-solid fa-microphone text-emerald-400" id="micIcon"></i>
-                <span id="muteBtnText">كتم الصوت</span>
-            </button>
-            <button onclick="leaveDailyCall()" class="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-xl flex items-center justify-center transition text-xs font-semibold" title="إنهاء المكالمة">
-                <i class="fa-solid fa-phone-slash"></i>
-            </button>
+    </div>
+
+    <!-- شاشة المكالمة الواردة (زر القبول في المنتصف) -->
+    <div id="incomingCallModal" class="hidden fixed inset-0 bg-[#0e1621]/95 z-50 flex flex-col items-center justify-center p-4">
+        <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center animate-bounce">
+            <div class="w-24 h-24 mb-4 relative">
+                <img src="22.jpg" alt="Logo" class="w-24 h-24 rounded-full object-cover border-4 border-emerald-500">
+            </div>
+            <h3 class="text-lg font-bold text-white mb-1">مكالمة صوتية واردة</h3>
+            <p class="text-xs text-[#8796a5] mb-8">الإدارة تتصل بك الآن...</p>
+            
+            <div class="flex items-center justify-center gap-6 w-full">
+                <button onclick="rejectIncomingCall()" class="w-14 h-14 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg" title="رفض">
+                    <i class="fa-solid fa-phone-slash text-lg"></i>
+                </button>
+                <button id="acceptCallBtn" class="w-16 h-16 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-2xl animate-pulse" title="قبول والانضمام">
+                    <i class="fa-solid fa-phone text-xl"></i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -152,7 +174,6 @@
         let currentClientKey = localStorage.getItem('telegram_hawary_key');
         let originalDisplayName = localStorage.getItem('telegram_hawary_name');
         let callFrame = null;
-        let pendingIncomingUrl = null; // الاحتفاظ برابط المكالمة الواردة للانضمام المباشر بضغطة زر
         const DAILY_API_KEY = "f344f7ad262fd3681378f82726aec1545e5b07c1f705cae852bce093e0044e99";
 
         const messagesContainer = document.getElementById("chatMessages");
@@ -236,10 +257,8 @@
             onValue(ref(db, `single_chat_room/${clientKey}/call`), (snapshot) => {
                 const callData = snapshot.val();
                 if (callData && callData.action === 'start' && callData.roomUrl) {
-                    pendingIncomingUrl = callData.roomUrl;
-                    // إذا بدأها الطرف الآخر، نظهر زر قبول/انضمام صريح لضمان تفاعل المستخدم وتشغيل الصوت في كروم
                     if (callData.sender !== 'client') {
-                        showIncomingCallBanner(callData.roomUrl);
+                        showIncomingCallModal(callData.roomUrl);
                     } else {
                         joinDailyCallWithGesture(callData.roomUrl);
                     }
@@ -249,21 +268,26 @@
             });
         }
 
-        function showIncomingCallBanner(url) {
-            let banner = document.getElementById('incomingCallBanner');
-            if (!banner) {
-                banner = document.createElement('div');
-                banner.id = 'incomingCallBanner';
-                banner.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-4 text-xs font-bold animate-bounce';
-                banner.innerHTML = `<span>📞 هناك مكالمة صوتية واردة من الإدارة</span><button onclick="acceptIncomingCall('${url}')" class="bg-white text-emerald-700 px-3 py-1.5 rounded-xl shadow">انضمام الآن</button>`;
-                document.body.appendChild(banner);
-            }
+        function showIncomingCallModal(url) {
+            const modal = document.getElementById('incomingCallModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            const acceptBtn = document.getElementById('acceptCallBtn');
+            acceptBtn.onclick = function() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                joinDailyCallWithGesture(url);
+            };
         }
 
-        window.acceptIncomingCall = function(url) {
-            const banner = document.getElementById('incomingCallBanner');
-            if (banner) banner.remove();
-            joinDailyCallWithGesture(url);
+        window.rejectIncomingCall = function() {
+            const modal = document.getElementById('incomingCallModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            if (currentClientKey) {
+                set(ref(db, `single_chat_room/${currentClientKey}/call`), { action: 'end' });
+            }
         };
 
         window.requestCall = async function() {
@@ -304,10 +328,13 @@
         };
 
         function joinDailyCallWithGesture(url) {
-            const banner = document.getElementById('incomingCallBanner');
-            if (banner) banner.remove();
+            const modal = document.getElementById('incomingCallModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
 
             document.getElementById('callContainer').classList.remove('hidden');
+            document.getElementById('callContainer').classList.add('flex');
+
             if (!callFrame) {
                 const containerElement = document.getElementById('dailyCallFrame');
                 callFrame = window.DailyIframe.createFrame(containerElement, {
@@ -339,19 +366,17 @@
         };
 
         function updateMicUIState(isCurrentlyMuted) {
-            const btnText = document.getElementById('muteBtnText');
+            const btnText = document.getElementById('muteBtn');
             const micIcon = document.getElementById('micIcon');
             const indicator = document.getElementById('micStatusIndicator');
             
             if (isCurrentlyMuted) {
-                btnText.innerText = "إلغاء الكتم";
-                micIcon.className = "fa-solid fa-microphone-slash text-red-400";
-                indicator.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-medium";
+                micIcon.className = "fa-solid fa-microphone-slash text-lg text-red-400";
+                indicator.className = "text-[10px] bg-red-500/20 text-red-400 px-3 py-1 rounded-full font-medium mb-6";
                 indicator.innerText = "الميكروفون مكتوم";
             } else {
-                btnText.innerText = "كتم الصوت";
-                micIcon.className = "fa-solid fa-microphone text-emerald-400";
-                indicator.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-medium";
+                micIcon.className = "fa-solid fa-microphone text-lg text-emerald-400";
+                indicator.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-medium mb-6";
                 indicator.innerText = "الميكروفون يعمل";
             }
         }
@@ -361,9 +386,13 @@
                 callFrame.destroy();
                 callFrame = null;
             }
-            document.getElementById('callContainer').classList.add('hidden');
-            const banner = document.getElementById('incomingCallBanner');
-            if (banner) banner.remove();
+            const container = document.getElementById('callContainer');
+            container.classList.add('hidden');
+            container.classList.remove('flex');
+
+            const modal = document.getElementById('incomingCallModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
             
             if (updateDb && currentClientKey) {
                 set(ref(db, `single_chat_room/${currentClientKey}/call`), { action: 'end' });
