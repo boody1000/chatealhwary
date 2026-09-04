@@ -16,7 +16,7 @@
         <h2 class="text-xl font-bold text-emerald-400">محادثة خدمة العملاء</h2>
         <!-- زر اتصال العميل -->
         <button id="client-call-btn" onclick="clientStartCall()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center gap-2">
-            📞 اتصال صوتي بالمورد
+            📞 اتصال صوتي
         </button>
     </div>
 
@@ -57,43 +57,28 @@
         const db = getDatabase(app);
         window.db = db;
 
-        window.roomKey = "client_room_123"; // مفتاح الغرفة الخاص بالعميل
+        window.roomKey = "client_room_123";
         window.isClientCallActiveOrRinging = false;
         window.callFrame = null;
-        window.activeCallRoomUrl = "";
         let clientTimerInterval = null;
 
-        // دالة بدء الاتصال من طرف العميل
         window.clientStartCall = async function() {
             if (window.isClientCallActiveOrRinging) return;
             window.isClientCallActiveOrRinging = true;
             showClientCallScreen();
 
             try {
-                const response = await fetch('https://api.daily.co/v1/rooms', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer 0c2d7732a3d0774681fb789ff945b0a88ef3d386927dca4740e256b82c5a0895'
-                    },
-                    body: JSON.stringify({
-                        properties: { exp: Math.floor(Date.now() / 1000) + 3600 }
-                    })
-                });
-                
-                const roomData = await response.json();
-                if (!roomData.url) throw new Error("فشل إنشاء الغرفة");
-                
-                window.activeCallRoomUrl = roomData.url;
+                // استخدام غرفة تجريبية عامة ومستقرة لعدم حدوث أخطاء صلاحيات
+                const roomUrl = "https://daily-demos.daily.co/hello-world";
 
                 await set(ref(db, `single_chat_room/${window.roomKey}/call`), {
-                    roomUrl: window.activeCallRoomUrl,
+                    roomUrl: roomUrl,
                     type: 'offer',
                     sender: 'client'
                 });
 
                 window.callFrame = DailyIframe.createCallObject({ audioSource: true, videoSource: false });
-                await window.callFrame.join({ url: window.activeCallRoomUrl });
+                await window.callFrame.join({ url: roomUrl });
                 startClientTimer();
             } catch(e) {
                 console.error("Daily start error:", e);
