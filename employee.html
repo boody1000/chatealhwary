@@ -155,50 +155,52 @@
 
     async function getMeteredIceServers() {
         if (cachedIceServers) return cachedIceServers;
+        
+        let iceServersList = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { 
+                urls: 'turn:openrelay.metered.ca:443?transport=tcp', 
+                username: 'openrelayproject', 
+                credential: 'openrelayproject' 
+            },
+            { 
+                urls: 'turns:openrelay.metered.ca:443?transport=tcp', 
+                username: 'openrelayproject', 
+                credential: 'openrelayproject' 
+            }
+        ];
+
         try {
             const res = await fetch("https://alhwary.metered.live/api/v1/turn/credentials?apiKey=6079dfbbdcf8564255625baf8471629ed765");
-            if (!res.ok) throw new Error("فشل جلب بيانات خوادم الـ TURN");
-            let data = await res.json();
-            
-            if (data && data.iceServers) {
-                data.iceServers = data.iceServers.map(server => {
-                    if (server.urls) {
-                        let urls = Array.isArray(server.urls) ? server.urls : [server.urls];
-                        server.urls = urls.map(url => {
-                            if (url.startsWith('turn:') || url.startsWith('turns:')) {
-                                let cleanUrl = url.split('?')[0];
-                                return `${cleanUrl}:443?transport=tcp`;
-                            }
-                            return url;
-                        });
-                    }
-                    return server;
-                });
+            if (res.ok) {
+                let data = await res.json();
+                if (data && data.iceServers) {
+                    let meteredServers = data.iceServers.map(server => {
+                        if (server.urls) {
+                            let urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+                            server.urls = urls.map(url => {
+                                if (url.startsWith('turn:') || url.startsWith('turns:')) {
+                                    let cleanUrl = url.split('?')[0];
+                                    return `${cleanUrl}:443?transport=tcp`;
+                                }
+                                return url;
+                            });
+                        }
+                        return server;
+                    });
+                    iceServersList = meteredServers.concat(iceServersList);
+                }
             }
-
-            const extraStunServers = [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:global.stun.twilio.com:3478' }
-            ];
-
-            if (data && data.iceServers) {
-                data.iceServers = data.iceServers.concat(extraStunServers);
-            } else {
-                data = { iceServers: extraStunServers };
-            }
-
-            cachedIceServers = data;
-            return cachedIceServers;
         } catch (e) {
-            console.error("خطأ في جلب خوادم الـ ICE للموظف:", e);
-            return { 
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:global.stun.twilio.com:3478' }
-                ] 
-            };
+            console.warn("تنبيه: تعذر جلب خوادم الـ Metered، سيتم الاعتماد على الخوادم البديلة.", e);
         }
+
+        cachedIceServers = {
+            iceServers: iceServersList,
+            iceTransportPolicy: 'all'
+        };
+        return cachedIceServers;
     }
 
     window.backToSidebar = function() {
@@ -406,11 +408,10 @@
 
       peerConnection = new RTCPeerConnection(config);
       
-      // [فحص الأخطاء وتتبع حالة ICE للموظف]
       peerConnection.oniceconnectionstatechange = () => {
           console.log("📌 [Employee ICE Status]:", peerConnection.iceConnectionState);
           if (peerConnection.iceConnectionState === 'failed' || peerConnection.iceConnectionState === 'disconnected') {
-              console.warn("⚠️ تحذير: فشل الاتصال المباشر أو عبر خوادم الـ TURN للطرف الموظف.");
+              console.warn("⚠️ تحذير: فشل الاتصال للطرف الموظف.");
           }
       };
 
