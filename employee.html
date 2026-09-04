@@ -357,12 +357,18 @@
     }
 
     async function openDailyCall(type) {
-        document.getElementById('messengerCallScreen').classList.remove('hidden');
-        document.getElementById('messengerCallScreen').classList.add('flex');
+        const callScreen = document.getElementById('messengerCallScreen');
+        const videoContainer = document.getElementById('messengerVideoContainer');
+        const videoBtn = document.getElementById('videoBtn');
+
+        if(callScreen) {
+            callScreen.classList.remove('hidden');
+            callScreen.classList.add('flex');
+        }
         
         if (type === 'video') {
-            document.getElementById('videoBtn').classList.remove('hidden');
-            document.getElementById('messengerVideoContainer').classList.remove('hidden');
+            if(videoBtn) videoBtn.classList.remove('hidden');
+            if(videoContainer) videoContainer.classList.remove('hidden');
         }
 
         try {
@@ -373,9 +379,12 @@
                 } catch(e) {}
                 callFrame = null;
             }
-            const container = document.getElementById('messengerVideoContainer');
+
+            if(videoContainer) {
+                videoContainer.innerHTML = '';
+            }
             
-            callFrame = window.DailyIframe.createFrame(container, {
+            callFrame = window.DailyIframe.createFrame(videoContainer, {
                 showLeaveButton: false,
                 showFullscreenButton: false,
                 iframeStyle: { width: '100%', height: '100%', border: '0' }
@@ -393,6 +402,7 @@
 
     async function closeMessengerCall() {
         stopRingtone();
+        
         if (callFrame) {
             try { 
                 await callFrame.leave();
@@ -400,11 +410,13 @@
             } catch(e) {}
             callFrame = null;
         }
+        
         const videoContainer = document.getElementById('messengerVideoContainer');
         if(videoContainer) {
             videoContainer.innerHTML = '';
             videoContainer.classList.add('hidden');
         }
+        
         const videoBtn = document.getElementById('videoBtn');
         if(videoBtn) videoBtn.classList.add('hidden');
         
