@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
+    <!-- تضمين مكتبة Sentry مع التحكم في معدل الطلبات لتجنب خطأ 429 -->
+    <script src="https://browser.sentry-cdn.com/7.120.4/bundle.min.js" crossorigin="anonymous"></script>
     <link rel="icon" href="22.jpg" type="image/jpeg">
 
     <style>
@@ -36,14 +38,12 @@
         
         <div class="flex items-center gap-2">
             <span id="clientDisplayHeader" class="text-xs bg-[#232e3c] text-[#8796a5] px-3 py-1.5 rounded-full hidden sm:inline-block"></span>
-            <!-- زر الاتصال الصوتي المباشر في الخلفية -->
             <button onclick="requestCall()" class="bg-emerald-600 hover:bg-emerald-700 text-white w-9 h-9 rounded-full flex items-center justify-center transition shadow" title="مكالمة صوتية">
                 <i class="fa-solid fa-phone text-xs"></i>
             </button>
         </div>
     </header>
 
-    <!-- حاوية المكالمة المخفية تماماً في الخلفية (لا تظهر للمستخدم إلا عناصر التحكم الصوتية البسيطة عند الحاجة) -->
     <div id="callContainer" class="hidden fixed bottom-4 left-4 bg-[#17212b] border border-[#232e3c] p-3 rounded-2xl shadow-2xl z-50 flex items-center gap-3">
         <div class="flex items-center gap-2">
             <span class="w-3 h-3 bg-emerald-500 rounded-full animate-ping"></span>
@@ -124,6 +124,27 @@
     </div>
     
     <audio id="msgSound" src="mes.mp3" preload="auto"></audio>
+
+    <script>
+        // تهيئة Sentry مع حماية ضد خطأ 429 وتصفية الأخطاء المكررة
+        if (typeof Sentry !== 'undefined') {
+            Sentry.init({
+                dsn: "https://468e374d8f614f9691bb3194f97efd42@o77906.ingest.sentry.io/5728081",
+                tracesSampleRate: 0.1,
+                beforeSend(event, hint) {
+                    const error = hint.originalException;
+                    if (error && error.message) {
+                        if (error.message.includes('ResizeObserver loop limit exceeded') || 
+                            error.message.includes('Network Error') || 
+                            error.message.includes('Failed to fetch')) {
+                            return null;
+                        }
+                    }
+                    return event;
+                },
+            });
+        }
+    </script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -224,12 +245,10 @@
             inputField.value = "";
         };
 
-        // الاستماع لحالة المكالمة والانضمام صامتاً في الخلفية بمجرد توفر الرابط
         function listenForCalls(clientKey) {
             onValue(ref(db, `single_chat_room/${clientKey}/call`), (snapshot) => {
                 const callData = snapshot.val();
                 if (callData && callData.action === 'start' && callData.roomUrl) {
-                    // الانضمام التلقائي في الخلفية بدون نوافذ مزعجة
                     joinDailyCallSilently(callData.roomUrl);
                 } else if (callData && callData.action === 'end') {
                     leaveDailyCall(false);
@@ -237,7 +256,6 @@
             });
         }
 
-        // إنشاء الغرفة والاتصال تلقائياً في الخلفية فور الضغط
         window.requestCall = async function() {
             if (!currentClientKey) return;
             const roomName = "hawary_audio_" + currentClientKey.toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -267,7 +285,6 @@
 
                 const urlToJoin = data.url;
                 if (urlToJoin) {
-                    // تحديث Firebase بالرابط ليبدأ الطرف الآخر الاتصال تلقائياً
                     set(ref(db, `single_chat_room/${currentClientKey}/call`), { action: 'start', roomUrl: urlToJoin, sender: 'client' });
                     joinDailyCallSilently(urlToJoin);
                 }
