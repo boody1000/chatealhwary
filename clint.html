@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
-    <script src="https://browser.sentry-cdn.com/7.120.4/bundle.min.js" crossorigin="anonymous"></script>
     <link rel="icon" href="22.jpg" type="image/jpeg">
 
     <style>
@@ -44,7 +43,7 @@
         </div>
     </header>
 
-    <!-- شاشة المكالمة المركزية النشطة (تشبه الهواتف) -->
+    <!-- شاشة المكالمة المركزية النشطة -->
     <div id="callContainer" class="hidden fixed inset-0 bg-[#0e1621]/95 z-50 flex flex-col items-center justify-center p-4">
         <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center">
             <div class="relative w-24 h-24 mb-4">
@@ -56,6 +55,7 @@
             <p id="callStatusText" class="text-xs text-[#8796a5] mb-2">جاري الاتصال بالإدارة...</p>
             <span id="micStatusIndicator" class="text-[10px] bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-medium mb-6">الميكروفون يعمل</span>
             
+            <!-- عنصر الصوت المخفي لضمان سماع الطرف الآخر -->
             <div id="dailyCallFrame" class="hidden"></div>
             
             <div class="flex items-center justify-center gap-4 w-full mt-4">
@@ -69,7 +69,7 @@
         </div>
     </div>
 
-    <!-- شاشة المكالمة الواردة (زر القبول في المنتصف) -->
+    <!-- شاشة المكالمة الواردة -->
     <div id="incomingCallModal" class="hidden fixed inset-0 bg-[#0e1621]/95 z-50 flex flex-col items-center justify-center p-4">
         <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center animate-bounce">
             <div class="w-24 h-24 mb-4 relative">
@@ -343,6 +343,21 @@
                     audioSource: true,
                     videoSource: false
                 });
+
+                // معالجة تدفق الصوت الوارد من الطرف الآخر وضمان سماعه تلقائياً
+                callFrame.on('participant-joined', (event) => {
+                    if (!event.participant.local) {
+                        callFrame.setParticipantAudio(event.participant.session_id, true);
+                    }
+                });
+                
+                callFrame.on('track-started', (event) => {
+                    if (event.track.kind === 'audio' && !event.participant.local) {
+                        const audioElement = new Audio();
+                        audioElement.srcObject = new MediaStream([event.track]);
+                        audioElement.play().catch(e => console.log("تفعيل الصوت يدريجياً:", e));
+                    }
+                });
             }
             
             callFrame.join({ 
@@ -366,7 +381,6 @@
         };
 
         function updateMicUIState(isCurrentlyMuted) {
-            const btnText = document.getElementById('muteBtn');
             const micIcon = document.getElementById('micIcon');
             const indicator = document.getElementById('micStatusIndicator');
             
