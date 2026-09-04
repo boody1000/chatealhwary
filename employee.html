@@ -410,17 +410,11 @@
       
       peerConnection.oniceconnectionstatechange = () => {
           console.log("📌 [Employee ICE Status]:", peerConnection.iceConnectionState);
-          if (peerConnection.iceConnectionState === 'failed' || peerConnection.iceConnectionState === 'disconnected') {
-              console.warn("⚠️ تحذير: فشل الاتصال للطرف الموظف.");
-          }
       };
 
       peerConnection.onicecandidate = e => { 
           if(e.candidate) {
-              console.log("🔍 [Employee] تم اكتشاف مرشح ICE جديد:", e.candidate.candidate);
               push(ref(db, `single_chat_room/${roomKey}/call/candidates`), e.candidate.toJSON()); 
-          } else {
-              console.log("✅ [Employee] انتهى جمع مرشحات الـ ICE بنجاح.");
           }
       };
       
