@@ -153,18 +153,23 @@
     let unreadCounts = {}, previousMessagesCounts = {}, isFirstLoad = true, allRoomsCache = [];
     let isMuted = false, isEmpCallActiveOrRinging = false;
 
-    // استخدام إعدادات اتصال موثوقة ومباشرة مع خوادم STUN العامة القوية لتفادي التعليق
+    // دمج خوادم STUN العامة وخوادم Metered TURN معاً في إعدادات الـ WebRTC
     const rtcConfig = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
             { 
                 urls: 'turn:openrelay.metered.ca:443?transport=tcp', 
                 username: 'openrelayproject', 
                 credential: 'openrelayproject' 
+            },
+            { 
+                urls: 'turn:alhwary.metered.ca:443?transport=tcp', 
+                username: 'حط_اليوزر_بتاعك_هنا', 
+                credential: 'حط_الباسورد_بتاعك_هنا' 
             }
-        ]
+        ],
+        iceTransportPolicy: 'all'
     };
 
     window.backToSidebar = function() {
