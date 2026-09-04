@@ -149,59 +149,23 @@
     const db = getDatabase(app);
 
     let activeClientKey = null, activeClientDisplayName = null, currentEmpName = "موظف الدعم", empCleanId = "default_emp";
-    let peerConnection = null, localStream = null, cachedIceServers = null, empTimerInterval = null, empSeconds = 0, pendingOffer = null;
+    let peerConnection = null, localStream = null, empTimerInterval = null, empSeconds = 0, pendingOffer = null;
     let unreadCounts = {}, previousMessagesCounts = {}, isFirstLoad = true, allRoomsCache = [];
     let isMuted = false, isEmpCallActiveOrRinging = false;
 
-    async function getMeteredIceServers() {
-        if (cachedIceServers) return cachedIceServers;
-        
-        let iceServersList = [
+    // استخدام إعدادات اتصال موثوقة ومباشرة مع خوادم STUN العامة القوية لتفادي التعليق
+    const rtcConfig = {
+        iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
             { 
                 urls: 'turn:openrelay.metered.ca:443?transport=tcp', 
                 username: 'openrelayproject', 
                 credential: 'openrelayproject' 
-            },
-            { 
-                urls: 'turns:openrelay.metered.ca:443?transport=tcp', 
-                username: 'openrelayproject', 
-                credential: 'openrelayproject' 
             }
-        ];
-
-        try {
-            const res = await fetch("https://alhwary.metered.live/api/v1/turn/credentials?apiKey=6079dfbbdcf8564255625baf8471629ed765");
-            if (res.ok) {
-                let data = await res.json();
-                if (data && data.iceServers) {
-                    let meteredServers = data.iceServers.map(server => {
-                        if (server.urls) {
-                            let urls = Array.isArray(server.urls) ? server.urls : [server.urls];
-                            server.urls = urls.map(url => {
-                                if (url.startsWith('turn:') || url.startsWith('turns:')) {
-                                    let cleanUrl = url.split('?')[0];
-                                    return `${cleanUrl}:443?transport=tcp`;
-                                }
-                                return url;
-                            });
-                        }
-                        return server;
-                    });
-                    iceServersList = meteredServers.concat(iceServersList);
-                }
-            }
-        } catch (e) {
-            console.warn("تنبيه: تعذر جلب خوادم الـ Metered، سيتم الاعتماد على الخوادم البديلة.", e);
-        }
-
-        cachedIceServers = {
-            iceServers: iceServersList,
-            iceTransportPolicy: 'all'
-        };
-        return cachedIceServers;
-    }
+        ]
+    };
 
     window.backToSidebar = function() {
       document.getElementById('chatPage').classList.add('hidden');
@@ -357,7 +321,7 @@
 
       showEmployeeCallScreen();
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         await createPeerConnection(activeClientKey);
         
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
@@ -368,7 +332,7 @@
         listenForCandidates(activeClientKey);
         startEmpTimer();
       } catch(e) { 
-        console.error("خطأ أثناء قبول المكالمة من الموظف:", e);
+        console.error("خطأ أثناء قبول المكالمة:", e);
         employeeEndCall(); 
       }
     };
@@ -378,7 +342,7 @@
       isEmpCallActiveOrRinging = true;
       showEmployeeCallScreen();
       try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         await createPeerConnection(activeClientKey);
         
         const offer = await peerConnection.createOffer();
@@ -395,21 +359,17 @@
           }
         });
       } catch(e) { 
-        console.error("خطأ أثناء اتصال الموظف:", e);
+        console.error("خطأ أثناء بدء الاتصال:", e);
         employeeEndCall(); 
       }
     };
 
     async function createPeerConnection(roomKey) {
       if (peerConnection) return;
-      const config = await getMeteredIceServers();
-      config.bundlePolicy = 'max-bundle';
-      config.rtcpMuxPolicy = 'require';
-
-      peerConnection = new RTCPeerConnection(config);
+      peerConnection = new RTCPeerConnection(rtcConfig);
       
       peerConnection.oniceconnectionstatechange = () => {
-          console.log("📌 [Employee ICE Status]:", peerConnection.iceConnectionState);
+          console.log("📌 ICE Status:", peerConnection.iceConnectionState);
       };
 
       peerConnection.onicecandidate = e => { 
@@ -444,7 +404,7 @@
       remoteAudio.play().then(() => {
         document.getElementById("forceEmpAudioBtn").style.display = "none";
       }).catch(e => {
-        console.warn("تعذر تشغيل الصوت تلقائياً للموظف:", e);
+        console.warn("تنبيه التشغيل التلقائي:", e);
       });
     };
 
@@ -452,9 +412,7 @@
       onValue(ref(db, `single_chat_room/${roomKey}/call/candidates`), snap => {
         snap.forEach(c => { 
           if (peerConnection && c.val() && peerConnection.remoteDescription) {
-            peerConnection.addIceCandidate(new RTCIceCandidate(c.val())).catch(err => {
-              console.error("خطأ في إضافة مرشح الـ ICE للموظف:", err);
-            }); 
+            peerConnection.addIceCandidate(new RTCIceCandidate(c.val())).catch(err => {}); 
           }
         });
       });
