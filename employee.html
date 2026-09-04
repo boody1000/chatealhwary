@@ -6,9 +6,10 @@
   <title>تليجرام - لوحة تحكم الموظفين</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- مكتبة Daily.co للاتصال -->
-  <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
   <link rel="icon" href="22.jpg" type="image/jpeg">
+  <!-- Daily.co Iframe SDK -->
+  <script src="https://unpkg.com/@daily-co/daily-js"></script>
+  
   <style>
    ::-webkit-scrollbar { width: 4px; }
    ::-webkit-scrollbar-track { background: #0e1621; }
@@ -58,8 +59,11 @@
         </div>
         
         <div class="flex items-center gap-2">
-          <!-- زر الاتصال الصوتي بالعميل -->
-          <button onclick="startDailyCall()" class="w-9 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center transition shadow" title="مكالمة صوتية مع العميل">
+          <!-- أزرار اتصال الموظف بالعميل -->
+          <button onclick="startCall('video')" class="w-9 h-9 bg-[#212f3d] text-[#6ab2f2] hover:text-white rounded-full flex items-center justify-center transition border border-[#232e3c]" title="مكالمة فيديو للعميل">
+            <i class="fa-solid fa-video text-xs"></i>
+          </button>
+          <button onclick="startCall('audio')" class="w-9 h-9 bg-[#212f3d] text-[#6ab2f2] hover:text-white rounded-full flex items-center justify-center transition border border-[#232e3c]" title="مكالمة صوتية للعميل">
             <i class="fa-solid fa-phone text-xs"></i>
           </button>
           <button onclick="openTransferModal()" class="w-9 h-9 bg-[#212f3d] text-[#6ab2f2] rounded-full flex items-center justify-center transition border border-[#232e3c]" title="تحويل لموظف آخر">
@@ -70,47 +74,6 @@
           </button>
         </div>
       </header>
-
-      <!-- نافذة تنبيه مكالمة واردة للموظف -->
-      <div id="incomingCallModal" class="hidden fixed inset-0 bg-[#0e1621]/90 z-50 flex items-center justify-center p-4">
-        <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center">
-            <img src="22.jpg" class="w-20 h-20 rounded-full object-cover border-2 border-emerald-500 animate-bounce mb-3">
-            <h3 class="text-base font-bold text-white mb-1">مكالمة واردة من العميل...</h3>
-            <p class="text-xs text-[#8796a5] mb-6">العميل يطلب مكالمة صوتية</p>
-            <div class="flex items-center gap-4 w-full">
-                <button onclick="rejectIncomingCall()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl text-xs font-semibold transition shadow flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-phone-slash"></i> رفض
-                </button>
-                <button onclick="acceptIncomingCall()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-xs font-semibold transition shadow flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-phone"></i> رد
-                </button>
-            </div>
-        </div>
-      </div>
-
-      <!-- حاوية المكالمة النشطة للموظف -->
-      <div id="callContainer" class="hidden fixed inset-0 bg-[#0e1621]/95 z-50 flex flex-col items-center justify-center p-4">
-        <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center">
-            <div class="relative mb-4">
-                <img src="22.jpg" alt="Logo" class="w-20 h-20 rounded-full object-cover border-2 border-emerald-500 animate-pulse">
-                <span class="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-[#17212b] rounded-full"></span>
-            </div>
-            <h3 class="text-base font-bold text-white mb-1">المكالمة الصوتية جارية</h3>
-            <p class="text-xs text-[#8796a5] mb-6">متصل مع العميل (صوت فقط)</p>
-
-            <div id="dailyCallFrame" class="hidden"></div>
-
-            <!-- أزرار التحكم بالمكالمة (كتم الصوت والإنهاء) -->
-            <div class="flex items-center justify-center gap-4 w-full">
-                <button id="muteBtn" onclick="toggleMute()" class="bg-[#212f3d] hover:bg-[#2b5278] text-white w-12 h-12 rounded-full flex items-center justify-center transition shadow border border-[#232e3c]" title="كتم/إلغاء كتم الصوت">
-                    <i class="fa-solid fa-microphone text-sm"></i>
-                </button>
-                <button onclick="leaveDailyCall()" class="bg-red-600 hover:bg-red-700 text-white flex-1 py-3 rounded-xl text-xs font-semibold transition shadow flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-phone-slash"></i> إنهاء المكالمة
-                </button>
-            </div>
-        </div>
-      </div>
 
       <div id="messageContainer" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2 text-sm">
         <div class="text-center text-[#8796a5] my-auto bg-[#17212b] p-4 rounded-xl border border-[#232e3c] max-w-sm mx-auto text-xs">اختر محادثة لبدء الرد</div>
@@ -126,6 +89,18 @@
 
   </div>
 
+  <!-- نافذة مكالمة الفيديو/الصوت للموظف -->
+  <div id="callModal" class="fixed inset-0 bg-[#0e1621]/95 z-50 hidden flex-col">
+    <div class="bg-[#17212b] border-b border-[#232e3c] px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+            <span id="callTitle" class="text-xs font-bold text-white">مكالمة جارية...</span>
+        </div>
+        <button onclick="endCall()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition">إنهاء المكالمة</button>
+    </div>
+    <div id="callContainer" class="flex-1 w-full h-full bg-black relative"></div>
+  </div>
+
   <div id="transferModal" class="fixed inset-0 bg-[#0e1621]/90 z-50 hidden flex-col items-center justify-center p-4">
     <div class="bg-[#17212b] border border-[#232e3c] p-5 rounded-2xl shadow-2xl flex flex-col max-w-sm w-full">
       <h3 class="text-xs font-bold text-[#6ab2f2] mb-3">تحويل المحادثة لموظف</h3>
@@ -135,10 +110,11 @@
   </div>
 
   <audio id="msgNotificationAudio" src="mes.mp3" preload="auto"></audio>
+  <audio id="ringAudio" src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" preload="auto" loop></audio>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update, off } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -156,16 +132,16 @@
     let activeClientKey = null, activeClientDisplayName = null, currentEmpName = "موظف الدعم", empCleanId = "default_emp";
     let unreadCounts = {}, previousMessagesCounts = {}, isFirstLoad = true, allRoomsCache = [];
     let callFrame = null;
-    let pendingRoomUrl = null;
-    const DAILY_API_KEY = "f344f7ad262fd3681378f82726aec1545e5b07c1f705cae852bce093e0044e99";
+    let callListenerRef = null;
+    const DAILY_ROOM_URL = "https://alhwarychate.daily.co/hawary_jhjh_198388_455906";
 
     window.backToSidebar = function() {
       document.getElementById('chatPage').classList.add('hidden');
       document.getElementById('chatPage').classList.remove('flex');
       document.getElementById('sidebarPage').classList.remove('hidden');
       document.getElementById('sidebarPage').classList.add('flex');
-      if (activeClientKey) { set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), null); activeClientKey = null; }
-      leaveDailyCall(false);
+      if (activeClientKey) set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), null);
+      if (callListenerRef) off(callListenerRef);
     };
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -181,16 +157,20 @@
         if (snapshot.exists()) {
           let roomsArray = [];
           snapshot.forEach((roomSnap) => {
-            const roomKey = roomSnap.key, originalName = roomKey.replace(/_/g, ' ');
-            let lastMsg = "انقر لعرض المحادثة", totalCount = 0, lockedBy = null, assignedTo = null, lastTimestamp = 0, clientStatus = "offline";
+            const roomKey = roomSnap.key;
+            let originalName = roomKey.replace(/_/g, ' ');
+            let lastMsg = "انقر لعرض المحادثة", totalCount = 0, assignedTo = null, lastTimestamp = 0, clientStatus = "offline";
 
             if (unreadCounts[roomKey] === undefined) unreadCounts[roomKey] = 0;
 
             roomSnap.forEach((child) => {
               if(child.key === 'call') return;
-              if(child.key === 'lockedBy') { lockedBy = child.val(); return; }
               if(child.key === 'assignedTo') { assignedTo = child.val(); return; }
               if(child.key === 'status') { clientStatus = child.val() || "offline"; return; }
+              if(child.key === 'client_info') {
+                if(child.val() && child.val().name) originalName = child.val().name;
+                return;
+              }
               const msg = child.val();
               if (msg && msg.text) { totalCount++; lastMsg = msg.text; if (msg.timestamp) lastTimestamp = Number(msg.timestamp); }
             });
@@ -205,7 +185,7 @@
               }
             }
             previousMessagesCounts[roomKey] = totalCount;
-            roomsArray.push({ roomKey, originalName, lastMsg, lockedBy, assignedTo, lastTimestamp, clientStatus });
+            roomsArray.push({ roomKey, originalName, lastMsg, assignedTo, lastTimestamp, clientStatus });
           });
 
           roomsArray.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
@@ -259,8 +239,27 @@
       unreadCounts[roomKey] = 0;
 
       document.getElementById('currentName').innerText = displayName;
+      update(ref(db, `single_chat_room/${roomKey}`), { assignedTo: currentEmpName });
 
-      update(ref(db, `single_chat_room/${roomKey}`), { lockedBy: currentEmpName, assignedTo: currentEmpName });
+      if (callListenerRef) off(callListenerRef);
+      callListenerRef = ref(db, `single_chat_room/${roomKey}/call`);
+      onValue(callListenerRef, (snapshot) => {
+        const callData = snapshot.val();
+        if (callData && callData.status === 'ringing' && callData.caller === 'client') {
+            document.getElementById('ringAudio').play().catch(e => {});
+            if (confirm(`مكالمة ${callData.type === 'video' ? 'فيديو' : 'صوتية'} واردة من العميل ${displayName}. هل تريد الرد؟`)) {
+                document.getElementById('ringAudio').pause();
+                update(ref(db, `single_chat_room/${roomKey}/call`), { status: 'active' });
+                openDailyCall(callData.type);
+            } else {
+                document.getElementById('ringAudio').pause();
+                update(ref(db, `single_chat_room/${roomKey}/call`), { status: 'ended' });
+            }
+        } else if (callData && callData.status === 'ended') {
+            document.getElementById('ringAudio').pause();
+            closeDailyCall();
+        }
+      });
 
       onValue(ref(db, 'single_chat_room/' + roomKey), (snapshot) => {
         const container = document.getElementById('messageContainer');
@@ -277,119 +276,61 @@
         }
         container.scrollTop = container.scrollHeight;
       });
-
-      listenForCalls(roomKey);
     };
 
-    function listenForCalls(roomKey) {
-      onValue(ref(db, `single_chat_room/${roomKey}/call`), (snapshot) => {
-        const callData = snapshot.val();
-        if (callData && callData.action === 'start' && callData.roomUrl && callData.sender === 'client') {
-          pendingRoomUrl = callData.roomUrl;
-          document.getElementById('incomingCallModal').classList.remove('hidden');
-          document.getElementById('incomingCallModal').classList.add('flex');
-        } else if (callData && callData.action === 'end') {
-          leaveDailyCall(false);
-        }
-      });
-    }
-
-    window.startDailyCall = async function() {
-      if (!activeClientKey) return;
-      const roomName = "hawary_audio_" + activeClientKey.toLowerCase();
-      const roomUrl = `https://api.daily.co/v1/rooms/${roomName}`;
-      
-      try {
-        let res = await fetch(roomUrl, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${DAILY_API_KEY}` }
+    window.startCall = async function(type) {
+        if (!activeClientKey) return;
+        await set(ref(db, `single_chat_room/${activeClientKey}/call`), {
+            status: 'ringing',
+            type: type,
+            caller: 'employee',
+            timestamp: Date.now()
         });
-        
-        let data;
-        if (!res.ok) {
-            const createRes = await fetch('https://api.daily.co/v1/rooms', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${DAILY_API_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ name: roomName, properties: { exp: Math.floor(Date.now() / 1000) + 3600 } })
+        openDailyCall(type);
+    };
+
+    function openDailyCall(type) {
+        document.getElementById('callModal').classList.remove('hidden');
+        document.getElementById('callModal').classList.add('flex');
+        document.getElementById('callTitle').innerText = type === 'video' ? 'مكالمة فيديو جارية...' : 'مكالمة صوتية جارية...';
+
+        if (!callFrame) {
+            const container = document.getElementById('callContainer');
+            callFrame = window.DailyIframe.createFrame(container, {
+                showLeaveButton: true,
+                showFullscreenButton: true,
+                iframeStyle: { width: '100%', height: '100%', border: '0', backgroundColor: '#000' }
             });
-            data = await createRes.json();
-        } else {
-            data = await res.json();
         }
-
-        const urlToJoin = data.url;
-        if (urlToJoin) {
-            set(ref(db, `single_chat_room/${activeClientKey}/call`), { action: 'start', roomUrl: urlToJoin, sender: 'employee' });
-            joinDailyCall(urlToJoin);
-        }
-      } catch (err) {
-        console.error(err);
-        alert("تعذر بدء الاتصال الصوتي");
-      }
-    };
-
-    window.acceptIncomingCall = function() {
-      document.getElementById('incomingCallModal').classList.add('hidden');
-      document.getElementById('incomingCallModal').classList.remove('flex');
-      if (pendingRoomUrl) {
-          joinDailyCall(pendingRoomUrl);
-      }
-    };
-
-    window.rejectIncomingCall = function() {
-      document.getElementById('incomingCallModal').classList.add('hidden');
-      document.getElementById('incomingCallModal').classList.remove('flex');
-      set(ref(db, `single_chat_room/${activeClientKey}/call`), { action: 'end' });
-    };
-
-    function joinDailyCall(url) {
-      document.getElementById('callContainer').classList.remove('hidden');
-      document.getElementById('callContainer').classList.add('flex');
-      if (!callFrame) {
-          callFrame = window.DailyIframe.createFrame(document.getElementById('dailyCallFrame'), {
-              showLeaveButton: false,
-              showFullscreenButton: false
-          });
-      }
-      callFrame.join({ url, startVideoOff: true, startAudioOff: false });
+        callFrame.join({ 
+            url: DAILY_ROOM_URL,
+            audioSource: true,
+            videoSource: type === 'video'
+        });
     }
 
-    window.toggleMute = function() {
-      if (!callFrame) return;
-      const localAudio = callFrame.localAudio();
-      callFrame.setLocalAudio(!localAudio);
-      const btn = document.getElementById('muteBtn');
-      if (localAudio) {
-          btn.classList.add('bg-red-600', 'border-red-500');
-          btn.innerHTML = '<i class="fa-solid fa-microphone-slash text-sm"></i>';
-      } else {
-          btn.classList.remove('bg-red-600', 'border-red-500');
-          btn.innerHTML = '<i class="fa-solid fa-microphone text-sm"></i>';
-      }
+    window.endCall = async function() {
+        if (activeClientKey) {
+            await update(ref(db, `single_chat_room/${activeClientKey}/call`), { status: 'ended' });
+        }
+        closeDailyCall();
     };
 
-    window.leaveDailyCall = function(updateDb = true) {
-      if (callFrame) {
-          callFrame.destroy();
-          callFrame = null;
-      }
-      document.getElementById('callContainer').classList.add('hidden');
-      document.getElementById('callContainer').classList.remove('flex');
-      document.getElementById('incomingCallModal').classList.add('hidden');
-      if (updateDb && activeClientKey) {
-          set(ref(db, `single_chat_room/${activeClientKey}/call`), { action: 'end' });
-      }
-    };
+    function closeDailyCall() {
+        if (callFrame) {
+            callFrame.leave();
+        }
+        document.getElementById('callModal').classList.add('hidden');
+        document.getElementById('callModal').classList.remove('flex');
+        document.getElementById('ringAudio').pause();
+    }
 
     window.sendMessage = async function(event) {
       event.preventDefault();
       const input = document.getElementById('messageInput');
       const text = input.value.trim();
       if(!text || !activeClientKey) return;
-      await push(ref(db, 'single_chat_room/' + activeClientKey), { text, sender: currentEmpName, senderRole: "employee", timestamp: Date.now() });
+      await push(ref(db, `single_chat_room/${activeClientKey}`), { text, sender: currentEmpName, senderRole: "employee", timestamp: Date.now() });
       input.value = '';
     };
 
@@ -411,7 +352,7 @@
     };
 
     window.executeTransfer = async function(target) {
-      await update(ref(db, `single_chat_room/${activeClientKey}`), { assignedTo: target, lockedBy: null });
+      await update(ref(db, `single_chat_room/${activeClientKey}`), { assignedTo: target });
       alert("تم التحويل بنجاح");
       document.getElementById('transferModal').style.display = 'none';
       backToSidebar();
