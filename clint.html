@@ -7,8 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="icon" href="22.jpg" type="image/jpeg">
-    <!-- مكتبة Daily.co للمكالمات -->
-    <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
+    
+    <!-- مكتبة Daily.co مع روابط احتياطية لضمان عدم فشل التحميل -->
+    <script src="https://unpkg.com/@daily-co/daily-js"></script>
+    <script>
+        if (typeof window.DailyIFrame === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/@daily-co/daily-js"><\/script>');
+        }
+    </script>
 
     <style>
       ::-webkit-scrollbar { width: 5px; }
@@ -36,13 +42,13 @@
         </div>
         
         <div class="flex items-center gap-2">
-            <span id="clientDisplayHeader" class="text-xs bg-[#232e3c] text-[#8796a5] px-3 py-1.5 rounded-full hidden sm:inline-block"></span>
-            <button onclick="startCall('video')" class="w-9 h-9 bg-[#212f3d] hover:bg-[#2b5278] text-[#6ab2f2] hover:text-white rounded-full flex items-center justify-center transition border border-[#232e3c]" title="مكالمة مرئية">
+            <button onclick="startCall('video')" class="w-9 h-9 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full flex items-center justify-center transition shadow" title="مكالمة فيديو">
                 <i class="fa-solid fa-video text-xs"></i>
             </button>
-            <button onclick="startCall('audio')" class="w-9 h-9 bg-[#212f3d] hover:bg-[#2b5278] text-[#6ab2f2] hover:text-white rounded-full flex items-center justify-center transition border border-[#232e3c]" title="مكالمة صوتية">
+            <button onclick="startCall('audio')" class="w-9 h-9 bg-blue-600 hover:bg-blue-500 text-white rounded-full flex items-center justify-center transition shadow" title="مكالمة صوتية">
                 <i class="fa-solid fa-phone text-xs"></i>
             </button>
+            <span id="clientDisplayHeader" class="text-xs bg-[#232e3c] text-[#8796a5] px-3 py-1.5 rounded-full hidden sm:inline-block"></span>
         </div>
     </header>
 
@@ -51,6 +57,17 @@
             <img src="22.jpg" alt="Logo" class="w-14 h-14 mx-auto rounded-full object-cover mb-2 border border-[#2b5278]">
             <p class="font-bold text-white mb-1">خدمة العملاء - تليجرام المباشر</p>
             <p class="text-[11px]">محادثتك مشفرة ومؤمنة بالكامل.</p>
+        </div>
+    </div>
+
+    <!-- نافذة الاتصال المنبثقة -->
+    <div id="callContainer" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col items-center justify-center p-2">
+        <div class="w-full max-w-4xl h-[85vh] bg-[#17212b] rounded-2xl overflow-hidden border border-[#232e3c] relative flex flex-col">
+            <div class="bg-[#212f3d] px-4 py-3 flex justify-between items-center text-xs text-white">
+                <span id="callTitleType" class="font-bold text-[#6ab2f2]">غرفة الاتصال المباشر</span>
+                <button onclick="leaveCall()" class="bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded-lg">إنهاء المكالمة</button>
+            </div>
+            <div id="call-frame-container" class="flex-1 w-full h-full bg-black"></div>
         </div>
     </div>
 
@@ -63,17 +80,6 @@
             </button>
         </form>
     </footer>
-
-    <!-- نافذة المكالمة (Modal) -->
-    <div id="callModal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col items-center justify-center">
-        <div class="w-full max-w-4xl h-[80vh] bg-[#17212b] rounded-2xl overflow-hidden flex flex-col border border-[#232e3c] shadow-2xl relative m-4">
-            <div class="bg-[#212f3d] px-4 py-3 flex justify-between items-center border-b border-[#232e3c]">
-                <h3 id="callTitle" class="text-white text-xs font-bold">مكالمة نشطة</h3>
-                <button onclick="endCall()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition">إغلاق المكالمة</button>
-            </div>
-            <div id="callContainer" class="flex-1 w-full h-full bg-black relative"></div>
-        </div>
-    </div>
 
     <!-- نافذة تسجيل البيانات -->
     <div id="nameModal" class="fixed inset-0 bg-[#0e1621]/95 z-50 flex items-center justify-center p-4 hidden">
@@ -123,7 +129,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, push, onValue, set, onDisconnect, off } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, push, onValue, set, update, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -140,17 +146,17 @@
 
         let currentClientKey = localStorage.getItem('telegram_hawary_key');
         let originalDisplayName = localStorage.getItem('telegram_hawary_name');
-        let chatRefInstance = null;
+        const messagesContainer = document.getElementById("chatMessages");
         let callFrame = null;
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
-        const messagesContainer = document.getElementById("chatMessages");
 
         window.addEventListener('DOMContentLoaded', () => {
             if (currentClientKey && originalDisplayName) {
                 document.getElementById("nameModal").classList.add("hidden");
                 document.getElementById("clientDisplayHeader").innerText = originalDisplayName;
-                initChatSession(currentClientKey, originalDisplayName);
+                initChatSession(currentClientKey);
                 setupUserPresence(currentClientKey);
+                listenForIncomingCalls(currentClientKey);
             } else {
                 document.getElementById("nameModal").classList.remove("hidden");
                 document.getElementById("nameModal").classList.add("flex");
@@ -173,36 +179,40 @@
             if (!inputVal || !phoneVal || !ageVal || !locationVal) { alert("يرجى ملء الحقول الإجبارية"); return; }
 
             originalDisplayName = inputVal;
-            currentClientKey = inputVal.replace(/\s+/g, '_');
+            currentClientKey = inputVal.replace(/[.#$\/\[\]]/g, '_');
             
             localStorage.setItem('telegram_hawary_key', currentClientKey);
             localStorage.setItem('telegram_hawary_name', originalDisplayName);
 
-            set(ref(db, `single_chat_room/${currentClientKey}/client_info`), {
-                name: originalDisplayName, phone: phoneVal, age: ageVal, location: locationVal, bio: bioVal
+            update(ref(db, `single_chat_room/${currentClientKey}`), {
+                client_name: originalDisplayName,
+                status: "online",
+                client_info: { name: originalDisplayName, phone: phoneVal, age: ageVal, location: locationVal, bio: bioVal }
             });
 
             document.getElementById("nameModal").classList.add("hidden");
             document.getElementById("clientDisplayHeader").innerText = originalDisplayName;
 
-            initChatSession(currentClientKey, originalDisplayName);
+            initChatSession(currentClientKey);
             setupUserPresence(currentClientKey);
+            listenForIncomingCalls(currentClientKey);
 
             const welcomeMsg = `مرحباً، أنا ${originalDisplayName}. هاتف: ${phoneVal} - العمر: ${ageVal} - الإقامة: ${locationVal}`;
-            push(ref(db, 'single_chat_room/' + currentClientKey), { text: welcomeMsg, sender: originalDisplayName, senderRole: "client", timestamp: Date.now() });
+            push(ref(db, `single_chat_room/${currentClientKey}/messages`), { 
+                text: welcomeMsg, sender: originalDisplayName, senderRole: "client", timestamp: Date.now() 
+            });
         };
 
-        function initChatSession(clientKey, displayName) {
-            if (chatRefInstance) off(ref(db, 'single_chat_room/' + clientKey));
-            chatRefInstance = ref(db, 'single_chat_room/' + clientKey);
-            onValue(chatRefInstance, (snapshot) => {
+        function initChatSession(clientKey) {
+            const messagesRef = ref(db, `single_chat_room/${clientKey}/messages`);
+            onValue(messagesRef, (snapshot) => {
                 messagesContainer.innerHTML = '';
                 if (snapshot.exists()) {
                     snapshot.forEach((child) => {
-                        if(['status','client_info','lockedBy','assignedTo'].includes(child.key)) return;
                         const msg = child.val();
-                        if(msg && msg.text) {
-                            appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, (msg.senderRole === 'client' || msg.sender === displayName));
+                        if (msg && msg.text) {
+                            const isClient = (msg.senderRole === 'client');
+                            appendMessageToUI(msg.text, msg.sender || originalDisplayName, msg.timestamp, isClient);
                         }
                     });
                 }
@@ -215,41 +225,79 @@
             const inputField = document.getElementById("messageInput");
             const text = inputField.value.trim();
             if (!text || !currentClientKey) return;
-            await push(ref(db, 'single_chat_room/' + currentClientKey), { text, sender: originalDisplayName, senderRole: "client", timestamp: Date.now() });
+            
+            await push(ref(db, `single_chat_room/${currentClientKey}/messages`), { 
+                text, sender: originalDisplayName, senderRole: "client", timestamp: Date.now() 
+            });
             inputField.value = "";
         };
 
-        window.startCall = async function(type) {
-            document.getElementById('callModal').classList.remove('hidden');
-            document.getElementById('callTitle').innerText = type === 'video' ? 'مكالمة مرئية نشطة' : 'مكالمة صوتية نشطة';
-            
-            if (!callFrame) {
-                const container = document.getElementById('callContainer');
-                callFrame = window.DailyIframe.createFrame(container, {
-                    showLeaveButton: true,
-                    showFullscreenButton: true,
-                    lang: 'en'
-                });
-            }
-
-            try {
-                await callFrame.join({ 
-                    url: DAILY_ROOM_URL,
-                    audioSource: true,
-                    videoSource: type === 'video' 
-                });
-            } catch (error) {
-                console.error("خطأ في بدء المكالمة:", error);
-                alert("تعذر بدء المكالمة، يرجى التحقق من صلاحيات الكاميرا والميكروفون.");
-                endCall();
-            }
+        window.startCall = function(type) {
+            if(!currentClientKey) return;
+            update(ref(db, `single_chat_room/${currentClientKey}/call_status`), {
+                active: true,
+                type: type,
+                caller: originalDisplayName,
+                timestamp: Date.now()
+            });
+            openDailyCallFrame(type);
         };
 
-        window.endCall = async function() {
-            if (callFrame) {
-                await callFrame.leave();
+        function listenForIncomingCalls(clientKey) {
+            onValue(ref(db, `single_chat_room/${clientKey}/call_status`), (snapshot) => {
+                const data = snapshot.val();
+                if(data && data.active && data.caller !== originalDisplayName) {
+                    const callTypeText = data.type === 'audio' ? 'مكالمة صوتية' : 'مكالمة فيديو';
+                    if(confirm(`تلقيت ${callTypeText} من ${data.caller}. هل تريد الرد والانضمام؟`)) {
+                        openDailyCallFrame(data.type || 'video');
+                    }
+                }
+            });
+        }
+
+        function openDailyCallFrame(type) {
+            document.getElementById('callContainer').classList.remove('hidden');
+            document.getElementById('callTitleType').innerText = type === 'audio' ? 'مكالمة صوتية نشطة' : 'مكالمة مرئية نشطة';
+            
+            if (!callFrame) {
+                const containerEl = document.getElementById('call-frame-container');
+                const dailyLib = window.DailyIFrame || (typeof DailyIFrame !== 'undefined' ? DailyIFrame : null);
+                
+                if (dailyLib && typeof dailyLib.createFrame === 'function') {
+                    callFrame = dailyLib.createFrame(containerEl, {
+                        showLeaveButton: true,
+                        showFullscreenButton: true,
+                        iframeStyle: {
+                            width: "100%",
+                            height: "100%",
+                            border: "0",
+                            borderRadius: "12px",
+                        }
+                    });
+                } else {
+                    alert("تعذر تحميل مكتبة الاتصال، تأكد من اتصالك بالإنترنت أو إلغاء حظر السكريبتات الخارجية.");
+                    document.getElementById('callContainer').classList.add('hidden');
+                    return;
+                }
             }
-            document.getElementById('callModal').classList.add('hidden');
+            
+            if (callFrame) {
+                callFrame.join({ 
+                    url: DAILY_ROOM_URL,
+                    audioSource: true,
+                    videoSource: type === 'video'
+                });
+            }
+        }
+
+        window.leaveCall = function() {
+            if (callFrame) {
+                try { callFrame.leave(); } catch(e){}
+            }
+            document.getElementById('callContainer').classList.add('hidden');
+            if(currentClientKey) {
+                update(ref(db, `single_chat_room/${currentClientKey}/call_status`), { active: false });
+            }
         };
 
         function appendMessageToUI(text, sender, timestamp, isClientMsg) {
