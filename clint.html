@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
-    <!-- تضمين مكتبة Sentry مع التحكم في معدل الطلبات لتجنب خطأ 429 -->
     <script src="https://browser.sentry-cdn.com/7.120.4/bundle.min.js" crossorigin="anonymous"></script>
     <link rel="icon" href="22.jpg" type="image/jpeg">
 
@@ -38,23 +37,31 @@
         
         <div class="flex items-center gap-2">
             <span id="clientDisplayHeader" class="text-xs bg-[#232e3c] text-[#8796a5] px-3 py-1.5 rounded-full hidden sm:inline-block"></span>
-            <button onclick="requestCall()" class="bg-emerald-600 hover:bg-emerald-700 text-white w-9 h-9 rounded-full flex items-center justify-center transition shadow" title="مكالمة صوتية">
+            <button onclick="requestCall()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-full flex items-center gap-2 text-xs transition shadow" title="مكالمة صوتية">
                 <i class="fa-solid fa-phone text-xs"></i>
+                <span>مكالمة</span>
             </button>
         </div>
     </header>
 
-    <div id="callContainer" class="hidden fixed bottom-4 left-4 bg-[#17212b] border border-[#232e3c] p-3 rounded-2xl shadow-2xl z-50 flex items-center gap-3">
-        <div class="flex items-center gap-2">
-            <span class="w-3 h-3 bg-emerald-500 rounded-full animate-ping"></span>
-            <span class="text-xs font-bold text-white">المكالمة جارية...</span>
+    <!-- واجهة المكالمة المصغرة مع مؤشرات الحالة الصوتية الواضحة -->
+    <div id="callContainer" class="hidden fixed bottom-4 left-4 bg-[#17212b] border border-[#232e3c] p-3.5 rounded-2xl shadow-2xl z-50 flex flex-col gap-2.5 w-64">
+        <div class="flex items-center justify-between border-b border-[#232e3c] pb-2">
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-emerald-500 rounded-full animate-ping"></span>
+                <span class="text-xs font-bold text-white">المكالمة جارية</span>
+            </div>
+            <span id="micStatusIndicator" class="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-medium">الميكروفون يعمل</span>
         </div>
+        
         <div id="dailyCallFrame" class="hidden"></div>
-        <div class="flex items-center gap-2">
-            <button id="muteBtn" onclick="toggleMute()" class="bg-[#212f3d] hover:bg-[#2b5278] text-white w-8 h-8 rounded-full flex items-center justify-center transition text-xs" title="كتم الصوت">
-                <i class="fa-solid fa-microphone"></i>
+        
+        <div class="flex items-center justify-between gap-2">
+            <button id="muteBtn" onclick="toggleMute()" class="flex-1 bg-[#212f3d] hover:bg-[#2b5278] text-white py-2 rounded-xl flex items-center justify-center gap-1.5 transition text-xs font-semibold" title="كتم الصوت">
+                <i class="fa-solid fa-microphone text-emerald-400" id="micIcon"></i>
+                <span id="muteBtnText">إلغاء كتم الصوت</span>
             </button>
-            <button onclick="leaveDailyCall()" class="bg-red-600 hover:bg-red-700 text-white w-8 h-8 rounded-full flex items-center justify-center transition text-xs" title="إنهاء المكالمة">
+            <button onclick="leaveDailyCall()" class="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-xl flex items-center justify-center transition text-xs font-semibold" title="إنهاء المكالمة">
                 <i class="fa-solid fa-phone-slash"></i>
             </button>
         </div>
@@ -126,7 +133,6 @@
     <audio id="msgSound" src="mes.mp3" preload="auto"></audio>
 
     <script>
-        // تهيئة Sentry مع حماية ضد خطأ 429 وتصفية الأخطاء المكررة
         if (typeof Sentry !== 'undefined') {
             Sentry.init({
                 dsn: "https://468e374d8f614f9691bb3194f97efd42@o77906.ingest.sentry.io/5728081",
@@ -304,14 +310,18 @@
                     videoSource: false
                 });
             }
+            
+            // التأكد من منح الأذونات وضبط الصوت بدقة ليعمل الطرفين
             callFrame.join({ 
                 url: url, 
                 startVideoOff: true, 
                 startAudioOff: false 
             }).then(() => {
                 callFrame.setLocalAudio(true);
+                updateMicUIState(true);
             }).catch((error) => {
                 console.error("خطأ في الاتصال الخفي:", error);
+                alert("يرجى السماح للمتصفح بالوصول إلى الميكروفون لكي تعمل المكالمة بنجاح.");
             });
         }
 
@@ -319,15 +329,28 @@
             if (!callFrame) return;
             const localAudio = callFrame.localAudio();
             callFrame.setLocalAudio(!localAudio);
-            const btn = document.getElementById('muteBtn');
-            if (localAudio) {
-                btn.classList.add('bg-red-600');
-                btn.innerHTML = '<i class="fa-solid fa-microphone-slash"></i>';
-            } else {
-                btn.classList.remove('bg-red-600');
-                btn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
-            }
+            updateMicUIState(localAudio); // العكس لأن الحالة ستتغير
         };
+
+        function updateMicUIState(isCurrentlyMuted) {
+            const btnText = document.getElementById('muteBtnText');
+            const micIcon = document.getElementById('micIcon');
+            const indicator = document.getElementById('micStatusIndicator');
+            
+            if (isCurrentlyMuted) {
+                // أصبح مكتوماً
+                btnText.innerText = "إلغاء الكتم";
+                micIcon.className = "fa-solid fa-microphone-slash text-red-400";
+                indicator.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-medium";
+                indicator.innerText = "الميكروفون مكتوم";
+            } else {
+                // أصبح مفتاح الصوت مفتوحاً
+                btnText.innerText = "كتم الصوت";
+                micIcon.className = "fa-solid fa-microphone text-emerald-400";
+                indicator.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-medium";
+                indicator.innerText = "الميكروفون يعمل";
+            }
+        }
 
         window.leaveDailyCall = function(updateDb = true) {
             if (callFrame) {
