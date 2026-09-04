@@ -3,142 +3,99 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تليجرام - لوحة تحكم الموظفين</title>
+  <title>لوحة تحكم الموظف - تليجرام</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="icon" href="22.jpg" type="image/jpeg">
   <script src="https://unpkg.com/@daily-co/daily-js"></script>
-  
   <style>
-   ::-webkit-scrollbar { width: 4px; }
-   ::-webkit-scrollbar-track { background: #0e1621; }
-   ::-webkit-scrollbar-thumb { background: #232e3c; border-radius: 4px; }
-   .telegram-bg { background-color: #0e1621; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #0e1621; }
+    ::-webkit-scrollbar-thumb { background: #232e3c; border-radius: 4px; }
   </style>
 </head>
-<body class="bg-[#0e1621] text-white font-sans h-[100dvh] overflow-hidden telegram-bg">
+<body class="bg-[#0e1621] text-white font-sans h-[100dvh] overflow-hidden flex">
 
-  <div class="flex h-full w-full relative overflow-hidden">
-    
-    <section id="sidebarPage" class="w-full h-full bg-[#17212b] border-r border-[#232e3c] flex flex-col z-20 absolute inset-0">
-      <div class="p-3.5 border-b border-[#232e3c] flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <img src="22.jpg" class="w-9 h-9 rounded-full object-cover border border-[#2b5278]">
-          <div>
-            <h2 class="text-sm font-bold text-white">تليجرام الإدارة</h2>
-            <span class="text-[10px] text-[#8796a5]">رسائل العملاء الواردة</span>
-          </div>
+  <!-- القائمة الجانبية للعملاء -->
+  <aside class="w-80 border-l border-[#232e3c] bg-[#17212b] flex flex-col h-full">
+    <div class="p-4 border-b border-[#232e3c] flex items-center justify-between">
+      <h2 class="font-bold text-sm text-[#6ab2f2]"><i class="fa-solid fa-users ml-2"></i>قائمة العملاء المتاحة</h2>
+    </div>
+    <div id="clientsList" class="flex-1 overflow-y-auto divide-y divide-[#232e3c]/50">
+      <div class="p-4 text-center text-xs text-slate-500">جاري البحث عن العملاء...</div>
+    </div>
+  </aside>
+
+  <!-- منطقة المحادثة الرئيسية -->
+  <main class="flex-1 flex flex-col h-full relative bg-[#0e1621]">
+    <header class="h-14 border-b border-[#232e3c] px-6 flex items-center justify-between bg-[#17212b]">
+      <div class="flex items-center space-x-3 space-x-reverse">
+        <div class="relative">
+          <img src="22.jpg" class="w-9 h-9 rounded-full object-cover">
+          <span id="empActiveDot" class="absolute bottom-0 left-0 w-2.5 h-2.5 bg-slate-500 border-2 border-[#17212b] rounded-full"></span>
         </div>
-        <div class="text-xs text-[#6ab2f2] bg-[#232e3c] px-3 py-1 rounded-full" id="loggedInUsername">موظف الدعم</div>
+        <div>
+          <h3 id="activeClientTitle" class="text-xs font-bold text-white">اختر عميلاً لبدء المحادثة</h3>
+          <span id="activeClientSub" class="text-[10px] text-slate-400">غير متصل</span>
+        </div>
       </div>
       
-      <div class="p-2.5 bg-[#17212b] border-b border-[#232e3c]">
-        <input type="text" id="searchClient" oninput="filterClients()" placeholder="بحث في المحادثات..." class="w-full bg-[#212f3d] border border-transparent rounded-xl px-3.5 py-2 text-xs focus:outline-none text-white placeholder-[#8796a5]">
+      <div id="callButtonsArea" class="flex items-center gap-2 hidden">
+        <button onclick="empStartCall('video')" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold transition" title="مكالمة فيديو">
+          <i class="fa-solid fa-video"></i> فيديو
+        </button>
+        <button onclick="empStartCall('audio')" class="bg-[#212f3d] hover:bg-[#2b5278] text-[#6ab2f2] hover:text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold transition border border-[#232e3c]" title="مكالمة صوتية">
+          <i class="fa-solid fa-phone"></i> صوت
+        </button>
       </div>
-      
-      <div id="chatsList" class="flex-1 overflow-y-auto divide-y divide-[#232e3c]/50">
-        <div class="p-6 text-center text-[#8796a5] text-xs">جاري جلب المحادثات...</div>
-      </div>
-    </section>
+    </header>
 
-    <main id="chatPage" class="hidden w-full h-full flex-col bg-[#0e1621] z-30 absolute inset-0">
-      <header class="h-14 border-b border-[#232e3c] px-4 flex items-center justify-between bg-[#17212b]">
-        <div class="flex items-center space-x-3 space-x-reverse min-w-0">
-          <button onclick="backToSidebar()" class="bg-[#212f3d] text-[#6ab2f2] w-9 h-9 rounded-full flex items-center justify-center transition border border-[#232e3c]" title="رجوع">
-            <i class="fa-solid fa-arrow-right text-xs"></i>
-          </button>
-          <div class="relative">
-            <img id="currentAvatar" src="22.jpg" class="w-9 h-9 rounded-full object-cover">
-            <span id="headerClientStatusDot" class="absolute bottom-0 left-0 w-2.5 h-2.5 bg-slate-500 border-2 border-[#17212b] rounded-full"></span>
-          </div>
-          <div class="min-w-0">
-            <h3 id="currentName" class="text-xs font-bold text-white truncate">اسم العميل</h3>
-            <span id="chatLockStatus" class="text-[10px] text-[#6ab2f2] block">متصل</span>
-          </div>
-        </div>
-        
-        <div class="flex items-center gap-2">
-          <button onclick="startCall('video')" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold transition shadow" title="مكالمة فيديو">
-            <i class="fa-solid fa-video"></i> فيديو
-          </button>
-          <button onclick="startCall('audio')" class="bg-[#212f3d] hover:bg-[#2b5278] text-[#6ab2f2] hover:text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold transition border border-[#232e3c]" title="مكالمة صوتية">
-            <i class="fa-solid fa-phone"></i> صوت
-          </button>
-          <button onclick="openTransferModal()" class="w-9 h-9 bg-[#212f3d] text-[#6ab2f2] rounded-full flex items-center justify-center transition border border-[#232e3c]" title="تحويل لموظف آخر">
-            <i class="fa-solid fa-share text-xs"></i>
-          </button>
-          <button onclick="deleteCurrentChat()" class="w-9 h-9 bg-red-600/20 text-red-400 rounded-full flex items-center justify-center transition border border-red-500/30" title="حذف المحادثة">
-            <i class="fa-solid fa-trash text-xs"></i>
-          </button>
-        </div>
-      </header>
+    <div id="empMessageContainer" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2 text-sm">
+      <div class="text-center text-slate-500 my-auto text-xs">الرجاء اختيار عميل من القائمة الجانبية</div>
+    </div>
 
-      <div id="messageContainer" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2 text-sm">
-        <div class="text-center text-[#8796a5] my-auto bg-[#17212b] p-4 rounded-xl border border-[#232e3c] max-w-sm mx-auto text-xs">اختر محادثة لبدء الرد</div>
-      </div>
+    <div class="p-3 border-t border-[#232e3c] bg-[#17212b]">
+      <form id="empMessageForm" class="flex items-center space-x-2 space-x-reverse hidden" onsubmit="empSendMessage(event)">
+        <input type="text" id="empMessageInput" placeholder="اكتب ردك للعميل..." autocomplete="off" class="flex-1 bg-[#212f3d] text-white rounded-full px-4 py-2.5 text-xs focus:outline-none border border-transparent">
+        <button type="submit" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-5 py-2.5 rounded-full text-xs font-semibold transition">إرسال</button>
+      </form>
+    </div>
+  </main>
 
-      <div class="p-3 border-t border-[#232e3c] bg-[#17212b]">
-        <form id="messageForm" class="flex items-center space-x-2 space-x-reverse" onsubmit="sendMessage(event)">
-          <input type="text" id="messageInput" placeholder="اكتب ردك هنا..." autocomplete="off" class="flex-1 bg-[#212f3d] border border-transparent text-white rounded-full px-4 py-2.5 text-xs focus:outline-none">
-          <button type="submit" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-5 py-2.5 rounded-full text-xs font-semibold transition">إرسال</button>
-        </form>
-      </div>
-    </main>
-
-  </div>
-
-  <!-- شاشة المكالمة -->
-  <div id="messengerCallScreen" class="fixed inset-0 bg-[#0f172a] z-50 flex flex-col items-center justify-between py-12 px-6 hidden">
+  <!-- شاشة المكالمة للموظف -->
+  <div id="empCallScreen" class="fixed inset-0 bg-[#0f172a] z-50 flex flex-col items-center justify-between py-12 px-6 hidden">
     <div class="flex flex-col items-center text-center z-20 mt-4">
-        <h2 id="messengerCallerName" class="text-white text-xl font-bold mb-1">اسم المتصل</h2>
-        <p id="messengerCallStatusText" class="text-slate-400 text-xs">جاري الرنين...</p>
+        <h2 id="empCallerName" class="text-white text-xl font-bold mb-1">العميل</h2>
+        <p id="empCallStatusText" class="text-slate-400 text-xs">جاري الاتصال...</p>
     </div>
 
     <div class="relative flex items-center justify-center my-auto">
         <div class="absolute w-36 h-36 bg-blue-500/20 rounded-full animate-ping"></div>
         <div class="absolute w-48 h-48 bg-blue-500/10 rounded-full animate-pulse"></div>
         <img src="22.jpg" alt="Avatar" class="w-28 h-28 rounded-full object-cover border-4 border-slate-700 shadow-2xl relative z-10">
-        <div id="messengerVideoContainer" class="absolute inset-0 w-full h-full rounded-full overflow-hidden hidden z-20 bg-black"></div>
+        <div id="empVideoContainer" class="absolute inset-0 w-full h-full rounded-full overflow-hidden hidden z-20 bg-black"></div>
     </div>
 
     <div class="flex flex-col items-center gap-6 w-full max-w-xs z-20 mb-4">
-        <div id="incomingActionButtons" class="flex items-center justify-center gap-8 w-full hidden">
-            <button onclick="rejectCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-xl shadow-lg transition transform hover:scale-105" title="رفض">
-                <i class="fa-solid fa-phone-slash"></i>
-            </button>
-            <button onclick="acceptCall()" class="w-16 h-16 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center text-xl shadow-lg transition transform hover:scale-105 animate-bounce" title="قبول">
-                <i class="fa-solid fa-phone"></i>
-            </button>
-        </div>
-
-        <div id="activeActionButtons" class="flex items-center justify-center gap-6 w-full">
-            <button onclick="toggleMute()" id="muteBtn" class="w-12 h-12 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full flex items-center justify-center text-sm transition" title="كتم الصوت">
+        <div class="flex items-center justify-center gap-6 w-full">
+            <button onclick="empToggleMute()" id="empMuteBtn" class="w-12 h-12 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full flex items-center justify-center text-sm transition" title="كتم الصوت">
                 <i class="fa-solid fa-microphone"></i>
             </button>
-            <button onclick="endCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-xl shadow-lg transition transform hover:scale-105" title="إنهاء المكالمة">
+            <button onclick="empEndCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-xl shadow-lg transition transform hover:scale-105" title="إنهاء المكالمة">
                 <i class="fa-solid fa-phone-slash"></i>
             </button>
-            <button onclick="toggleVideo()" id="videoBtn" class="w-12 h-12 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full flex items-center justify-center text-sm transition hidden" title="الكاميرا">
+            <button onclick="empToggleVideo()" id="empVideoBtn" class="w-12 h-12 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full flex items-center justify-center text-sm transition hidden" title="الكاميرا">
                 <i class="fa-solid fa-video"></i>
             </button>
         </div>
     </div>
   </div>
 
-  <div id="transferModal" class="fixed inset-0 bg-[#0e1621]/90 z-50 hidden flex-col items-center justify-center p-4">
-    <div class="bg-[#17212b] border border-[#232e3c] p-5 rounded-2xl shadow-2xl flex flex-col max-w-sm w-full">
-      <h3 class="text-xs font-bold text-[#6ab2f2] mb-3">تحويل المحادثة لموظف</h3>
-      <div id="employeesListContainer" class="flex flex-col gap-2 max-h-40 overflow-y-auto mb-3 text-xs text-[#8796a5]">جاري البحث...</div>
-      <button onclick="document.getElementById('transferModal').style.display='none'" class="w-full bg-[#212f3d] py-2 rounded-xl text-xs">إلغاء</button>
-    </div>
-  </div>
-
-  <audio id="msgNotificationAudio" src="mes.mp3" preload="auto"></audio>
-  <audio id="ringtoneAudio" loop src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+  <audio id="empMsgAudio" src="mes.mp3" preload="auto"></audio>
+  <audio id="empRingtone" loop src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update, off } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, update, off } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -153,238 +110,176 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    let activeClientKey = null, activeClientDisplayName = null, currentEmpName = "موظف الدعم", empCleanId = "default_emp";
-    let unreadCounts = {}, previousMessagesCounts = {}, isFirstLoad = true, allRoomsCache = [];
+    let activeClientKey = null;
+    let messagesUnsubscribe = null;
+    let callUnsubscribe = null;
     let callFrame = null;
-    let callListenerRef = null;
     const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
-    const ringtone = document.getElementById("ringtoneAudio");
-
-    window.backToSidebar = function() {
-      document.getElementById('chatPage').classList.add('hidden');
-      document.getElementById('chatPage').classList.remove('flex');
-      document.getElementById('sidebarPage').classList.remove('hidden');
-      document.getElementById('sidebarPage').classList.add('flex');
-      if (activeClientKey) set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), null);
-      if (callListenerRef) off(callListenerRef);
-    };
+    const ringtone = document.getElementById("empRingtone");
+    let employeeName = "الموظف";
 
     window.addEventListener('DOMContentLoaded', () => {
-      const loggedUser = localStorage.getItem('loggedUsername');
-      if (loggedUser) { currentEmpName = loggedUser; document.getElementById('loggedInUsername').innerText = currentEmpName; }
-      empCleanId = currentEmpName.replace(/\s+/g, '_');
-
-      const empStatusRef = ref(db, 'online_employees/' + empCleanId);
-      set(empStatusRef, { name: currentEmpName, inCall: false, lastActive: Date.now() });
-      onDisconnect(empStatusRef).remove();
-
-      onValue(ref(db, 'single_chat_room'), (snapshot) => {
-        if (snapshot.exists()) {
-          let roomsArray = [];
-          snapshot.forEach((roomSnap) => {
-            const roomKey = roomSnap.key;
-            let originalName = roomKey.replace(/_/g, ' ');
-            let lastMsg = "انقر لعرض المحادثة", totalCount = 0, assignedTo = null, lastTimestamp = 0, clientStatus = "offline";
-
-            if (unreadCounts[roomKey] === undefined) unreadCounts[roomKey] = 0;
-
-            roomSnap.forEach((child) => {
-              if(child.key === 'call') return;
-              if(child.key === 'assignedTo') { assignedTo = child.val(); return; }
-              if(child.key === 'status') { clientStatus = child.val() || "offline"; return; }
-              if(child.key === 'client_info') {
-                if(child.val() && child.val().name) originalName = child.val().name;
+        const roomsRef = ref(db, 'single_chat_room');
+        onValue(roomsRef, (snapshot) => {
+            const listContainer = document.getElementById('clientsList');
+            listContainer.innerHTML = '';
+            
+            if (!snapshot.exists()) {
+                listContainer.innerHTML = '<div class="p-4 text-center text-xs text-slate-500">لا يوجد عملاء حالياً</div>';
                 return;
-              }
-              const msg = child.val();
-              if (msg && msg.text) { totalCount++; lastMsg = msg.text; if (msg.timestamp) lastTimestamp = Number(msg.timestamp); }
-            });
-
-            if (assignedTo && assignedTo !== currentEmpName) return;
-
-            if (!isFirstLoad && previousMessagesCounts[roomKey] !== undefined && totalCount > previousMessagesCounts[roomKey]) {
-              const diff = totalCount - previousMessagesCounts[roomKey];
-              if (activeClientKey !== roomKey && diff > 0) {
-                unreadCounts[roomKey] += diff;
-                document.getElementById("msgNotificationAudio").play().catch(e => {});
-              }
             }
-            previousMessagesCounts[roomKey] = totalCount;
-            roomsArray.push({ roomKey, originalName, lastMsg, assignedTo, lastTimestamp, clientStatus });
-          });
 
-          roomsArray.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
-          allRoomsCache = roomsArray;
-          renderRoomsList(allRoomsCache);
-          isFirstLoad = false;
-        } else {
-          document.getElementById('chatsList').innerHTML = '<div class="p-6 text-center text-[#8796a5] text-xs">لا توجد محادثات عملاء</div>';
-        }
-      });
+            snapshot.forEach((childSnapshot) => {
+                const clientKey = childSnapshot.key;
+                const clientData = childSnapshot.val();
+                const info = clientData.client_info || { name: clientKey };
+                const isOnline = clientData.status === 'online';
+                
+                let lastMsgText = "انقر لبدء المحادثة";
+                Object.keys(clientData).forEach(k => {
+                    if(!['call', 'assignedTo', 'status', 'lockedBy', 'client_info'].includes(k)) {
+                        if(clientData[k] && clientData[k].text) {
+                            lastMsgText = clientData[k].text;
+                        }
+                    }
+                });
+
+                const itemHTML = `
+                    <div onclick="selectClient('${clientKey}', '${info.name}')" class="p-3 hover:bg-[#212f3d] cursor-pointer transition flex items-center space-x-3 space-x-reverse ${activeClientKey === clientKey ? 'bg-[#2b5278]/30 border-r-4 border-[#6ab2f2]' : ''}">
+                        <div class="relative">
+                            <img src="22.jpg" class="w-10 h-10 rounded-full object-cover">
+                            <span class="absolute bottom-0 left-0 w-2.5 h-2.5 ${isOnline ? 'bg-emerald-500' : 'bg-slate-500'} border-2 border-[#17212b] rounded-full"></span>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h4 class="text-xs font-bold text-white truncate">${info.name}</h4>
+                            <p class="text-[11px] text-slate-400 truncate mt-0.5">${lastMsgText}</p>
+                        </div>
+                    </div>
+                `;
+                listContainer.insertAdjacentHTML('beforeend', itemHTML);
+            });
+        });
     });
 
-    function renderRoomsList(rooms) {
-      const list = document.getElementById('chatsList');
-      list.innerHTML = '';
-      rooms.forEach(r => {
-        const count = unreadCounts[r.roomKey];
-        const badge = count > 0 ? `<div class="bg-[#2b5278] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">${count}</div>` : '';
-        const isOnline = r.clientStatus === 'online';
-        
-        list.innerHTML += `
-          <div onclick="switchChat('${r.roomKey}', '${r.originalName}')" class="p-3 hover:bg-[#212f3d] cursor-pointer transition flex items-center space-x-3 space-x-reverse border-b border-[#232e3c]/40">
-            <div class="relative">
-              <img src="22.jpg" class="w-11 h-11 rounded-full object-cover">
-              <span class="absolute bottom-0 left-0 w-3 h-3 ${isOnline ? 'bg-emerald-500' : 'bg-slate-500'} border-2 border-[#17212b] rounded-full"></span>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between mb-1">
-                <h3 class="text-xs font-bold text-white truncate">${r.originalName}</h3>
-                <div>${badge}</div>
-              </div>
-              <p class="text-[11px] text-[#8796a5] truncate">${r.lastMsg}</p>
-            </div>
-          </div>`;
-      });
-    }
+    window.selectClient = function(clientKey, clientName) {
+        activeClientKey = clientKey;
+        document.getElementById('activeClientTitle').innerText = clientName;
+        document.getElementById('activeClientSub').innerText = "متصل";
+        document.getElementById('empActiveDot').className = "absolute bottom-0 left-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#17212b] rounded-full";
+        document.getElementById('empMessageForm').classList.remove('hidden');
+        document.getElementById('callButtonsArea').classList.remove('hidden');
 
-    window.filterClients = function() {
-      const q = document.getElementById('searchClient').value.trim().toLowerCase();
-      renderRoomsList(q ? allRoomsCache.filter(r => r.originalName.toLowerCase().includes(q)) : allRoomsCache);
-    };
+        if (messagesUnsubscribe) messagesUnsubscribe();
+        if (callUnsubscribe) callUnsubscribe();
 
-    window.switchChat = function(roomKey, displayName) {
-      document.getElementById('sidebarPage').classList.add('hidden');
-      document.getElementById('sidebarPage').classList.remove('flex');
-      document.getElementById('chatPage').classList.remove('hidden');
-      document.getElementById('chatPage').classList.add('flex');
+        // الاستماع لمكالمات هذا العميل تحديداً
+        const callRef = ref(db, `single_chat_room/${clientKey}/call`);
+        callUnsubscribe = onValue(callRef, (snapshot) => {
+            const callData = snapshot.val();
+            if (!callData) return;
 
-      activeClientKey = roomKey;
-      activeClientDisplayName = displayName;
-      unreadCounts[roomKey] = 0;
+            if (callData.status === 'ringing') {
+                if (callData.caller !== employeeName) {
+                    document.getElementById('empCallerName').innerText = clientName;
+                    document.getElementById('empCallStatusText').innerText = callData.type === 'video' ? 'مكالمة فيديو واردة...' : 'مكالمة صوتية واردة...';
+                    document.getElementById('empCallScreen').classList.remove('hidden');
+                    document.getElementById('empCallScreen').classList.add('flex');
+                    ringtone.play().catch(e => {});
+                }
+            } else if (callData.status === 'active') {
+                stopEmpRingtone();
+                document.getElementById('empCallStatusText').innerText = 'المكالمة جارية';
+                openEmpDailyCall(callData.type);
+            } else if (callData.status === 'ended' || callData.status === 'rejected') {
+                stopEmpRingtone();
+                closeEmpCallScreen();
+            }
+        });
 
-      document.getElementById('currentName').innerText = displayName;
-      update(ref(db, `single_chat_room/${roomKey}`), { assignedTo: currentEmpName });
+        // الاستماع لرسائل هذا العميل
+        const roomRef = ref(db, `single_chat_room/${clientKey}`);
+        let isFirstLoad = true;
+        let prevCount = 0;
 
-      if (callListenerRef) off(callListenerRef);
-      callListenerRef = ref(db, `single_chat_room/${roomKey}/call`);
-      onValue(callListenerRef, (snapshot) => {
-        const callData = snapshot.val();
-        if (!callData) return;
+        messagesUnsubscribe = onValue(roomRef, (snapshot) => {
+            const container = document.getElementById('empMessageContainer');
+            container.innerHTML = '';
+            let count = 0;
 
-        if (callData.status === 'ringing') {
-            if (callData.caller !== currentEmpName) {
-                document.getElementById('messengerCallerName').innerText = callData.caller;
-                document.getElementById('messengerCallStatusText').innerText = callData.type === 'video' ? 'مكالمة فيديو واردة...' : 'مكالمة صوتية واردة...';
-                document.getElementById('incomingActionButtons').classList.remove('hidden');
-                document.getElementById('messengerCallScreen').classList.remove('hidden');
-                document.getElementById('messengerCallScreen').classList.add('flex');
-                ringtone.play().catch(e => {});
+            if (snapshot.exists()) {
+                snapshot.forEach((child) => {
+                    if(['call','assignedTo','status','lockedBy','client_info'].includes(child.key)) return;
+                    const msg = child.val();
+                    if(msg && msg.text) {
+                        count++;
+                        const isEmp = (msg.senderRole === 'employee' || msg.sender === employeeName);
+                        appendEmpMsg(msg.text, msg.sender || 'موظف', msg.timestamp, isEmp);
+                    }
+                });
+
+                if (!isFirstLoad && count > prevCount) {
+                    const lastChild = Object.values(snapshot.val()).pop();
+                    if (lastChild && lastChild.senderRole === 'client') {
+                        document.getElementById("empMsgAudio").play().catch(e => {});
+                    }
+                }
+                prevCount = count;
+                isFirstLoad = false;
             } else {
-                document.getElementById('messengerCallerName').innerText = activeClientDisplayName;
-                document.getElementById('messengerCallStatusText').innerText = 'جاري الاتصال...';
-                document.getElementById('incomingActionButtons').classList.add('hidden');
-                document.getElementById('messengerCallScreen').classList.remove('hidden');
-                document.getElementById('messengerCallScreen').classList.add('flex');
-                ringtone.play().catch(e => {});
+                container.innerHTML = '<div class="text-center text-slate-500 my-auto text-xs">لا توجد رسائل بعد</div>';
             }
-        } else if (callData.status === 'active') {
-            stopRingtone();
-            document.getElementById('incomingActionButtons').classList.add('hidden');
-            document.getElementById('messengerCallStatusText').innerText = 'المكالمة جارية';
-            openDailyCall(callData.type);
-        } else if (callData.status === 'ended' || callData.status === 'rejected') {
-            stopRingtone();
-            closeMessengerCall();
-        }
-      });
-
-      onValue(ref(db, 'single_chat_room/' + roomKey), (snapshot) => {
-        const container = document.getElementById('messageContainer');
-        container.innerHTML = '';
-        if (snapshot.exists()) {
-          snapshot.forEach((child) => {
-            if(['call','assignedTo','status','lockedBy','client_info'].includes(child.key)) return;
-            const msg = child.val();
-            if(msg && msg.text) {
-              const isClient = (msg.senderRole === 'client' || msg.sender === displayName);
-              appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClient);
-            }
-          });
-        }
-        container.scrollTop = container.scrollHeight;
-      });
-    };
-
-    window.startCall = async function(type) {
-        if (!activeClientKey) return;
-        await set(ref(db, `single_chat_room/${activeClientKey}/call`), {
-            status: 'ringing',
-            type: type,
-            caller: currentEmpName,
-            timestamp: Date.now()
+            container.scrollTop = container.scrollHeight;
         });
     };
 
-    window.acceptCall = async function() {
-        stopRingtone();
-        document.getElementById('incomingActionButtons').classList.add('hidden');
-        await update(ref(db, `single_chat_room/${activeClientKey}/call`), { status: 'active' });
+    window.empStartCall = async function(type) {
+        if(!activeClientKey) return;
+        await set(ref(db, `single_chat_room/${activeClientKey}/call`), {
+            status: 'ringing',
+            type: type,
+            caller: employeeName,
+            timestamp: Date.now()
+        });
+        document.getElementById('empCallerName').innerText = document.getElementById('activeClientTitle').innerText;
+        document.getElementById('empCallStatusText').innerText = 'جاري الاتصال بالعميل...';
+        document.getElementById('empCallScreen').classList.remove('hidden');
+        document.getElementById('empCallScreen').classList.add('flex');
+        ringtone.play().catch(e => {});
     };
 
-    window.rejectCall = async function() {
-        stopRingtone();
-        await update(ref(db, `single_chat_room/${activeClientKey}/call`), { status: 'rejected' });
-    };
-
-    window.endCall = async function() {
-        stopRingtone();
-        if (activeClientKey) {
+    window.empEndCall = async function() {
+        stopEmpRingtone();
+        if(activeClientKey) {
             await update(ref(db, `single_chat_room/${activeClientKey}/call`), { status: 'ended' });
         }
-        closeMessengerCall();
+        closeEmpCallScreen();
     };
 
-    window.addEventListener('beforeunload', () => {
-        if (activeClientKey) {
-            set(ref(db, `single_chat_room/${activeClientKey}/call`), { status: 'ended' });
-        }
-    });
-
-    function stopRingtone() {
+    function stopEmpRingtone() {
         ringtone.pause();
         ringtone.currentTime = 0;
     }
 
-    async function openDailyCall(type) {
-        const callScreen = document.getElementById('messengerCallScreen');
-        const videoContainer = document.getElementById('messengerVideoContainer');
-        const videoBtn = document.getElementById('videoBtn');
+    async function openEmpDailyCall(type) {
+        const screen = document.getElementById('empCallScreen');
+        const container = document.getElementById('empVideoContainer');
+        const videoBtn = document.getElementById('empVideoBtn');
 
-        if(callScreen) {
-            callScreen.classList.remove('hidden');
-            callScreen.classList.add('flex');
-        }
-        
+        screen.classList.remove('hidden');
+        screen.classList.add('flex');
         if (type === 'video') {
-            if(videoBtn) videoBtn.classList.remove('hidden');
-            if(videoContainer) videoContainer.classList.remove('hidden');
+            videoBtn.classList.remove('hidden');
+            container.classList.remove('hidden');
         }
 
         try {
             if (callFrame) {
-                try { 
-                    await callFrame.leave();
-                    await callFrame.destroy(); 
-                } catch(e) {}
+                try { await callFrame.leave(); await callFrame.destroy(); } catch(e){}
                 callFrame = null;
             }
+            container.innerHTML = '';
 
-            if(videoContainer) {
-                videoContainer.innerHTML = '';
-            }
-            
-            callFrame = window.DailyIframe.createFrame(videoContainer, {
+            callFrame = window.DailyIframe.createFrame(container, {
                 showLeaveButton: false,
                 showFullscreenButton: false,
                 iframeStyle: { width: '100%', height: '100%', border: '0' }
@@ -395,111 +290,69 @@
                 audioSource: true,
                 videoSource: type === 'video'
             });
-        } catch (err) {
+        } catch(err) {
             console.error("Daily call error:", err);
         }
     }
 
-    async function closeMessengerCall() {
-        stopRingtone();
-        
+    async function closeEmpCallScreen() {
+        stopEmpRingtone();
         if (callFrame) {
-            try { 
-                await callFrame.leave();
-                await callFrame.destroy(); 
-            } catch(e) {}
+            try { await callFrame.leave(); await callFrame.destroy(); } catch(e){}
             callFrame = null;
         }
-        
-        const videoContainer = document.getElementById('messengerVideoContainer');
-        if(videoContainer) {
-            videoContainer.innerHTML = '';
-            videoContainer.classList.add('hidden');
-        }
-        
-        const videoBtn = document.getElementById('videoBtn');
-        if(videoBtn) videoBtn.classList.add('hidden');
-        
-        const incomingBtns = document.getElementById('incomingActionButtons');
-        if(incomingBtns) incomingBtns.classList.add('hidden');
-
-        const callScreen = document.getElementById('messengerCallScreen');
-        if(callScreen) {
-            callScreen.classList.add('hidden');
-            callScreen.classList.remove('flex');
-        }
+        const container = document.getElementById('empVideoContainer');
+        container.innerHTML = '';
+        container.classList.add('hidden');
+        document.getElementById('empVideoBtn').classList.add('hidden');
+        document.getElementById('empCallScreen').classList.add('hidden');
+        document.getElementById('empCallScreen').classList.remove('flex');
     }
 
-    window.toggleMute = function() {
+    window.empToggleMute = function() {
         if (callFrame) {
-            const currentAudio = callFrame.localAudio();
-            callFrame.setLocalAudio(!currentAudio);
-            const btn = document.getElementById('muteBtn');
-            btn.classList.toggle('bg-red-600', currentAudio);
+            const cur = callFrame.localAudio();
+            callFrame.setLocalAudio(!cur);
+            document.getElementById('empMuteBtn').classList.toggle('bg-red-600', cur);
         }
     };
 
-    window.toggleVideo = function() {
+    window.empToggleVideo = function() {
         if (callFrame) {
-            const currentVideo = callFrame.localVideo();
-            callFrame.setLocalVideo(!currentVideo);
-            const btn = document.getElementById('videoBtn');
-            btn.classList.toggle('bg-red-600', currentVideo);
+            const cur = callFrame.localVideo();
+            callFrame.setLocalVideo(!cur);
+            document.getElementById('empVideoBtn').classList.toggle('bg-red-600', cur);
         }
     };
 
-    window.sendMessage = async function(event) {
-      event.preventDefault();
-      const input = document.getElementById('messageInput');
-      const text = input.value.trim();
-      if(!text || !activeClientKey) return;
-      await push(ref(db, `single_chat_room/${activeClientKey}`), { text, sender: currentEmpName, senderRole: "employee", timestamp: Date.now() });
-      input.value = '';
+    window.empSendMessage = async function(event) {
+        event.preventDefault();
+        if(!activeClientKey) return;
+        const input = document.getElementById('empMessageInput');
+        const text = input.value.trim();
+        if(!text) return;
+
+        await push(ref(db, `single_chat_room/${activeClientKey}`), {
+            text: text,
+            sender: employeeName,
+            senderRole: "employee",
+            timestamp: Date.now()
+        });
+        input.value = '';
     };
 
-    window.openTransferModal = function() {
-      const modal = document.getElementById('transferModal');
-      const container = document.getElementById('employeesListContainer');
-      modal.style.display = 'flex';
-      onValue(ref(db, 'online_employees'), snap => {
-        container.innerHTML = '';
-        if (snap.exists()) {
-          snap.forEach(child => {
-            const emp = child.val();
-            if (emp && emp.name && emp.name !== currentEmpName) {
-              container.innerHTML += `<button onclick="executeTransfer('${emp.name}')" class="w-full bg-[#212f3d] p-2 rounded-lg text-white text-xs mb-1 text-right">👤 ${emp.name}</button>`;
-            }
-          });
-        }
-      }, { onlyOnce: true });
-    };
-
-    window.executeTransfer = async function(target) {
-      await update(ref(db, `single_chat_room/${activeClientKey}`), { assignedTo: target });
-      alert("تم التحويل بنجاح");
-      document.getElementById('transferModal').style.display = 'none';
-      backToSidebar();
-    };
-
-    window.deleteCurrentChat = async function() {
-      if (confirm("هل تريد حذف المحادثة بالكامل؟")) {
-        await remove(ref(db, 'single_chat_room/' + activeClientKey));
-        backToSidebar();
-      }
-    };
-
-    function appendMessageToUI(text, sender, timestamp, isClientMsg) {
-      const container = document.getElementById('messageContainer');
-      const time = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'الآن';
-      const html = !isClientMsg 
-        ? `<div class="flex flex-col items-end w-full mb-1"><div class="bg-[#2b5278] text-white p-2.5 px-3.5 rounded-2xl rounded-tl-none max-w-md text-xs shadow"><span class="block text-[9px] text-[#8796a5] font-bold mb-0.5">${sender} (أنت)</span><span>${escapeHtml(text)}</span><span class="block text-[9px] text-[#8796a5] mt-1 text-left">${time}</span></div></div>`
-        : `<div class="flex flex-col items-start w-full mb-1"><div class="bg-[#182533] text-white p-2.5 px-3.5 rounded-2xl rounded-tr-none max-w-md text-xs shadow border border-[#232e3c]"><span class="block text-[9px] text-[#6ab2f2] font-bold mb-0.5">${sender} (عميل)</span><span>${escapeHtml(text)}</span><span class="block text-[9px] text-[#8796a5] mt-1 text-left">${time}</span></div></div>`;
-      container.insertAdjacentHTML('beforeend', html);
-      container.scrollTop = container.scrollHeight;
+    function appendEmpMsg(text, sender, timestamp, isEmpMsg) {
+        const container = document.getElementById('empMessageContainer');
+        const time = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'الآن';
+        const html = isEmpMsg
+            ? `<div class="flex flex-col items-end w-full mb-1"><div class="bg-[#2b5278] text-white p-2.5 px-3.5 rounded-2xl rounded-tl-none max-w-md text-xs shadow"><span class="block text-[9px] text-[#8796a5] font-bold mb-0.5">${sender} (أنت)</span><span>${escapeHtml(text)}</span><span class="block text-[9px] text-[#8796a5] mt-1 text-left">${time}</span></div></div>`
+            : `<div class="flex flex-col items-start w-full mb-1"><div class="bg-[#182533] text-white p-2.5 px-3.5 rounded-2xl rounded-tr-none max-w-md text-xs shadow border border-[#232e3c]"><span class="block text-[9px] text-[#6ab2f2] font-bold mb-0.5">${sender}</span><span>${escapeHtml(text)}</span><span class="block text-[9px] text-[#8796a5] mt-1 text-left">${time}</span></div></div>`;
+        container.insertAdjacentHTML('beforeend', html);
+        container.scrollTop = container.scrollHeight;
     }
 
     function escapeHtml(str) {
-      return str ? str.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])) : '';
+        return str ? str.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])) : '';
     }
   </script>
 </body>
