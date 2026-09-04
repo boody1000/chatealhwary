@@ -116,7 +116,7 @@
         if (cachedIceServers) return cachedIceServers;
         try {
             const response = await fetch("https://alhwary.metered.live/api/v1/turn/credentials?apiKey=6079dfbbdcf8564255625baf8471629ed765");
-            if (!response.ok) throw new Error();
+            if (!response.ok) throw new Error("فشل جلب بيانات خوادم الـ TURN");
             let data = await response.json();
             
             if (data && data.iceServers) {
@@ -150,6 +150,7 @@
             cachedIceServers = data;
             return cachedIceServers;
         } catch (error) {
+            console.error("خطأ في جلب خوادم الـ ICE، استخدام البدائل الافتراضية:", error);
             return { 
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
@@ -221,7 +222,10 @@
         await update(ref(db, `single_chat_room/${roomKey}/call`), { answer: { type: answer.type, sdp: answer.sdp }, status: 'answered' });
         listenForCandidates();
         startClientTimer();
-      } catch(e) { clientEndCall(); }
+      } catch(e) { 
+        console.error("خطأ أثناء قبول المكالمة:", e);
+        clientEndCall(); 
+      }
     };
 
     window.clientStartCall = async function() {
@@ -246,6 +250,7 @@
           }
         });
       } catch(e) {
+        console.error("خطأ أثناء بدء المكالمة:", e);
         clientEndCall();
       }
     };
@@ -258,16 +263,29 @@
       
       peerConnection = new RTCPeerConnection(config);
       
+      // [فحص الأخطاء وتتبع حالة ICE]
+      peerConnection.oniceconnectionstatechange = () => {
+          console.log("📌 [Client ICE Status]:", peerConnection.iceConnectionState);
+          if (peerConnection.iceConnectionState === 'failed' || peerConnection.iceConnectionState === 'disconnected') {
+              console.warn("⚠️ تحذير: فشل الاتصال المباشر أو عبر خوادم الـ TURN (قد يكون هناك حظر من شبكة الواي فاي أو الموبايل إنترنت).");
+          }
+      };
+
+      peerConnection.onicecandidate = e => { 
+          if(e.candidate) {
+              console.log("🔍 تم اكتشاف مرشح ICE جديد:", e.candidate.candidate);
+              push(ref(db, `single_chat_room/${roomKey}/call/candidates`), e.candidate.toJSON()); 
+          } else {
+              console.log("✅ انتهى جمع جميع مرشحات الـ ICE بنجاح.");
+          }
+      };
+      
       if (localStream) {
           localStream.getTracks().forEach(track => {
               peerConnection.addTrack(track, localStream);
           });
       }
 
-      peerConnection.onicecandidate = e => { 
-          if(e.candidate) push(ref(db, `single_chat_room/${roomKey}/call/candidates`), e.candidate.toJSON()); 
-      };
-      
       peerConnection.ontrack = e => { 
           const remoteAudio = document.getElementById("clientRemoteAudio");
           if (e.streams && e.streams[0]) {
@@ -288,7 +306,7 @@
       remoteAudio.play().then(() => {
         document.getElementById("forceAudioBtn").style.display = "none";
       }).catch(e => {
-        // لو المتصفح منع التشغيل التلقائي، الزرار هيظل ظاهر ليضغط عليه المستخدم يدوياً
+        console.warn("تعذر تشغيل الصوت تلقائياً، يلزم ضغط المستخدم:", e);
       });
     };
 
@@ -296,7 +314,9 @@
       onValue(ref(db, `single_chat_room/${roomKey}/call/candidates`), snap => {
         snap.forEach(c => { 
           if (peerConnection && c.val() && peerConnection.remoteDescription) {
-            peerConnection.addIceCandidate(new RTCIceCandidate(c.val())).catch(e => {}); 
+            peerConnection.addIceCandidate(new RTCIceCandidate(c.val())).catch(err => {
+              console.error("خطأ في إضافة مرشح الـ ICE:", err);
+            }); 
           }
         });
       });
