@@ -113,7 +113,7 @@
       <p class="text-xs text-[#8796a5]" id="empCallTimer">00:00</p>
       
       <button id="forceEmpAudioBtn" onclick="forcePlayEmpAudio()" class="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-lg animate-bounce">
-        <i class="fa-solid fa-volume-high"></i> اضغط هنا لتفعيل سماع الصوت الآن
+        <i class="fa-solid fa-volume-high"></i> اضغط هنا لتفعيل السماعة الخارجية
       </button>
     </div>
     
@@ -160,7 +160,6 @@
             if (!res.ok) throw new Error();
             let data = await res.json();
             
-            // إجبار استخدام TCP وبورت 443 لتجاوز حظر داتا الموبايل
             if (data && data.iceServers) {
                 data.iceServers = data.iceServers.map(server => {
                     if (server.urls) {
@@ -361,8 +360,6 @@
         await peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer.offer));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
-        
-        playEmpRemoteAudioStream();
 
         await update(ref(db, `single_chat_room/${activeClientKey}/call`), { answer: { type: answer.type, sdp: answer.sdp }, status: 'answered' });
         listenForCandidates(activeClientKey);
@@ -388,7 +385,6 @@
           const data = snap.val();
           if (data && data.answer && peerConnection && peerConnection.signalingState === "have-local-offer") {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-            playEmpRemoteAudioStream();
             startEmpTimer();
           }
         });
@@ -424,18 +420,8 @@
               inboundStream.addTrack(e.track);
               remoteAudio.srcObject = inboundStream;
           }
-          playEmpRemoteAudioStream();
+          forcePlayEmpAudio();
       };
-    }
-
-    function playEmpRemoteAudioStream() {
-      const remoteAudio = document.getElementById("empRemoteAudio");
-      remoteAudio.muted = false;
-      remoteAudio.volume = 1.0;
-      let playPromise = remoteAudio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {});
-      }
     }
 
     window.forcePlayEmpAudio = function() {
@@ -445,7 +431,7 @@
       remoteAudio.play().then(() => {
         document.getElementById("forceEmpAudioBtn").style.display = "none";
       }).catch(e => {
-        alert("يرجى التأكد من رفع صوت الهاتف وربط السماعات");
+        // الزرار يظل متاحاً للضغط اليدوي عند الحاجة لتجاوز حظر المتصفح
       });
     };
 
