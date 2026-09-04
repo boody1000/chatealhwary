@@ -32,7 +32,7 @@
         </div>
         
         <div class="flex items-center gap-2">
-          <button id="callEmployeeBtn" onclick="clientStartCall()" class="w-9 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center transition" title="اتصال صوتي بالمصلحة">
+          <button id="callEmployeeBtn" onclick="clientStartCall()" class="w-9 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center transition" title="اتصال صوتي بالموظف">
             <i class="fa-solid fa-phone text-xs"></i>
           </button>
         </div>
@@ -113,7 +113,7 @@
     let peerConnection = null, localStream = null, clientTimerInterval = null, clientSeconds = 0, pendingOffer = null;
     let isClientMuted = false, isClientCallActiveOrRinging = false;
 
-    // دمج خوادم STUN العامة وخوادم Metered TURN معاً في صفحة العميل أيضاً
+    // خوادم STUN و Metered TURN الحقيقية
     const rtcConfig = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -124,9 +124,14 @@
                 credential: 'openrelayproject' 
             },
             { 
-                urls: 'turn:alhwary.metered.ca:443?transport=tcp', 
-                username: 'حط_اليوزر_بتاعك_هنا', 
-                credential: 'حط_الباسورد_بتاعك_هنا' 
+                urls: 'turn:alhwary.metered.live:443?transport=tcp', 
+                username: '2a87406f32f8d0e5cb30b846', 
+                credential: '7KsW7ZWWa15vik94' 
+            },
+            { 
+                urls: 'turn:alhwary.metered.live:443?transport=udp', 
+                username: '2a87406f32f8d0e5cb30b846', 
+                credential: '7KsW7ZWWa15vik94' 
             }
         ],
         iceTransportPolicy: 'all'
@@ -142,7 +147,6 @@
       set(clientStatusRef, "online");
       onDisconnect(clientStatusRef).set("offline");
 
-      // الاستماع للرسائل ومكالمات الموظف الواردة
       onValue(ref(db, `single_chat_room/${clientRoomKey}`), (snapshot) => {
         const container = document.getElementById('messageContainer');
         container.innerHTML = '';
