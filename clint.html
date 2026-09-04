@@ -6,7 +6,6 @@
     <title>تليجرام - الهواري للتعارف والزواج</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- مكتبة Daily.co للاتصال -->
     <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
     <link rel="icon" href="22.jpg" type="image/jpeg">
 
@@ -14,7 +13,6 @@
       ::-webkit-scrollbar { width: 5px; }
       ::-webkit-scrollbar-track { background: #0e1621; }
       ::-webkit-scrollbar-thumb { background: #232e3c; border-radius: 4px; }
-      
       .telegram-bg {
         background-color: #0e1621;
         background-image: radial-gradient(#17212b 1px, transparent 1px);
@@ -38,14 +36,14 @@
         
         <div class="flex items-center gap-2">
             <span id="clientDisplayHeader" class="text-xs bg-[#232e3c] text-[#8796a5] px-3 py-1.5 rounded-full hidden sm:inline-block"></span>
-            <!-- زر طلب مكالمة صوتية -->
+            <!-- زر طلب مكالمة صوتية (ينشئ الغرفة تلقائياً) -->
             <button onclick="requestCall()" class="bg-emerald-600 hover:bg-emerald-700 text-white w-9 h-9 rounded-full flex items-center justify-center transition shadow" title="مكالمة صوتية">
                 <i class="fa-solid fa-phone text-xs"></i>
             </button>
         </div>
     </header>
 
-    <!-- نافذة تنبيه مكالمة واردة (للرد أو الرفض) -->
+    <!-- نافذة تنبيه مكالمة واردة -->
     <div id="incomingCallModal" class="hidden fixed inset-0 bg-[#0e1621]/90 z-50 flex items-center justify-center p-4">
         <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center">
             <img src="22.jpg" class="w-20 h-20 rounded-full object-cover border-2 border-emerald-500 animate-bounce mb-3">
@@ -62,7 +60,7 @@
         </div>
     </div>
 
-    <!-- نافذة المكالمة النشطة (صوت فقط مع أزرار التحكم) -->
+    <!-- نافذة المكالمة النشطة -->
     <div id="callContainer" class="hidden fixed inset-0 bg-[#0e1621]/95 z-50 flex flex-col items-center justify-center p-4">
         <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center">
             <div class="relative mb-4">
@@ -72,10 +70,8 @@
             <h3 class="text-base font-bold text-white mb-1">المكالمة الصوتية جارية</h3>
             <p class="text-xs text-[#8796a5] mb-4">متصل عبر خط آمن (صوت فقط)</p>
             
-            <!-- حاوية مرئية لعنصر الصوت لضمان تشغيل تدفق البيانات -->
             <div id="dailyCallFrame" class="w-full h-12 my-2 flex items-center justify-center bg-[#212f3d] rounded-xl overflow-hidden"></div>
 
-            <!-- أزرار التحكم بالمكالمة (مكبر الصوت / كتم الصوت / الإنهاء) -->
             <div class="flex items-center justify-center gap-4 w-full mt-4">
                 <button id="muteBtn" onclick="toggleMute()" class="bg-[#212f3d] hover:bg-[#2b5278] text-white w-12 h-12 rounded-full flex items-center justify-center transition shadow border border-[#232e3c]" title="كتم/إلغاء كتم الصوت">
                     <i class="fa-solid fa-microphone text-sm"></i>
@@ -265,40 +261,46 @@
             });
         }
 
+        // دالة إنشاء غرفة المكالمة تلقائياً عبر API والربط المباشر
         window.requestCall = async function() {
             if (!currentClientKey) return;
-            const roomName = "hawary_audio_" + currentClientKey.toLowerCase();
-            const roomUrl = `https://api.daily.co/v1/rooms/${roomName}`;
+            const roomName = "hawary_audio_" + currentClientKey.toLowerCase().replace(/[^a-z0-9]/g, '_');
             
             try {
-                let res = await fetch(roomUrl, {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${DAILY_API_KEY}` }
+                // محاولة إنشاء الغرفة تلقائياً
+                const createRes = await fetch('https://api.daily.co/v1/rooms', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${DAILY_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        name: roomName, 
+                        properties: { exp: Math.floor(Date.now() / 1000) + 3600 } 
+                    })
                 });
                 
-                let data;
-                if (!res.ok) {
-                    const createRes = await fetch('https://api.daily.co/v1/rooms', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${DAILY_API_KEY}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ name: roomName, properties: { exp: Math.floor(Date.now() / 1000) + 3600 } })
+                let data = await createRes.json();
+                
+                // لو الغرفة موجودة مسبقاً، نقوم بجلب بياناتها بدلاً من الفشل
+                if (!createRes.ok) {
+                    const getRes = await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
+                        method: 'GET',
+                        headers: { 'Authorization': `Bearer ${DAILY_API_KEY}` }
                     });
-                    data = await createRes.json();
-                } else {
-                    data = await res.json();
+                    data = await getRes.getJson ? await getRes.getJson() : await getRes.json();
                 }
 
                 const urlToJoin = data.url;
                 if (urlToJoin) {
                     set(ref(db, `single_chat_room/${currentClientKey}/call`), { action: 'start', roomUrl: urlToJoin, sender: 'client' });
                     joinDailyCall(urlToJoin);
+                } else {
+                    alert("تعذر إنشاء رابط الغرفة تلقائياً.");
                 }
             } catch (err) {
                 console.error(err);
-                alert("تعذر طلب المكالمة الصوتية");
+                alert("حدث خطأ أثناء الاتصال بخادم الغرف.");
             }
         };
 
