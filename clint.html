@@ -6,7 +6,6 @@
   <title>تليجرام - دردشة العملاء</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- مكتبة Daily.co للاتصالات -->
   <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
   <link rel="icon" href="22.jpg" type="image/jpeg">
   <style>
@@ -20,7 +19,6 @@
 
   <div class="flex flex-col h-full w-full relative overflow-hidden">
     
-    <!-- رأس الصفحة للعميل -->
     <header class="h-14 border-b border-[#232e3c] px-4 flex items-center justify-between bg-[#17212b] z-20">
       <div class="flex items-center space-x-3 space-x-reverse min-w-0">
         <div class="relative">
@@ -40,12 +38,10 @@
       </div>
     </header>
 
-    <!-- صندوق المحادثة -->
     <div id="messageContainer" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2 text-sm bg-[#0e1621]">
       <div class="text-center text-[#8796a5] my-auto bg-[#17212b] p-4 rounded-xl border border-[#232e3c] max-w-sm mx-auto text-xs">جاري تحميل المحادثة...</div>
     </div>
 
-    <!-- إرسال الرسائل -->
     <div class="p-3 border-t border-[#232e3c] bg-[#17212b] z-20">
       <form id="messageForm" class="flex items-center space-x-2 space-x-reverse" onsubmit="sendMessage(event)">
         <input type="text" id="messageInput" placeholder="اكتب رسالتك للموظف..." autocomplete="off" class="flex-1 bg-[#212f3d] border border-transparent text-white rounded-full px-4 py-2.5 text-xs focus:outline-none">
@@ -55,7 +51,6 @@
 
   </div>
 
-  <!-- نافذة استقبال مكالمة من الموظف -->
   <div id="clientIncomingCallModal" class="fixed inset-0 bg-[#0e1621]/90 z-50 hidden flex-col items-center justify-center p-4">
     <div class="bg-[#17212b] border border-[#232e3c] p-6 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full text-center">
       <div class="w-20 h-20 bg-[#2b5278]/30 text-[#6ab2f2] rounded-full flex items-center justify-center mb-4 border-2 border-[#2b5278] animate-bounce">
@@ -70,7 +65,6 @@
     </div>
   </div>
 
-  <!-- شاشة المكالمة النشطة للعميل -->
   <div id="clientCallScreen" class="fixed inset-0 bg-[#0e1621]/95 z-50 hidden flex-col items-center justify-between p-8 text-white">
     <div class="flex flex-col items-center mt-12">
       <div class="w-24 h-24 bg-[#17212b] rounded-full flex items-center justify-center overflow-hidden mb-4 border-2 border-emerald-500 animate-pulse">
@@ -119,21 +113,16 @@
     document.getElementById('clientHeaderName').innerText = clientName;
 
     window.addEventListener('DOMContentLoaded', () => {
-      // تحديث حالة الاتصال للعميل
       const statusRef = ref(db, `single_chat_room/${roomKey}/status`);
       set(statusRef, 'online');
       onDisconnect(statusRef).set('offline');
 
-      // الاستماع للرسائل ومكالمات الموظف
       onValue(ref(db, `single_chat_room/${roomKey}`), (snapshot) => {
         const container = document.getElementById('messageContainer');
         container.innerHTML = '';
         if (snapshot.exists()) {
           snapshot.forEach((child) => {
-            if(child.key === 'call') {
-              checkIncomingCall(child.val());
-              return;
-            }
+            if(child.key === 'call') { checkIncomingCall(child.val()); return; }
             if(['assignedStatus','status','lockedBy','assignedTo'].includes(child.key)) return;
             const msg = child.val();
             if(msg && msg.text) {
@@ -185,11 +174,7 @@
           return;
         }
 
-        callFrame = DailyIframe.createCallObject({
-          audioSource: true,
-          videoSource: false
-        });
-
+        callFrame = DailyIframe.createCallObject({ audioSource: true, videoSource: false });
         await callFrame.join({ url: activeCallRoomUrl });
         startClientTimer();
       } catch(e) {
@@ -205,7 +190,7 @@
       showClientCallScreen();
 
       try {
-        activeCallRoomUrl = "https://your-domain.daily.co/" + roomKey;
+        activeCallRoomUrl = "https://alhwarychate.daily.co/" + roomKey.replace(/[^a-zA-Z0-9-_]/g, '_');
 
         await set(ref(db, `single_chat_room/${roomKey}/call`), {
           roomUrl: activeCallRoomUrl,
@@ -213,11 +198,7 @@
           sender: 'client'
         });
 
-        callFrame = DailyIframe.createCallObject({
-          audioSource: true,
-          videoSource: false
-        });
-
+        callFrame = DailyIframe.createCallObject({ audioSource: true, videoSource: false });
         await callFrame.join({ url: activeCallRoomUrl });
         startClientTimer();
       } catch(e) {
@@ -243,15 +224,9 @@
 
     window.clientEndCall = async function() {
       try {
-        if (callFrame) {
-          await callFrame.leave();
-          callFrame.destroy();
-          callFrame = null;
-        }
+        if (callFrame) { await callFrame.leave(); callFrame.destroy(); callFrame = null; }
         await remove(ref(db, `single_chat_room/${roomKey}/call`));
-      } catch(e) {
-        console.error("End call error:", e);
-      }
+      } catch(e) { console.error("End call error:", e); }
       closeClientCallUI();
     };
 
@@ -261,10 +236,7 @@
       if (ringAudio) ringAudio.pause();
 
       const callScreen = document.getElementById("clientCallScreen");
-      if (callScreen) {
-        callScreen.classList.remove("flex");
-        callScreen.classList.add("hidden");
-      }
+      if (callScreen) { callScreen.classList.remove("flex"); callScreen.classList.add("hidden"); }
 
       const incomingModal = document.getElementById("clientIncomingCallModal");
       if (incomingModal) incomingModal.style.display = "none";
