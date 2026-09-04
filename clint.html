@@ -70,12 +70,13 @@
                 <span class="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-[#17212b] rounded-full"></span>
             </div>
             <h3 class="text-base font-bold text-white mb-1">المكالمة الصوتية جارية</h3>
-            <p class="text-xs text-[#8796a5] mb-6">متصل عبر خط آمن (صوت فقط)</p>
+            <p class="text-xs text-[#8796a5] mb-4">متصل عبر خط آمن (صوت فقط)</p>
             
-            <div id="dailyCallFrame" class="hidden"></div>
+            <!-- حاوية مرئية لعنصر الصوت لضمان تشغيل تدفق البيانات -->
+            <div id="dailyCallFrame" class="w-full h-12 my-2 flex items-center justify-center bg-[#212f3d] rounded-xl overflow-hidden"></div>
 
             <!-- أزرار التحكم بالمكالمة (مكبر الصوت / كتم الصوت / الإنهاء) -->
-            <div class="flex items-center justify-center gap-4 w-full">
+            <div class="flex items-center justify-center gap-4 w-full mt-4">
                 <button id="muteBtn" onclick="toggleMute()" class="bg-[#212f3d] hover:bg-[#2b5278] text-white w-12 h-12 rounded-full flex items-center justify-center transition shadow border border-[#232e3c]" title="كتم/إلغاء كتم الصوت">
                     <i class="fa-solid fa-microphone text-sm"></i>
                 </button>
@@ -319,12 +320,23 @@
             document.getElementById('callContainer').classList.remove('hidden');
             document.getElementById('callContainer').classList.add('flex');
             if (!callFrame) {
-                callFrame = window.DailyIframe.createFrame(document.getElementById('dailyCallFrame'), {
+                const containerElement = document.getElementById('dailyCallFrame');
+                callFrame = window.DailyIframe.createFrame(containerElement, {
                     showLeaveButton: false,
-                    showFullscreenButton: false
+                    showFullscreenButton: false,
+                    audioSource: true,
+                    videoSource: false
                 });
             }
-            callFrame.join({ url, startVideoOff: true, startAudioOff: false });
+            callFrame.join({ 
+                url: url, 
+                startVideoOff: true, 
+                startAudioOff: false 
+            }).then(() => {
+                callFrame.setLocalAudio(true);
+            }).catch((error) => {
+                console.error("خطأ أثناء الانضمام لمكالمة Daily.co:", error);
+            });
         }
 
         window.toggleMute = function() {
