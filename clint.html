@@ -59,7 +59,7 @@
         <div class="flex items-center justify-between gap-2">
             <button id="muteBtn" onclick="toggleMute()" class="flex-1 bg-[#212f3d] hover:bg-[#2b5278] text-white py-2 rounded-xl flex items-center justify-center gap-1.5 transition text-xs font-semibold" title="كتم الصوت">
                 <i class="fa-solid fa-microphone text-emerald-400" id="micIcon"></i>
-                <span id="muteBtnText">إلغاء كتم الصوت</span>
+                <span id="muteBtnText">كتم الصوت</span>
             </button>
             <button onclick="leaveDailyCall()" class="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-xl flex items-center justify-center transition text-xs font-semibold" title="إنهاء المكالمة">
                 <i class="fa-solid fa-phone-slash"></i>
@@ -132,26 +132,6 @@
     
     <audio id="msgSound" src="mes.mp3" preload="auto"></audio>
 
-    <script>
-        if (typeof Sentry !== 'undefined') {
-            Sentry.init({
-                dsn: "https://468e374d8f614f9691bb3194f97efd42@o77906.ingest.sentry.io/5728081",
-                tracesSampleRate: 0.1,
-                beforeSend(event, hint) {
-                    const error = hint.originalException;
-                    if (error && error.message) {
-                        if (error.message.includes('ResizeObserver loop limit exceeded') || 
-                            error.message.includes('Network Error') || 
-                            error.message.includes('Failed to fetch')) {
-                            return null;
-                        }
-                    }
-                    return event;
-                },
-            });
-        }
-    </script>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, push, onValue, set, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
@@ -172,6 +152,7 @@
         let currentClientKey = localStorage.getItem('telegram_hawary_key');
         let originalDisplayName = localStorage.getItem('telegram_hawary_name');
         let callFrame = null;
+        let pendingIncomingUrl = null; // الاحتفاظ برابط المكالمة الواردة للانضمام المباشر بضغطة زر
         const DAILY_API_KEY = "f344f7ad262fd3681378f82726aec1545e5b07c1f705cae852bce093e0044e99";
 
         const messagesContainer = document.getElementById("chatMessages");
@@ -255,12 +236,35 @@
             onValue(ref(db, `single_chat_room/${clientKey}/call`), (snapshot) => {
                 const callData = snapshot.val();
                 if (callData && callData.action === 'start' && callData.roomUrl) {
-                    joinDailyCallSilently(callData.roomUrl);
+                    pendingIncomingUrl = callData.roomUrl;
+                    // إذا بدأها الطرف الآخر، نظهر زر قبول/انضمام صريح لضمان تفاعل المستخدم وتشغيل الصوت في كروم
+                    if (callData.sender !== 'client') {
+                        showIncomingCallBanner(callData.roomUrl);
+                    } else {
+                        joinDailyCallWithGesture(callData.roomUrl);
+                    }
                 } else if (callData && callData.action === 'end') {
                     leaveDailyCall(false);
                 }
             });
         }
+
+        function showIncomingCallBanner(url) {
+            let banner = document.getElementById('incomingCallBanner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'incomingCallBanner';
+                banner.className = 'fixed top-4 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-4 text-xs font-bold animate-bounce';
+                banner.innerHTML = `<span>📞 هناك مكالمة صوتية واردة من الإدارة</span><button onclick="acceptIncomingCall('${url}')" class="bg-white text-emerald-700 px-3 py-1.5 rounded-xl shadow">انضمام الآن</button>`;
+                document.body.appendChild(banner);
+            }
+        }
+
+        window.acceptIncomingCall = function(url) {
+            const banner = document.getElementById('incomingCallBanner');
+            if (banner) banner.remove();
+            joinDailyCallWithGesture(url);
+        };
 
         window.requestCall = async function() {
             if (!currentClientKey) return;
@@ -292,14 +296,17 @@
                 const urlToJoin = data.url;
                 if (urlToJoin) {
                     set(ref(db, `single_chat_room/${currentClientKey}/call`), { action: 'start', roomUrl: urlToJoin, sender: 'client' });
-                    joinDailyCallSilently(urlToJoin);
+                    joinDailyCallWithGesture(urlToJoin);
                 }
             } catch (err) {
                 console.error(err);
             }
         };
 
-        function joinDailyCallSilently(url) {
+        function joinDailyCallWithGesture(url) {
+            const banner = document.getElementById('incomingCallBanner');
+            if (banner) banner.remove();
+
             document.getElementById('callContainer').classList.remove('hidden');
             if (!callFrame) {
                 const containerElement = document.getElementById('dailyCallFrame');
@@ -311,16 +318,15 @@
                 });
             }
             
-            // التأكد من منح الأذونات وضبط الصوت بدقة ليعمل الطرفين
             callFrame.join({ 
                 url: url, 
                 startVideoOff: true, 
                 startAudioOff: false 
             }).then(() => {
                 callFrame.setLocalAudio(true);
-                updateMicUIState(true);
+                updateMicUIState(false);
             }).catch((error) => {
-                console.error("خطأ في الاتصال الخفي:", error);
+                console.error("خطأ في الاتصال:", error);
                 alert("يرجى السماح للمتصفح بالوصول إلى الميكروفون لكي تعمل المكالمة بنجاح.");
             });
         }
@@ -329,7 +335,7 @@
             if (!callFrame) return;
             const localAudio = callFrame.localAudio();
             callFrame.setLocalAudio(!localAudio);
-            updateMicUIState(localAudio); // العكس لأن الحالة ستتغير
+            updateMicUIState(localAudio); 
         };
 
         function updateMicUIState(isCurrentlyMuted) {
@@ -338,13 +344,11 @@
             const indicator = document.getElementById('micStatusIndicator');
             
             if (isCurrentlyMuted) {
-                // أصبح مكتوماً
                 btnText.innerText = "إلغاء الكتم";
                 micIcon.className = "fa-solid fa-microphone-slash text-red-400";
                 indicator.className = "text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-medium";
                 indicator.innerText = "الميكروفون مكتوم";
             } else {
-                // أصبح مفتاح الصوت مفتوحاً
                 btnText.innerText = "كتم الصوت";
                 micIcon.className = "fa-solid fa-microphone text-emerald-400";
                 indicator.className = "text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-medium";
@@ -358,6 +362,9 @@
                 callFrame = null;
             }
             document.getElementById('callContainer').classList.add('hidden');
+            const banner = document.getElementById('incomingCallBanner');
+            if (banner) banner.remove();
+            
             if (updateDb && currentClientKey) {
                 set(ref(db, `single_chat_room/${currentClientKey}/call`), { action: 'end' });
             }
