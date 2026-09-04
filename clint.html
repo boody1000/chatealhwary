@@ -98,7 +98,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, update, onDisconnect, off } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, update, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -122,15 +122,12 @@
     let previousMessagesCount = 0, isFirstLoad = true;
 
     window.addEventListener('DOMContentLoaded', () => {
-        // تثبيت اسم العميل بحيث لا يتغير عشوائياً عند كل إعادة تحميل
         let savedName = localStorage.getItem('clientName');
         if (!savedName) {
             savedName = 'عميل_' + Math.floor(1000 + Math.random() * 9000);
             localStorage.setItem('clientName', savedName);
         }
         clientDisplayName = savedName;
-        
-        // توحيد مفتاح الغرفة ليتوافق مع نظام قراءة الموظف (استبدال المسافات بشرطة سفلى)
         clientRoomKey = clientDisplayName.trim().replace(/\s+/g, '_');
 
         const clientStatusRef = ref(db, `single_chat_room/${clientRoomKey}/status`);
@@ -142,7 +139,6 @@
             lastSeen: Date.now()
         });
 
-        // الاستماع للمكالمات الواردة
         callListenerRef = ref(db, `single_chat_room/${clientRoomKey}/call`);
         onValue(callListenerRef, (snapshot) => {
             const callData = snapshot.val();
@@ -175,7 +171,6 @@
             }
         });
 
-        // جلب الرسائل من نفس الغرفة المحددة بدقة
         onValue(ref(db, `single_chat_room/${clientRoomKey}`), (snapshot) => {
             const container = document.getElementById('messageContainer');
             container.innerHTML = '';
@@ -252,16 +247,10 @@
 
         try {
             if (callFrame) {
-                try { 
-                    await callFrame.leave();
-                    await callFrame.destroy(); 
-                } catch(e) {}
+                try { await callFrame.leave(); await callFrame.destroy(); } catch(e){}
                 callFrame = null;
             }
-
-            if(videoContainer) {
-                videoContainer.innerHTML = '';
-            }
+            if(videoContainer) videoContainer.innerHTML = '';
             
             callFrame = window.DailyIframe.createFrame(videoContainer, {
                 showLeaveButton: false,
@@ -282,10 +271,7 @@
     async function closeMessengerCall() {
         stopRingtone();
         if (callFrame) {
-            try { 
-                await callFrame.leave();
-                await callFrame.destroy(); 
-            } catch(e) {}
+            try { await callFrame.leave(); await callFrame.destroy(); } catch(e){}
             callFrame = null;
         }
         
@@ -312,8 +298,7 @@
         if (callFrame) {
             const currentAudio = callFrame.localAudio();
             callFrame.setLocalAudio(!currentAudio);
-            const btn = document.getElementById('muteBtn');
-            btn.classList.toggle('bg-red-600', currentAudio);
+            document.getElementById('muteBtn').classList.toggle('bg-red-600', currentAudio);
         }
     };
 
@@ -321,8 +306,7 @@
         if (callFrame) {
             const currentVideo = callFrame.localVideo();
             callFrame.setLocalVideo(!currentVideo);
-            const btn = document.getElementById('videoBtn');
-            btn.classList.toggle('bg-red-600', currentVideo);
+            document.getElementById('videoBtn').classList.toggle('bg-red-600', currentVideo);
         }
     };
 
