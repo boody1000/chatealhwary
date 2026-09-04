@@ -113,26 +113,14 @@
     let peerConnection = null, localStream = null, clientTimerInterval = null, clientSeconds = 0, pendingOffer = null;
     let isClientMuted = false, isClientCallActiveOrRinging = false;
 
-    // خوادم STUN و Metered TURN الحقيقية
+    // خوادم STUN القوية لضمان الاتصال
     const rtcConfig = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            { 
-                urls: 'turn:openrelay.metered.ca:443?transport=tcp', 
-                username: 'openrelayproject', 
-                credential: 'openrelayproject' 
-            },
-            { 
-                urls: 'turn:alhwary.metered.live:443?transport=tcp', 
-                username: '2a87406f32f8d0e5cb30b846', 
-                credential: '7KsW7ZWWa15vik94' 
-            },
-            { 
-                urls: 'turn:alhwary.metered.live:443?transport=udp', 
-                username: '2a87406f32f8d0e5cb30b846', 
-                credential: '7KsW7ZWWa15vik94' 
-            }
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' }
         ],
         iceTransportPolicy: 'all'
     };
