@@ -63,49 +63,47 @@
         </form>
     </footer>
 
-    <!-- نافذة الاتصال الجاري (عندما تتصل أنت ويقوم الطرف الآخر بالرد) -->
-    <div id="callModal" class="fixed inset-0 bg-[#0e1621]/95 z-50 flex flex-col hidden">
-        <div class="bg-[#17212b] border-b border-[#232e3c] px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
-                <span id="callTitle" class="text-xs font-bold text-white">المكالمة جارية...</span>
-            </div>
-            <button onclick="endCall()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition">إنهاء المكالمة</button>
+    <!-- شاشة المكالمة (مطابقة لشاشة مسنجر) -->
+    <div id="messengerCallScreen" class="fixed inset-0 bg-[#0f172a] z-50 flex flex-col items-center justify-between py-12 px-6 hidden">
+        <!-- رأس المكالمة -->
+        <div class="flex flex-col items-center text-center z-20 mt-4">
+            <h2 id="messengerCallerName" class="text-white text-xl font-bold mb-1">اسم المتصل</h2>
+            <p id="messengerCallStatusText" class="text-slate-400 text-xs">جاري الرنين...</p>
         </div>
-        <div id="callContainer" class="flex-1 w-full h-full bg-black relative"></div>
-    </div>
 
-    <!-- نافذة استقبال مكالمة واردة (رنين + قبول أو رفض) -->
-    <div id="incomingCallModal" class="fixed inset-0 bg-[#0e1621]/90 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center">
-            <div class="relative mb-4">
-                <img src="22.jpg" alt="Caller" class="w-20 h-20 rounded-full object-cover border-4 border-[#2b5278] animate-pulse">
-            </div>
-            <h3 id="incomingCallerName" class="text-base font-bold text-white mb-1">مكالمة واردة...</h3>
-            <p id="incomingCallType" class="text-xs text-[#6ab2f2] mb-6">يرغب في بدء مكالمة فيديو</p>
-            
-            <div class="flex items-center gap-4 w-full">
-                <button onclick="rejectCall()" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow">
-                    <i class="fa-solid fa-phone-slash"></i> رفض
-                </button>
-                <button onclick="acceptCall()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow">
-                    <i class="fa-solid fa-phone"></i> قبول
-                </button>
-            </div>
+        <!-- صورة المتصل في المنتصف مع تأثير الهالة (Pulse) -->
+        <div class="relative flex items-center justify-center my-auto">
+            <div class="absolute w-36 h-36 bg-blue-500/20 rounded-full animate-ping"></div>
+            <div class="absolute w-48 h-48 bg-blue-500/10 rounded-full animate-pulse"></div>
+            <img src="22.jpg" alt="Avatar" class="w-28 h-28 rounded-full object-cover border-4 border-slate-700 shadow-2xl relative z-10">
+            <!-- عنصر لفيديو الكاميرا إذا كانت مكالمة فيديو -->
+            <div id="messengerVideoContainer" class="absolute inset-0 w-full h-full rounded-full overflow-hidden hidden z-20 bg-black"></div>
         </div>
-    </div>
 
-    <!-- نافذة انتظار الرد (جارٍ الاتصال...) -->
-    <div id="outgoingCallModal" class="fixed inset-0 bg-[#0e1621]/90 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-[#17212b] border border-[#232e3c] w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col items-center text-center">
-            <div class="relative mb-4">
-                <img src="22.jpg" alt="Calling" class="w-20 h-20 rounded-full object-cover border-4 border-[#2b5278] animate-bounce">
+        <!-- أزرار التحكم والتحويل (أسلوب مسنجر) -->
+        <div class="flex flex-col items-center gap-6 w-full max-w-xs z-20 mb-4">
+            <!-- أزرار القبول والرفض للمكالمة الواردة -->
+            <div id="incomingActionButtons" class="flex items-center justify-center gap-8 w-full hidden">
+                <button onclick="rejectCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-xl shadow-lg transition transform hover:scale-105" title="رفض">
+                    <i class="fa-solid fa-phone-slash"></i>
+                </button>
+                <button onclick="acceptCall()" class="w-16 h-16 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center text-xl shadow-lg transition transform hover:scale-105 animate-bounce" title="قبول">
+                    <i class="fa-solid fa-phone"></i>
+                </button>
             </div>
-            <h3 class="text-base font-bold text-white mb-1">جاري الاتصال...</h3>
-            <p class="text-xs text-[#8796a5] mb-6">في انتظار رد الطرف الآخر</p>
-            <button onclick="cancelOutgoingCall()" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl text-xs font-bold transition shadow">
-                إلغاء المكالمة
-            </button>
+
+            <!-- أزرار أثناء المكالمة الجارية أو الخروج -->
+            <div id="activeActionButtons" class="flex items-center justify-center gap-6 w-full">
+                <button onclick="toggleMute()" id="muteBtn" class="w-12 h-12 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full flex items-center justify-center text-sm transition" title="كتم الصوت">
+                    <i class="fa-solid fa-microphone"></i>
+                </button>
+                <button onclick="endCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center text-xl shadow-lg transition transform hover:scale-105" title="إنهاء المكالمة">
+                    <i class="fa-solid fa-phone-slash"></i>
+                </button>
+                <button onclick="toggleVideo()" id="videoBtn" class="w-12 h-12 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full flex items-center justify-center text-sm transition hidden" title="الكاميرا">
+                    <i class="fa-solid fa-video"></i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -255,23 +253,33 @@
                 const callData = snapshot.val();
                 if (!callData) return;
 
-                if (callData.status === 'ringing' && callData.caller !== originalDisplayName) {
-                    pendingCallType = callData.type;
-                    document.getElementById('incomingCallerName').innerText = callData.caller;
-                    document.getElementById('incomingCallType').innerText = callData.type === 'video' ? 'يرغب في بدء مكالمة فيديو' : 'يرغب في بدء مكالمة صوتية';
-                    document.getElementById('incomingCallModal').classList.remove('hidden');
-                    document.getElementById('incomingCallModal').classList.add('flex');
-                    ringtone.play().catch(e => {});
+                if (callData.status === 'ringing') {
+                    if (callData.caller !== originalDisplayName) {
+                        // مكالمة واردة
+                        pendingCallType = callData.type;
+                        document.getElementById('messengerCallerName').innerText = callData.caller;
+                        document.getElementById('messengerCallStatusText').innerText = callData.type === 'video' ? 'مكالمة فيديو واردة...' : 'مكالمة صوتية واردة...';
+                        document.getElementById('incomingActionButtons').classList.remove('hidden');
+                        document.getElementById('messengerCallScreen').classList.remove('hidden');
+                        document.getElementById('messengerCallScreen').classList.add('flex');
+                        ringtone.play().catch(e => {});
+                    } else {
+                        // مكالمة صادرة (جاري الاتصال)
+                        document.getElementById('messengerCallerName').innerText = originalDisplayName;
+                        document.getElementById('messengerCallStatusText').innerText = 'جاري الاتصال...';
+                        document.getElementById('incomingActionButtons').classList.add('hidden');
+                        document.getElementById('messengerCallScreen').classList.remove('hidden');
+                        document.getElementById('messengerCallScreen').classList.add('flex');
+                        ringtone.play().catch(e => {});
+                    }
                 } else if (callData.status === 'active') {
                     stopRingtone();
-                    document.getElementById('incomingCallModal').classList.add('hidden');
-                    document.getElementById('outgoingCallModal').classList.add('hidden');
+                    document.getElementById('incomingActionButtons').classList.add('hidden');
+                    document.getElementById('messengerCallStatusText').innerText = 'المكالمة جارية';
                     openDailyCall(callData.type);
                 } else if (callData.status === 'ended' || callData.status === 'rejected') {
                     stopRingtone();
-                    document.getElementById('incomingCallModal').classList.add('hidden');
-                    document.getElementById('outgoingCallModal').classList.add('hidden');
-                    closeDailyCall();
+                    closeMessengerCall();
                 }
             });
         }
@@ -285,27 +293,17 @@
                 caller: originalDisplayName,
                 timestamp: Date.now()
             });
-            document.getElementById('outgoingCallModal').classList.remove('hidden');
-            document.getElementById('outgoingCallModal').classList.add('flex');
-            ringtone.play().catch(e => {});
         };
 
         window.acceptCall = async function() {
             stopRingtone();
-            document.getElementById('incomingCallModal').classList.add('hidden');
+            document.getElementById('incomingActionButtons').classList.add('hidden');
             await update(ref(db, `single_chat_room/${currentClientKey}/call`), { status: 'active' });
         };
 
         window.rejectCall = async function() {
             stopRingtone();
-            document.getElementById('incomingCallModal').classList.add('hidden');
             await update(ref(db, `single_chat_room/${currentClientKey}/call`), { status: 'rejected' });
-        };
-
-        window.cancelOutgoingCall = async function() {
-            stopRingtone();
-            document.getElementById('outgoingCallModal').classList.add('hidden');
-            await update(ref(db, `single_chat_room/${currentClientKey}/call`), { status: 'ended' });
         };
 
         function stopRingtone() {
@@ -314,22 +312,25 @@
         }
 
         async function openDailyCall(type) {
-            document.getElementById('callModal').classList.remove('hidden');
-            document.getElementById('callModal').classList.add('flex');
-            document.getElementById('callTitle').innerText = type === 'video' ? 'مكالمة فيديو جارية...' : 'مكالمة صوتية جارية...';
+            document.getElementById('messengerCallScreen').classList.remove('hidden');
+            document.getElementById('messengerCallScreen').classList.add('flex');
+            
+            if (type === 'video') {
+                document.getElementById('videoBtn').classList.remove('hidden');
+                document.getElementById('messengerVideoContainer').classList.remove('hidden');
+            }
 
             try {
                 if (callFrame) {
                     try { await callFrame.destroy(); } catch(e) {}
                     callFrame = null;
                 }
-                const container = document.getElementById('callContainer');
-                container.innerHTML = '';
+                const container = document.getElementById('messengerVideoContainer');
                 
                 callFrame = window.DailyIframe.createFrame(container, {
-                    showLeaveButton: true,
-                    showFullscreenButton: true,
-                    iframeStyle: { width: '100%', height: '100%', border: '0', backgroundColor: '#000' }
+                    showLeaveButton: false,
+                    showFullscreenButton: false,
+                    iframeStyle: { width: '100%', height: '100%', border: '0' }
                 });
 
                 await callFrame.join({ 
@@ -342,21 +343,42 @@
             }
         }
 
+        window.toggleMute = function() {
+            if (callFrame) {
+                const currentAudio = callFrame.localAudio();
+                callFrame.setLocalAudio(!currentAudio);
+                const btn = document.getElementById('muteBtn');
+                btn.classList.toggle('bg-red-600', currentAudio);
+            }
+        };
+
+        window.toggleVideo = function() {
+            if (callFrame) {
+                const currentVideo = callFrame.localVideo();
+                callFrame.setLocalVideo(!currentVideo);
+                const btn = document.getElementById('videoBtn');
+                btn.classList.toggle('bg-red-600', currentVideo);
+            }
+        };
+
         window.endCall = async function() {
             if (currentClientKey) {
                 await update(ref(db, `single_chat_room/${currentClientKey}/call`), { status: 'ended' });
             }
-            closeDailyCall();
+            closeMessengerCall();
         };
 
-        async function closeDailyCall() {
+        async function closeMessengerCall() {
             if (callFrame) {
                 try { await callFrame.destroy(); } catch(e) {}
                 callFrame = null;
             }
-            document.getElementById('callContainer').innerHTML = '';
-            document.getElementById('callModal').classList.add('hidden');
-            document.getElementById('callModal').classList.remove('flex');
+            document.getElementById('messengerVideoContainer').innerHTML = '';
+            document.getElementById('messengerVideoContainer').classList.add('hidden');
+            document.getElementById('videoBtn').classList.add('hidden');
+            document.getElementById('incomingActionButtons').classList.add('hidden');
+            document.getElementById('messengerCallScreen').classList.add('hidden');
+            document.getElementById('messengerCallScreen').classList.remove('flex');
         }
 
         window.sendMessage = async function(event) {
