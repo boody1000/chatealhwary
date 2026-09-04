@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تليجرام - دردشة العميل والدعم</title>
+  <title>تليجرام - دردشة العملاء</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="icon" href="22.jpg" type="image/jpeg">
-  <!-- مكتبة Daily.co الجاهزة للمكالمات السحابية السريعة -->
+  <!-- مكتبة Daily.co للاتصالات -->
   <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
+  <link rel="icon" href="22.jpg" type="image/jpeg">
   <style>
    ::-webkit-scrollbar { width: 4px; }
    ::-webkit-scrollbar-track { background: #0e1621; }
@@ -20,63 +20,68 @@
 
   <div class="flex flex-col h-full w-full relative overflow-hidden">
     
+    <!-- رأس الصفحة للعميل -->
     <header class="h-14 border-b border-[#232e3c] px-4 flex items-center justify-between bg-[#17212b] z-20">
       <div class="flex items-center space-x-3 space-x-reverse min-w-0">
         <div class="relative">
           <img src="22.jpg" class="w-9 h-9 rounded-full object-cover">
-          <span id="supportStatusDot" class="absolute bottom-0 left-0 w-2.5 h-2.5 bg-slate-500 border-2 border-[#17212b] rounded-full"></span>
+          <span class="absolute bottom-0 left-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#17212b] rounded-full"></span>
         </div>
         <div class="min-w-0">
-          <h3 class="text-xs font-bold text-white truncate">الدعم الفني - شركة الهواري</h3>
-          <span id="supportStatusText" class="text-[10px] text-[#8796a5] block">جاري التحقق...</span>
+          <h3 id="clientHeaderName" class="text-xs font-bold text-white truncate">أهلاً بك، زائرنا الكريم</h3>
+          <span class="text-[10px] text-emerald-400 block">متصل بالدعم الفني</span>
         </div>
       </div>
       
       <div class="flex items-center gap-2">
-        <button id="startCallBtn" onclick="clientStartCall()" class="w-9 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center transition" title="اتصال صوتي">
+        <button id="clientCallBtn" onclick="clientStartCall()" class="w-9 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center transition" title="اتصال صوتي بالمشرف">
           <i class="fa-solid fa-phone text-xs"></i>
         </button>
       </div>
     </header>
 
-    <div id="messageContainer" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2 text-sm z-10">
-      <div class="text-center text-[#8796a5] my-auto bg-[#17212b] p-4 rounded-xl border border-[#232e3c] max-w-sm mx-auto text-xs">مرحباً بك، أكتب رسالتك وسيرد عليك موظف الدعم فوراً</div>
+    <!-- صندوق المحادثة -->
+    <div id="messageContainer" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2 text-sm bg-[#0e1621]">
+      <div class="text-center text-[#8796a5] my-auto bg-[#17212b] p-4 rounded-xl border border-[#232e3c] max-w-sm mx-auto text-xs">جاري تحميل المحادثة...</div>
     </div>
 
+    <!-- إرسال الرسائل -->
     <div class="p-3 border-t border-[#232e3c] bg-[#17212b] z-20">
       <form id="messageForm" class="flex items-center space-x-2 space-x-reverse" onsubmit="sendMessage(event)">
-        <input type="text" id="messageInput" placeholder="اكتب رسالتك هنا..." autocomplete="off" class="flex-1 bg-[#212f3d] border border-transparent text-white rounded-full px-4 py-2.5 text-xs focus:outline-none">
+        <input type="text" id="messageInput" placeholder="اكتب رسالتك للموظف..." autocomplete="off" class="flex-1 bg-[#212f3d] border border-transparent text-white rounded-full px-4 py-2.5 text-xs focus:outline-none">
         <button type="submit" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-5 py-2.5 rounded-full text-xs font-semibold transition">إرسال</button>
       </form>
     </div>
 
   </div>
 
-  <div id="incomingCallModal" class="fixed inset-0 bg-[#0e1621]/90 z-50 hidden flex-col items-center justify-center p-4">
+  <!-- نافذة استقبال مكالمة من الموظف -->
+  <div id="clientIncomingCallModal" class="fixed inset-0 bg-[#0e1621]/90 z-50 hidden flex-col items-center justify-center p-4">
     <div class="bg-[#17212b] border border-[#232e3c] p-6 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full text-center">
       <div class="w-20 h-20 bg-[#2b5278]/30 text-[#6ab2f2] rounded-full flex items-center justify-center mb-4 border-2 border-[#2b5278] animate-bounce">
         <img src="22.jpg" class="w-full h-full rounded-full object-cover">
       </div>
-      <h3 class="text-sm font-bold mb-1">مكالمة صوتية واردة!</h3>
-      <p id="incomingCallerName" class="text-xs text-emerald-400 mb-5">موظف الدعم يتصل بك الآن...</p>
+      <h3 class="text-sm font-bold mb-1">الموظف يتصل بك!</h3>
+      <p class="text-xs text-emerald-400 mb-5">مكالمة صوتية واردة من الدعم الفني...</p>
       <div class="flex items-center gap-3 w-full">
-        <button onclick="rejectIncomingCall()" class="flex-1 bg-red-600 hover:bg-red-700 py-2.5 rounded-xl font-semibold text-xs">رفض</button>
-        <button onclick="acceptIncomingCall()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 py-2.5 rounded-xl font-semibold text-xs">رد</button>
+        <button onclick="clientRejectCall()" class="flex-1 bg-red-600 hover:bg-red-700 py-2.5 rounded-xl font-semibold text-xs">رفض</button>
+        <button onclick="clientAcceptCall()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 py-2.5 rounded-xl font-semibold text-xs">رد</button>
       </div>
     </div>
   </div>
 
+  <!-- شاشة المكالمة النشطة للعميل -->
   <div id="clientCallScreen" class="fixed inset-0 bg-[#0e1621]/95 z-50 hidden flex-col items-center justify-between p-8 text-white">
     <div class="flex flex-col items-center mt-12">
       <div class="w-24 h-24 bg-[#17212b] rounded-full flex items-center justify-center overflow-hidden mb-4 border-2 border-emerald-500 animate-pulse">
         <img src="22.jpg" class="w-full h-full object-cover">
       </div>
-      <h2 id="clientCallStatus" class="text-lg font-bold mb-1">المكالمة جارية مع الدعم</h2>
+      <h2 class="text-lg font-bold mb-1">المكالمة جارية مع الدعم الفني</h2>
       <p class="text-xs text-[#8796a5]" id="clientCallTimer">00:00</p>
     </div>
     
     <div class="flex items-center gap-6 mb-12">
-      <button id="clientMuteBtn" onclick="toggleClientMute()" class="w-14 h-14 bg-[#17212b] hover:bg-[#232e3c] rounded-full flex items-center justify-center text-lg transition border border-[#232e3c]">
+      <button onclick="clientToggleMute()" class="w-14 h-14 bg-[#17212b] hover:bg-[#232e3c] rounded-full flex items-center justify-center text-lg transition border border-[#232e3c]">
         <i class="fa-solid fa-microphone" id="clientMuteIcon"></i>
       </button>
       <button onclick="clientEndCall()" class="w-16 h-16 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-xl transition">
@@ -89,7 +94,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue, set, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -101,69 +106,97 @@
         appId: "1:524067560260:web:adc87a02eadf098d5a5511"
     };
 
-    const DAILY_API_KEY = "3e719443ab9ead791404a2aa56ac0549283b63f076fe8d3cd6880158527b3703";
-
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
     let clientName = localStorage.getItem('clientName') || "العميل_" + Math.floor(Math.random() * 1000);
-    let roomKey = clientName.replace(/\s+/g, '_');
-    let callObject = null, clientTimerInterval = null, clientSeconds = 0, pendingRoomUrl = null;
-    let isClientMuted = false, isClientCallActiveOrRinging = false;
+    localStorage.setItem('clientName', clientName);
+    const roomKey = clientName.replace(/\s+/g, '_');
+
+    let callFrame = null, clientTimerInterval = null, clientSeconds = 0;
+    let isClientCallActiveOrRinging = false, activeCallRoomUrl = null, isMuted = false;
+
+    document.getElementById('clientHeaderName').innerText = clientName;
 
     window.addEventListener('DOMContentLoaded', () => {
-      const clientStatusRef = ref(db, `single_chat_room/${roomKey}/status`);
-      set(clientStatusRef, 'online');
-      onDisconnect(clientStatusRef).set('offline');
+      // تحديث حالة الاتصال للعميل
+      const statusRef = ref(db, `single_chat_room/${roomKey}/status`);
+      set(statusRef, 'online');
+      onDisconnect(statusRef).set('offline');
 
-      onValue(ref(db, 'online_employees'), snap => {
-        const dot = document.getElementById('supportStatusDot');
-        const txt = document.getElementById('supportStatusText');
-        if (snap.exists() && snap.size > 0) {
-          dot.className = "absolute bottom-0 left-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#17212b] rounded-full";
-          txt.innerText = "الدعم متاح الآن";
-        } else {
-          dot.className = "absolute bottom-0 left-0 w-2.5 h-2.5 bg-slate-500 border-2 border-[#17212b] rounded-full";
-          txt.innerText = "غير متصل حالياً";
-        }
-      });
-
+      // الاستماع للرسائل ومكالمات الموظف
       onValue(ref(db, `single_chat_room/${roomKey}`), (snapshot) => {
         const container = document.getElementById('messageContainer');
         container.innerHTML = '';
         if (snapshot.exists()) {
           snapshot.forEach((child) => {
-            if(['call','assignedTo','status','lockedBy','client_info'].includes(child.key)) {
-              if(child.key === 'call') checkIncomingCallFromEmployee(child.val());
+            if(child.key === 'call') {
+              checkIncomingCall(child.val());
               return;
             }
+            if(['assignedStatus','status','lockedBy','assignedTo'].includes(child.key)) return;
             const msg = child.val();
             if(msg && msg.text) {
-              const isMe = (msg.sender === clientName || msg.senderRole === 'client');
-              appendMessageToUI(msg.text, msg.sender, msg.timestamp, isMe);
+              const isClient = (msg.senderRole === 'client' || msg.sender === clientName);
+              appendMessageToUI(msg.text, msg.sender || 'موظف', msg.timestamp, isClient);
             }
           });
+        } else {
+          container.innerHTML = '<div class="text-center text-[#8796a5] my-auto text-xs">ابدأ بإرسال رسالة للدعم الفني</div>';
         }
       });
     });
 
-    function checkIncomingCallFromEmployee(callData) {
-      if (callData && callData.roomUrl && callData.caller === 'employee' && !isClientCallActiveOrRinging) {
+    window.sendMessage = async function(event) {
+      event.preventDefault();
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      if(!text) return;
+
+      await push(ref(db, `single_chat_room/${roomKey}`), {
+        text,
+        sender: clientName,
+        senderRole: "client",
+        timestamp: Date.now()
+      });
+      input.value = '';
+    };
+
+    function checkIncomingCall(callData) {
+      if (callData && callData.type === 'offer' && callData.sender === 'employee' && !isClientCallActiveOrRinging) {
         isClientCallActiveOrRinging = true;
-        pendingRoomUrl = callData.roomUrl;
-        document.getElementById("incomingCallModal").style.display = "flex";
+        activeCallRoomUrl = callData.roomUrl;
+        document.getElementById("clientIncomingCallModal").style.display = "flex";
         document.getElementById("clientRingAudio").play().catch(e => {});
       } else if (!callData && isClientCallActiveOrRinging) {
-        closeClientCallUI();
+        clientEndCall();
       }
     }
 
-    window.acceptIncomingCall = async function() {
+    window.clientAcceptCall = async function() {
       document.getElementById("clientRingAudio").pause();
-      document.getElementById("incomingCallModal").style.display = "none";
+      document.getElementById("clientIncomingCallModal").style.display = "none";
       showClientCallScreen();
-      await joinDailyRoom(pendingRoomUrl);
-      startClientTimer();
+
+      try {
+        if (!activeCallRoomUrl) {
+          alert("رابط المكالمة غير متوفر");
+          clientEndCall();
+          return;
+        }
+
+        callFrame = DailyIframe.createCallObject({
+          audioSource: true,
+          videoSource: false
+        });
+
+        await callFrame.join({ url: activeCallRoomUrl });
+        startClientTimer();
+      } catch(e) {
+        console.error("Daily join error:", e);
+        alert("تعذر الانضمام للمكالمة");
+        clientEndCall();
+      }
     };
 
     window.clientStartCall = async function() {
@@ -172,30 +205,27 @@
       showClientCallScreen();
 
       try {
-        const res = await fetch("https://api.daily.co/v1/rooms", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${DAILY_API_KEY}`
-          },
-          body: JSON.stringify({ properties: { exp: Math.floor(Date.now() / 1000) + 3600 } })
-        });
-        const roomData = await res.json();
-        if (!roomData.url) throw new Error("تعذر إنشاء غرفة الاتصال");
+        activeCallRoomUrl = "https://your-domain.daily.co/" + roomKey;
 
-        await set(ref(db, `single_chat_room/${roomKey}/call`), { roomUrl: roomData.url, caller: 'client' });
-        await joinDailyRoom(roomData.url);
+        await set(ref(db, `single_chat_room/${roomKey}/call`), {
+          roomUrl: activeCallRoomUrl,
+          type: 'offer',
+          sender: 'client'
+        });
+
+        callFrame = DailyIframe.createCallObject({
+          audioSource: true,
+          videoSource: false
+        });
+
+        await callFrame.join({ url: activeCallRoomUrl });
         startClientTimer();
       } catch(e) {
+        console.error("Daily start error:", e);
+        alert("تعذر بدء الاتصال");
         clientEndCall();
       }
     };
-
-    async function joinDailyRoom(url) {
-      callObject = window.Daily.createCallObject({ audioSource: true, videoSource: false });
-      callObject.on("left-meeting", () => { closeClientCallUI(); });
-      await callObject.join({ url });
-    }
 
     function showClientCallScreen() {
       document.getElementById("clientCallScreen").classList.remove("hidden");
@@ -212,50 +242,57 @@
     }
 
     window.clientEndCall = async function() {
-      if (callObject) { await callObject.leave(); callObject.destroy(); callObject = null; }
-      remove(ref(db, `single_chat_room/${roomKey}/call`));
+      try {
+        if (callFrame) {
+          await callFrame.leave();
+          callFrame.destroy();
+          callFrame = null;
+        }
+        await remove(ref(db, `single_chat_room/${roomKey}/call`));
+      } catch(e) {
+        console.error("End call error:", e);
+      }
       closeClientCallUI();
     };
 
     function closeClientCallUI() {
       isClientCallActiveOrRinging = false;
-      document.getElementById("clientRingAudio").pause();
-      document.getElementById("clientCallScreen").classList.remove("flex");
-      document.getElementById("clientCallScreen").classList.add("hidden");
-      document.getElementById("incomingCallModal").style.display = "none";
+      const ringAudio = document.getElementById("clientRingAudio");
+      if (ringAudio) ringAudio.pause();
+
+      const callScreen = document.getElementById("clientCallScreen");
+      if (callScreen) {
+        callScreen.classList.remove("flex");
+        callScreen.classList.add("hidden");
+      }
+
+      const incomingModal = document.getElementById("clientIncomingCallModal");
+      if (incomingModal) incomingModal.style.display = "none";
+
       if (clientTimerInterval) clearInterval(clientTimerInterval);
-      if (callObject) { callObject.destroy(); callObject = null; }
     }
 
-    window.toggleClientMute = function() {
-      if (!callObject) return;
-      isClientMuted = !isClientMuted;
-      callObject.setLocalAudio(!isClientMuted);
-      document.getElementById("clientMuteIcon").className = isClientMuted ? "fa-solid fa-microphone-slash text-red-400" : "fa-solid fa-microphone";
-    };
-
-    window.rejectIncomingCall = function() {
-      document.getElementById("clientRingAudio").pause();
-      document.getElementById("incomingCallModal").style.display = "none";
+    window.clientRejectCall = function() {
+      const ringAudio = document.getElementById("clientRingAudio");
+      if (ringAudio) ringAudio.pause();
+      document.getElementById("clientIncomingCallModal").style.display = "none";
       remove(ref(db, `single_chat_room/${roomKey}/call`));
       isClientCallActiveOrRinging = false;
     };
 
-    window.sendMessage = async function(event) {
-      event.preventDefault();
-      const input = document.getElementById('messageInput');
-      const text = input.value.trim();
-      if(!text) return;
-      await push(ref(db, `single_chat_room/${roomKey}`), { text, sender: clientName, senderRole: "client", timestamp: Date.now() });
-      input.value = '';
+    window.clientToggleMute = function() {
+      if (!callFrame) return;
+      isMuted = !isMuted;
+      callFrame.setLocalAudio(!isMuted);
+      document.getElementById("clientMuteIcon").className = isMuted ? "fa-solid fa-microphone-slash text-red-400" : "fa-solid fa-microphone";
     };
 
-    function appendMessageToUI(text, sender, timestamp, isMe) {
+    function appendMessageToUI(text, sender, timestamp, isClientMsg) {
       const container = document.getElementById('messageContainer');
       const time = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'الآن';
-      const html = isMe 
+      const html = isClientMsg 
         ? `<div class="flex flex-col items-end w-full mb-1"><div class="bg-[#2b5278] text-white p-2.5 px-3.5 rounded-2xl rounded-tl-none max-w-md text-xs shadow"><span class="block text-[9px] text-[#8796a5] font-bold mb-0.5">${sender} (أنت)</span><span>${escapeHtml(text)}</span><span class="block text-[9px] text-[#8796a5] mt-1 text-left">${time}</span></div></div>`
-        : `<div class="flex flex-col items-start w-full mb-1"><div class="bg-[#182533] text-white p-2.5 px-3.5 rounded-2xl rounded-tr-none max-w-md text-xs shadow border border-[#232e3c]"><span class="block text-[9px] text-[#6ab2f2] font-bold mb-0.5">${sender} (الدعم)</span><span>${escapeHtml(text)}</span><span class="block text-[9px] text-[#8796a5] mt-1 text-left">${time}</span></div></div>`;
+        : `<div class="flex flex-col items-start w-full mb-1"><div class="bg-[#182533] text-white p-2.5 px-3.5 rounded-2xl rounded-tr-none max-w-md text-xs shadow border border-[#232e3c]"><span class="block text-[9px] text-[#6ab2f2] font-bold mb-0.5">${sender} (موظف الدعم)</span><span>${escapeHtml(text)}</span><span class="block text-[9px] text-[#8796a5] mt-1 text-left">${time}</span></div></div>`;
       container.insertAdjacentHTML('beforeend', html);
       container.scrollTop = container.scrollHeight;
     }
