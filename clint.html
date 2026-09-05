@@ -77,13 +77,15 @@
         .messenger-header p { font-size: 14px; color: #a3a6ad; }
 
         .messenger-controls {
-            display: flex; justify-content: center; align-items: center; gap: 25px; margin-bottom: 30px; width: 100%;
+            display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 30px; width: 100%; flex-wrap: wrap;
         }
         .m-btn {
             width: 60px; height: 60px; border-radius: 50%; border: none; color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;
         }
         .m-btn-mute { background: #3a3b3c; }
         .m-btn-mute.active { background: #e41e3f; }
+        .m-btn-speaker { background: #3a3b3c; }
+        .m-btn-speaker.active { background: #0084ff; }
         .m-btn-hangup { background: #e41e3f; }
         .m-btn-accept { background: #31a24c; }
         .m-btn:hover { opacity: 0.85; }
@@ -92,7 +94,7 @@
 <body>
 
     <audio id="ringSound" src="ring.mp3" preload="auto" loop></audio>
-    <audio id="remoteAudio" autoplay></audio>
+    <audio id="remoteAudio" autoplay playsinline></audio>
 
     <div class="name-modal" id="nameModal">
         <div class="name-box">
@@ -169,6 +171,7 @@
 
         let callObject = null;
         let isMuted = false;
+        let isSpeakerOn = false; // افتراضياً السماعة الداخلية (الإذن العادي)
 
         function initClientSession(clientName) {
             const clientChatRef = ref(db, 'chats/' + clientName);
@@ -179,7 +182,7 @@
                     <div class="msg-time-header">اليوم</div>
                     <div class="message-wrapper support">
                         <div class="message support">
-                            <p>أهلاً بك يا ${clientName}، كيف يمكننا مساعدتك اليوم؟</p>
+                            <p>أهلاً بك يا ${clientName}, كيف يمكننا مساعدتك اليوم؟</p>
                         </div>
                         <span class="msg-timestamp">الآن</span>
                     </div>
@@ -226,6 +229,8 @@
             document.getElementById('callStatusText').innerText = "جاري الاتصال الصوتي...";
             document.getElementById('messengerCallScreen').style.display = 'flex';
             document.getElementById('messengerControlsBar').innerHTML = `
+                <button class="m-btn m-btn-mute" id="muteBtn" onclick="toggleMute()"><i class="fa-solid fa-microphone"></i></button>
+                <button class="m-btn m-btn-speaker" id="speakerBtn" onclick="toggleSpeaker()"><i class="fa-solid fa-volume-high"></i></button>
                 <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
             `;
             if (ringAudio) { ringAudio.currentTime = 0; ringAudio.play().catch(e=>{}); }
@@ -241,6 +246,7 @@
             document.getElementById('callStatusText').innerText = "المكالمة الصوتية جارية...";
             document.getElementById('messengerControlsBar').innerHTML = `
                 <button class="m-btn m-btn-mute" id="muteBtn" onclick="toggleMute()"><i class="fa-solid fa-microphone"></i></button>
+                <button class="m-btn m-btn-speaker" id="speakerBtn" onclick="toggleSpeaker()"><i class="fa-solid fa-volume-high"></i></button>
                 <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
             `;
             startDailyAudioFrame();
@@ -298,6 +304,40 @@
             const btn = document.getElementById('muteBtn');
             btn.classList.toggle('active', isMuted);
             btn.innerHTML = isMuted ? '<i class="fa-solid fa-microphone-slash"></i>' : '<i class="fa-solid fa-microphone"></i>';
+        };
+
+        // دالة التحكم في مكبر الصوت (السماعة الخارجية / السماعة الداخلية)
+        window.toggleSpeaker = function() {
+            const audioEl = document.getElementById('remoteAudio');
+            const speakerBtn = document.getElementById('speakerBtn');
+            
+            isSpeakerOn = !isSpeakerOn;
+            
+            if (isSpeakerOn) {
+                // تفعيل السماعة الخارجية (Loudspeaker) عبر خاصية setSinkId إن وجدت مدعومة بالمصفح
+                speakerBtn.classList.add('active');
+                speakerBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                if (typeof audioEl.setSinkId === 'function') {
+                    // محاولة تحويل مسار الصوت للسماعة الخارجية الافتراضية
+                    navigator.mediaDevices.enumerateDevices().then(devices => {
+                        const speakers = devices.filter(d => d.kind === 'audiooutput');
+                        // اختيار أول سماعة خارجية متاحة أو تركها للافتراضي
+                        if (speakers.length > 0) {
+                            audioEl.setSinkId(speakers[0].deviceId).catch(err => console.log(err));
+                        }
+                    });
+                }
+                // للأجهزة المحمولة التي تدعم خصائص الـ AudioContext أو تعظيم مستوى الصوت
+                audioEl.volume = 1.0;
+            } else {
+                // العودة للسماعة الداخلية (EarPiece)
+                speakerBtn.classList.remove('active');
+                speakerBtn.innerHTML = '<i class="fa-solid fa-volume-low"></i>';
+                if (typeof audioEl.setSinkId === 'function') {
+                    audioEl.setSinkId('').catch(err => console.log(err));
+                }
+                audioEl.volume = 0.8; // خفض طفيف ليلائم السماعة الداخلية للأذن
+            }
         };
 
         window.startChat = function() {
