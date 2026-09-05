@@ -138,7 +138,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -153,6 +153,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const messagesRef = ref(db, 'chats/');
 
         const chatBody = document.getElementById('clientMessages');
         const ringAudio = document.getElementById('ringSound');
@@ -161,33 +162,10 @@
         let callObject = null;
         let isMuted = false;
 
-        function initClientSession(clientName) {
-            const clientChatRef = ref(db, 'chats/' + clientName);
-            
-            onValue(clientChatRef, (snapshot) => {
-                const data = snapshot.val();
-                chatBody.innerHTML = `
-                    <div class="msg-time-header">اليوم</div>
-                    <div class="message-wrapper support">
-                        <div class="message support">
-                            <p>أهلاً بك يا ${clientName}، كيف يمكننا مساعدتك اليوم؟</p>
-                        </div>
-                        <span class="msg-timestamp">الآن</span>
-                    </div>
-                `;
-                if (data) {
-                    Object.values(data).forEach(msg => {
-                        appendMessageToUI(msg);
-                    });
-                }
-            });
-
-            listenToCalls(clientName);
-        }
-
-        function listenToCalls(clientName) {
-            const safeEmpName = "default_employee"; 
-            const callRef = ref(db, 'employee_chats/' + safeEmpName + '/calls/' + clientName);
+        function listenToCalls() {
+            const clientName = sessionStorage.getItem('chatClientName');
+            if (!clientName) return;
+            const callRef = ref(db, 'calls/' + clientName);
             onValue(callRef, (snapshot) => {
                 const data = snapshot.val();
                 if (!data) return;
@@ -201,9 +179,6 @@
                         <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
                     `;
                     if (ringAudio) { ringAudio.currentTime = 0; ringAudio.play().catch(e=>{}); }
-                } else if (data.status === 'accepted') {
-                    if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
-                    document.getElementById('callStatusText').innerText = "المكالمة الصوتية جارية...";
                 } else if (data.status === 'ended') {
                     closeCallScreenUI();
                 }
@@ -212,10 +187,7 @@
 
         window.initiateCall = function() {
             const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
-            const safeEmpName = "default_employee";
-            
-            // كتابة إشارة الاتصال لضمان التقاطها فورياً من طرف الموظف
-            set(ref(db, 'employee_chats/' + safeEmpName + '/calls/' + clientName), {
+            set(ref(db, 'calls/' + clientName), {
                 sender: 'client',
                 status: 'calling',
                 timestamp: Date.now()
@@ -234,8 +206,7 @@
         window.acceptCall = function() {
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             const clientName = sessionStorage.getItem('chatClientName');
-            const safeEmpName = "default_employee";
-            set(ref(db, 'employee_chats/' + safeEmpName + '/calls/' + clientName + '/status'), 'accepted');
+            set(ref(db, 'calls/' + clientName + '/status'), 'accepted');
 
             document.getElementById('callStatusText').innerText = "المكالمة الصوتية جارية...";
             document.getElementById('messengerControlsBar').innerHTML = `
@@ -253,6 +224,7 @@
                 });
 
                 callObject.on('joined-meeting', () => {
+                    console.log("تم الانضمام للمكالمة الصوتية بنجاح");
                     callObject.setLocalAudio(true);
                 });
 
@@ -261,21 +233,22 @@
                         const audioEl = document.getElementById('remoteAudio');
                         if (audioEl) {
                             audioEl.srcObject = new MediaStream([e.track]);
-                            audioEl.play().catch(err => {});
+                            audioEl.play().catch(err => console.log("خطأ في تشغيل الصوت:", err));
                         }
                     }
                 });
             }
 
-            callObject.join({ url: DAILY_ROOM_URL }).catch(err => {});
+            callObject.join({ url: DAILY_ROOM_URL }).catch(err => {
+                console.error("خطأ في الانضمام للمكالمة الصوتية:", err);
+            });
         }
 
         window.endCallCompletely = function() {
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             const clientName = sessionStorage.getItem('chatClientName');
-            const safeEmpName = "default_employee";
             if (clientName) {
-                set(ref(db, 'employee_chats/' + safeEmpName + '/calls/' + clientName + '/status'), 'ended');
+                set(ref(db, 'calls/' + clientName + '/status'), 'ended');
             }
             closeCallScreenUI();
         };
@@ -304,7 +277,7 @@
             document.getElementById('nameModal').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
             document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
-            initClientSession(nameInput);
+            listenToCalls();
         };
 
         window.onload = function() {
@@ -313,7 +286,7 @@
                 document.getElementById('nameModal').style.display = 'none';
                 document.getElementById('chatContainer').style.display = 'flex';
                 document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + savedName;
-                initClientSession(savedName);
+                listenToCalls();
             }
         };
 
@@ -326,7 +299,11 @@
             return hours + ':' + minutes + ' ' + ampm;
         }
 
-        function appendMessageToUI(data) {
+        onChildAdded(messagesRef, (snapshot) => {
+            const data = snapshot.val();
+            const currentClientName = sessionStorage.getItem('chatClientName');
+            if (data.clientName && currentClientName && data.clientName !== currentClientName) return;
+
             const wrapperDiv = document.createElement('div');
             wrapperDiv.classList.add('message-wrapper');
             const msgDiv = document.createElement('div');
@@ -345,7 +322,7 @@
             wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
             chatBody.appendChild(wrapperDiv);
             chatBody.scrollTop = chatBody.scrollHeight;
-        }
+        });
 
         window.sendClientMessage = function() {
             const input = document.getElementById('clientInput');
@@ -353,9 +330,7 @@
             const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
             if (text === "") return;
             const now = new Date();
-            
-            const clientChatRef = ref(db, 'chats/' + clientName);
-            push(clientChatRef, {
+            push(messagesRef, {
                 sender: 'client', clientName: clientName, text: text,
                 timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now)
             });
