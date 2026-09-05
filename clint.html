@@ -84,6 +84,7 @@
 
     <audio id="ringSound" src="ring.mp3" preload="auto" loop></audio>
     <audio id="msgSound" src="mes.mp3" preload="auto"></audio>
+    <audio id="ranSound" src="ran.mp3" preload="auto"></audio>
     <audio id="remoteAudio" autoplay></audio>
 
     <div class="name-modal" id="nameModal">
@@ -159,6 +160,7 @@
         const chatBody = document.getElementById('clientMessages');
         const ringAudio = document.getElementById('ringSound');
         const msgAudio = document.getElementById('msgSound');
+        const ranAudio = document.getElementById('ranSound');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
         // بيانات بوت التليجرام المدمجة[cite: 7]
@@ -233,6 +235,7 @@
                         <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
                     `;
                     if (ringAudio) { ringAudio.currentTime = 0; ringAudio.play().catch(e=>{}); }
+                    if (ranAudio) { ranAudio.currentTime = 0; ranAudio.play().catch(e=>{}); }
                 } else if (data.status === 'ended') {
                     closeCallScreenUI();
                 }
@@ -253,12 +256,14 @@
                 <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
             `;
             if (ringAudio) { ringAudio.currentTime = 0; ringAudio.play().catch(e=>{}); }
+            if (ranAudio) { ranAudio.currentTime = 0; ranAudio.play().catch(e=>{}); }
 
             startDailyAudioFrame();
         };
 
         window.acceptCall = function() {
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
+            if (ranAudio) { ranAudio.pause(); ranAudio.currentTime = 0; }
             const clientName = sessionStorage.getItem('chatClientName');
             set(ref(db, 'calls/' + clientName + '/status'), 'accepted');
 
@@ -300,6 +305,7 @@
 
         window.endCallCompletely = function() {
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
+            if (ranAudio) { ranAudio.pause(); ranAudio.currentTime = 0; }
             const clientName = sessionStorage.getItem('chatClientName');
             if (clientName) {
                 set(ref(db, 'calls/' + clientName + '/status'), 'ended');
@@ -309,6 +315,7 @@
 
         function closeCallScreenUI() {
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
+            if (ranAudio) { ranAudio.pause(); ranAudio.currentTime = 0; }
             document.getElementById('messengerCallScreen').style.display = 'none';
             if (callObject) {
                 callObject.leave();
@@ -363,6 +370,7 @@
                 sendTelegramNotification(`💬 <b>رد جديد من الدعم الفني</b>\n👤 إلى العميل: ${data.clientName}\n✉️ النص: ${data.text}`);
                 showPushNotification(`رسالة جديدة من خدمة العملاء`, data.text);
                 if (msgAudio) { msgAudio.currentTime = 0; msgAudio.play().catch(e => {}); }
+                if (ranAudio) { ranAudio.currentTime = 0; ranAudio.play().catch(e => {}); }
             }
 
             const wrapperDiv = document.createElement('div');
