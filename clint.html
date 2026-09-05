@@ -3,116 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تواصل معنا - الدعم الفني Firebase</title>
+    <title>تواصل معنا - المكالمة الصوتية</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/@daily-co/daily-js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #e9ebee; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        body { background-color: #e9ebee; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
         
         .name-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;
         }
         .name-box {
-            background: #fff;
-            padding: 30px;
-            border-radius: 12px;
-            width: 320px;
-            text-align: center;
+            background: #fff; padding: 30px; border-radius: 12px; width: 320px; text-align: center;
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
         }
         .name-box h3 { margin-bottom: 15px; color: #050505; font-size: 18px; }
         .name-box input {
-            width: 100%;
-            padding: 10px 15px;
-            border: 1px solid #ccd0d5;
-            border-radius: 20px;
-            outline: none;
-            font-size: 14px;
-            margin-bottom: 15px;
-            text-align: center;
+            width: 100%; padding: 10px 15px; border: 1px solid #ccd0d5; border-radius: 20px;
+            outline: none; font-size: 14px; margin-bottom: 15px; text-align: center;
         }
-        .name-box input:focus { border-color: #0084ff; }
         .name-box button {
-            background: #0084ff;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            width: 100%;
+            background: #0084ff; color: #fff; border: none; padding: 10px 20px;
+            border-radius: 20px; cursor: pointer; font-size: 14px; width: 100%;
         }
 
-        .client-chat-container { width: 380px; height: 550px; background: #fff; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; }
+        .client-chat-container { width: 380px; height: 550px; background: #fff; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; position: relative; }
         .chat-header { background: #0084ff; color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
         .support-info { display: flex; align-items: center; }
         .support-info img { width: 40px; height: 40px; border-radius: 50%; margin-left: 10px; border: 2px solid #fff; object-fit: cover; }
         .support-info h3 { font-size: 15px; }
         .status { font-size: 12px; color: #e4e6eb; }
-        .close-btn { font-size: 18px; cursor: pointer; }
+        
+        .call-actions { display: flex; gap: 10px; }
+        .call-actions button { background: #31a24c; border: none; color: #fff; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .call-actions button:hover { opacity: 0.85; }
+
         .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f4f5f7; display: flex; flex-direction: column; gap: 8px; }
         .msg-time-header { text-align: center; font-size: 11px; color: #8a8d91; margin: 5px 0; }
         
-        .message-wrapper {
-            display: flex;
-            flex-direction: column;
-            max-width: 75%;
-        }
-        .message-wrapper.client {
-            align-self: flex-end;
-            align-items: flex-end;
-        }
-        .message-wrapper.support {
-            align-self: flex-start;
-            align-items: flex-start;
-        }
+        .message-wrapper { display: flex; flex-direction: column; max-width: 75%; }
+        .message-wrapper.client { align-self: flex-end; align-items: flex-end; }
+        .message-wrapper.support { align-self: flex-start; align-items: flex-start; }
 
-        .message {
-            padding: 10px 14px;
-            border-radius: 15px;
-            font-size: 14px;
-            word-break: break-word;
-        }
+        .message { padding: 10px 14px; border-radius: 15px; font-size: 14px; word-break: break-word; }
         .message.support { background: #fff; color: #050505; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .message.client { background: #0084ff; color: #fff; }
-
-        .msg-timestamp {
-            font-size: 10px;
-            color: #8a8d91;
-            margin-top: 3px;
-            padding: 0 4px;
-        }
+        .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
 
         .chat-footer { padding: 12px; background: #fff; border-top: 1px solid #e4e6eb; display: flex; gap: 10px; align-items: center; }
         .chat-footer input { flex: 1; padding: 10px 15px; border: 1px solid #ccd0d5; border-radius: 20px; outline: none; font-size: 14px; }
-        .chat-footer input:focus { border-color: #0084ff; }
         .chat-footer button { background: #0084ff; color: #fff; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; }
 
-        /* جعل الشات يتجاوب بشكل كامل ليملأ الشاشة على الهواتف المحمولة */
-        @media (max-width: 480px) {
-            body { background-color: #fff; height: 100vh; align-items: stretch; }
-            .client-chat-container { width: 100%; height: 100vh; border-radius: 0; box-shadow: none; }
+        /* شاشة المكالمة الصوتية */
+        #messengerCallScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #1c1e21; display: none; flex-direction: column; justify-content: space-between; align-items: center; z-index: 9999; padding: 50px 0;
         }
+        .messenger-header {
+            text-align: center; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 15px;
+        }
+        .messenger-header img { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #31a24c; object-fit: cover; }
+        .messenger-header h2 { font-size: 22px; }
+        .messenger-header p { font-size: 14px; color: #a3a6ad; }
+
+        .messenger-controls {
+            display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 20px;
+        }
+        .m-btn {
+            width: 65px; height: 65px; border-radius: 50%; border: none; color: #fff; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;
+        }
+        .m-btn-mute { background: #3a3b3c; }
+        .m-btn-mute.active { background: #e41e3f; }
+        .m-btn-hangup { background: #e41e3f; }
+        .m-btn-accept { background: #31a24c; }
+        .m-btn:hover { opacity: 0.85; }
     </style>
 </head>
 <body>
 
-    <audio id="msgSound" src="mes.mp3" preload="auto"></audio>
+    <audio id="ringSound" src="ring.mp3" preload="auto" loop></audio>
+    <audio id="remoteAudio" autoplay></audio>
 
     <div class="name-modal" id="nameModal">
         <div class="name-box">
             <h3>أدخل اسمك للبدء</h3>
             <input type="text" id="clientNameInput" placeholder="اكتب اسمك هنا...">
             <button onclick="startChat()">بدء المحادثة</button>
+        </div>
+    </div>
+
+    <!-- شاشة المكالمة الصوتية -->
+    <div id="messengerCallScreen">
+        <div class="messenger-header">
+            <img src="22.jpg" alt="User">
+            <h2 id="callStatusText">جاري الاتصال...</h2>
+            <p id="callSubText">مكالمة صوتية - خدمة العملاء</p>
+        </div>
+        
+        <div id="messengerControlsBar" class="messenger-controls">
+            <button class="m-btn m-btn-hangup" onclick="endCallCompletely()" title="إنهاء المكالمة"><i class="fa-solid fa-phone-slash"></i></button>
         </div>
     </div>
 
@@ -125,7 +115,9 @@
                     <span class="status" id="welcomeUserTitle">متصل الآن</span>
                 </div>
             </div>
-            <i class="fa-solid fa-xmark close-btn"></i>
+            <div class="call-actions">
+                <button onclick="initiateCall()" title="اتصال صوتي"><i class="fa-solid fa-phone"></i></button>
+            </div>
         </div>
 
         <div class="chat-body" id="clientMessages">
@@ -146,7 +138,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -164,49 +156,129 @@
         const messagesRef = ref(db, 'chats/');
 
         const chatBody = document.getElementById('clientMessages');
-        const msgSound = document.getElementById('msgSound');
+        const ringAudio = document.getElementById('ringSound');
+        const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
-        // معلومات بوت تلجرام
-        const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
-        const TELEGRAM_CHAT_ID = "7594072203";
+        let callObject = null;
+        let isMuted = false;
 
-        function sendTelegramNotification(clientName, messageText) {
-            const text = `🔔 رسالة جديدة من العميل:\n👤 الاسم: ${clientName}\n💬 النص: ${messageText}`;
-            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+        function listenToCalls() {
+            const clientName = sessionStorage.getItem('chatClientName');
+            if (!clientName) return;
+            const callRef = ref(db, 'calls/' + clientName);
+            onValue(callRef, (snapshot) => {
+                const data = snapshot.val();
+                if (!data) return;
 
-            fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: TELEGRAM_CHAT_ID,
-                    text: text
-                })
-            }).catch(err => console.log("Telegram Error:", err));
-        }
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker Registered!', reg))
-                    .catch(err => console.log('Service Worker Failed:', err));
+                if (data.status === 'calling' && data.sender === 'support') {
+                    document.getElementById('callStatusText').innerText = "مكالمة صوتية واردة...";
+                    document.getElementById('messengerCallScreen').style.display = 'flex';
+                    
+                    document.getElementById('messengerControlsBar').innerHTML = `
+                        <button class="m-btn m-btn-accept" onclick="acceptCall()"><i class="fa-solid fa-phone"></i></button>
+                        <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
+                    `;
+                    if (ringAudio) { ringAudio.currentTime = 0; ringAudio.play().catch(e=>{}); }
+                } else if (data.status === 'ended') {
+                    closeCallScreenUI();
+                }
             });
         }
 
-        function requestNotificationPermission() {
-            if ('Notification' in window && Notification.permission !== 'granted') {
-                Notification.requestPermission();
+        window.initiateCall = function() {
+            const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
+            set(ref(db, 'calls/' + clientName), {
+                sender: 'client',
+                status: 'calling',
+                timestamp: Date.now()
+            });
+
+            document.getElementById('callStatusText').innerText = "جاري الاتصال الصوتي...";
+            document.getElementById('messengerCallScreen').style.display = 'flex';
+            document.getElementById('messengerControlsBar').innerHTML = `
+                <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
+            `;
+            if (ringAudio) { ringAudio.currentTime = 0; ringAudio.play().catch(e=>{}); }
+
+            startDailyAudioFrame();
+        };
+
+        window.acceptCall = function() {
+            if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
+            const clientName = sessionStorage.getItem('chatClientName');
+            set(ref(db, 'calls/' + clientName + '/status'), 'accepted');
+
+            document.getElementById('callStatusText').innerText = "المكالمة الصوتية جارية...";
+            document.getElementById('messengerControlsBar').innerHTML = `
+                <button class="m-btn m-btn-mute" id="muteBtn" onclick="toggleMute()"><i class="fa-solid fa-microphone"></i></button>
+                <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
+            `;
+            startDailyAudioFrame();
+        };
+
+        function startDailyAudioFrame() {
+            if (!callObject) {
+                callObject = window.DailyIframe.createCallObject({
+                    audioSource: true,
+                    videoSource: false
+                });
+
+                callObject.on('joined-meeting', () => {
+                    console.log("تم الانضمام للمكالمة الصوتية بنجاح");
+                    callObject.setLocalAudio(true);
+                });
+
+                callObject.on('track-started', (e) => {
+                    if (e.track.kind === 'audio' && !e.participant.local) {
+                        const audioEl = document.getElementById('remoteAudio');
+                        if (audioEl) {
+                            audioEl.srcObject = new MediaStream([e.track]);
+                            audioEl.play().catch(err => console.log("خطأ في تشغيل الصوت:", err));
+                        }
+                    }
+                });
+            }
+
+            callObject.join({ url: DAILY_ROOM_URL }).catch(err => {
+                console.error("خطأ في الانضمام للمكالمة الصوتية:", err);
+            });
+        }
+
+        window.endCallCompletely = function() {
+            if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
+            const clientName = sessionStorage.getItem('chatClientName');
+            if (clientName) {
+                set(ref(db, 'calls/' + clientName + '/status'), 'ended');
+            }
+            closeCallScreenUI();
+        };
+
+        function closeCallScreenUI() {
+            if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
+            document.getElementById('messengerCallScreen').style.display = 'none';
+            if (callObject) {
+                callObject.leave();
             }
         }
 
-        function playMessageSound() {
-            if (msgSound) {
-                msgSound.pause();
-                msgSound.currentTime = 0;
-                msgSound.play().catch(e => {
-                    console.log("Audio Play Error:", e);
-                });
-            }
-        }
+        window.toggleMute = function() {
+            if (!callObject) return;
+            isMuted = !isMuted;
+            callObject.setLocalAudio(!isMuted);
+            const btn = document.getElementById('muteBtn');
+            btn.classList.toggle('active', isMuted);
+            btn.innerHTML = isMuted ? '<i class="fa-solid fa-microphone-slash"></i>' : '<i class="fa-solid fa-microphone"></i>';
+        };
+
+        window.startChat = function() {
+            const nameInput = document.getElementById('clientNameInput').value.trim();
+            if (nameInput === "") { alert("الرجاء كتابة اسمك أولاً"); return; }
+            sessionStorage.setItem('chatClientName', nameInput);
+            document.getElementById('nameModal').style.display = 'none';
+            document.getElementById('chatContainer').style.display = 'flex';
+            document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
+            listenToCalls();
+        };
 
         window.onload = function() {
             const savedName = sessionStorage.getItem('chatClientName');
@@ -214,30 +286,7 @@
                 document.getElementById('nameModal').style.display = 'none';
                 document.getElementById('chatContainer').style.display = 'flex';
                 document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + savedName;
-                requestNotificationPermission();
-            }
-        };
-
-        window.startChat = function() {
-            const nameInput = document.getElementById('clientNameInput').value.trim();
-            if (nameInput === "") {
-                alert("الرجاء كتابة اسمك أولاً");
-                return;
-            }
-
-            sessionStorage.setItem('chatClientName', nameInput);
-            document.getElementById('nameModal').style.display = 'none';
-            document.getElementById('chatContainer').style.display = 'flex';
-            document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
-            
-            requestNotificationPermission();
-
-            if (msgSound) {
-                msgSound.volume = 0;
-                msgSound.play().then(() => {
-                    msgSound.pause();
-                    msgSound.volume = 1;
-                }).catch(() => {});
+                listenToCalls();
             }
         };
 
@@ -245,58 +294,32 @@
             let hours = date.getHours();
             let minutes = date.getMinutes();
             let ampm = hours >= 12 ? 'م' : 'ص';
-            hours = hours % 12;
-            hours = hours ? hours : 12;
+            hours = hours % 12; hours = hours ? hours : 12;
             minutes = minutes < 10 ? '0' + minutes : minutes;
             return hours + ':' + minutes + ' ' + ampm;
         }
 
-        let isInitialLoad = true;
-        setTimeout(() => { isInitialLoad = false; }, 1500);
-
         onChildAdded(messagesRef, (snapshot) => {
             const data = snapshot.val();
             const currentClientName = sessionStorage.getItem('chatClientName');
-            
-            if (data.clientName && currentClientName && data.clientName !== currentClientName) {
-                return;
-            }
+            if (data.clientName && currentClientName && data.clientName !== currentClientName) return;
 
             const wrapperDiv = document.createElement('div');
             wrapperDiv.classList.add('message-wrapper');
-            
             const msgDiv = document.createElement('div');
             msgDiv.classList.add('message');
-
             const timeSpan = document.createElement('span');
             timeSpan.classList.add('msg-timestamp');
-
-            const messageDate = new Date(data.timestamp || Date.now());
-            timeSpan.innerText = formatTime(messageDate);
+            timeSpan.innerText = formatTime(new Date(data.timestamp || Date.now()));
 
             if (data.sender === 'client') {
-                wrapperDiv.classList.add('client');
-                msgDiv.classList.add('client');
+                wrapperDiv.classList.add('client'); msgDiv.classList.add('client');
                 msgDiv.innerHTML = `<p>${data.text}</p>`;
             } else {
-                wrapperDiv.classList.add('support');
-                msgDiv.classList.add('support');
+                wrapperDiv.classList.add('support'); msgDiv.classList.add('support');
                 msgDiv.innerHTML = `<p>${data.text}</p>`;
-                
-                if (!isInitialLoad) {
-                    playMessageSound();
-
-                    if ('Notification' in window && Notification.permission === 'granted') {
-                        new Notification('رسالة جديدة من خدمة العملاء', {
-                            body: data.text,
-                            icon: './22.jpg'
-                        });
-                    }
-                }
             }
-
-            wrapperDiv.appendChild(msgDiv);
-            wrapperDiv.appendChild(timeSpan);
+            wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
             chatBody.appendChild(wrapperDiv);
             chatBody.scrollTop = chatBody.scrollHeight;
         });
@@ -305,22 +328,12 @@
             const input = document.getElementById('clientInput');
             const text = input.value.trim();
             const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
-
             if (text === "") return;
-
             const now = new Date();
-
             push(messagesRef, {
-                sender: 'client',
-                clientName: clientName,
-                text: text,
-                timestamp: now.getTime(),
-                dateString: now.toLocaleDateString('ar-EG'),
-                timeString: formatTime(now)
+                sender: 'client', clientName: clientName, text: text,
+                timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now)
             });
-
-            sendTelegramNotification(clientName, text);
-
             input.value = "";
         };
 
