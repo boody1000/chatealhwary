@@ -164,7 +164,6 @@
         function initClientSession(clientName) {
             const clientChatRef = ref(db, 'chats/' + clientName);
             
-            // جلب وعرض محادثة هذا العميل المستقلة فقط
             onValue(clientChatRef, (snapshot) => {
                 const data = snapshot.val();
                 chatBody.innerHTML = `
@@ -214,6 +213,8 @@
         window.initiateCall = function() {
             const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
             const safeEmpName = "default_employee";
+            
+            // كتابة إشارة الاتصال لضمان التقاطها فورياً من طرف الموظف
             set(ref(db, 'employee_chats/' + safeEmpName + '/calls/' + clientName), {
                 sender: 'client',
                 status: 'calling',
@@ -252,7 +253,6 @@
                 });
 
                 callObject.on('joined-meeting', () => {
-                    console.log("تم الانضمام للمكالمة الصوتية بنجاح");
                     callObject.setLocalAudio(true);
                 });
 
@@ -261,15 +261,13 @@
                         const audioEl = document.getElementById('remoteAudio');
                         if (audioEl) {
                             audioEl.srcObject = new MediaStream([e.track]);
-                            audioEl.play().catch(err => console.log("خطأ في تشغيل الصوت:", err));
+                            audioEl.play().catch(err => {});
                         }
                     }
                 });
             }
 
-            callObject.join({ url: DAILY_ROOM_URL }).catch(err => {
-                console.error("خطأ في الانضمام للمكالمة الصوتية:", err);
-            });
+            callObject.join({ url: DAILY_ROOM_URL }).catch(err => {});
         }
 
         window.endCallCompletely = function() {
