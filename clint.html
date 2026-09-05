@@ -2,34 +2,43 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>تواصل معنا - المكالمة الصوتية</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #e9ebee; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        body { background-color: #e9ebee; height: 100vh; height: 100dvh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
         
         .name-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;
+            background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px;
         }
         .name-box {
-            background: #fff; padding: 30px; border-radius: 12px; width: 320px; text-align: center;
+            background: #fff; padding: 30px; border-radius: 12px; width: 100%; max-width: 320px; text-align: center;
             box-shadow: 0 5px 20px rgba(0,0,0,0.2);
         }
         .name-box h3 { margin-bottom: 15px; color: #050505; font-size: 18px; }
         .name-box input {
-            width: 100%; padding: 10px 15px; border: 1px solid #ccd0d5; border-radius: 20px;
+            width: 100%; padding: 12px 15px; border: 1px solid #ccd0d5; border-radius: 20px;
             outline: none; font-size: 14px; margin-bottom: 15px; text-align: center;
         }
         .name-box button {
-            background: #0084ff; color: #fff; border: none; padding: 10px 20px;
-            border-radius: 20px; cursor: pointer; font-size: 14px; width: 100%;
+            background: #0084ff; color: #fff; border: none; padding: 12px 20px;
+            border-radius: 20px; cursor: pointer; font-size: 14px; width: 100%; font-weight: bold;
         }
 
-        .client-chat-container { width: 380px; height: 550px; background: #fff; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; position: relative; }
-        .chat-header { background: #0084ff; color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .client-chat-container { 
+            width: 100%; height: 100%; background: #fff; display: none; flex-direction: column; overflow: hidden; position: relative; 
+        }
+
+        @media (min-width: 480px) {
+            .client-chat-container {
+                width: 400px; height: 600px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            }
+        }
+
+        .chat-header { background: #0084ff; color: #fff; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
         .support-info { display: flex; align-items: center; }
         .support-info img { width: 40px; height: 40px; border-radius: 50%; margin-left: 10px; border: 2px solid #fff; object-fit: cover; }
         .support-info h3 { font-size: 15px; }
@@ -42,7 +51,7 @@
         .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #f4f5f7; display: flex; flex-direction: column; gap: 8px; }
         .msg-time-header { text-align: center; font-size: 11px; color: #8a8d91; margin: 5px 0; }
         
-        .message-wrapper { display: flex; flex-direction: column; max-width: 75%; }
+        .message-wrapper { display: flex; flex-direction: column; max-width: 80%; }
         .message-wrapper.client { align-self: flex-end; align-items: flex-end; }
         .message-wrapper.support { align-self: flex-start; align-items: flex-start; }
 
@@ -51,27 +60,27 @@
         .message.client { background: #0084ff; color: #fff; }
         .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
 
-        .chat-footer { padding: 12px; background: #fff; border-top: 1px solid #e4e6eb; display: flex; gap: 10px; align-items: center; }
+        .chat-footer { padding: 10px 15px; background: #fff; border-top: 1px solid #e4e6eb; display: flex; gap: 10px; align-items: center; }
         .chat-footer input { flex: 1; padding: 10px 15px; border: 1px solid #ccd0d5; border-radius: 20px; outline: none; font-size: 14px; }
-        .chat-footer button { background: #0084ff; color: #fff; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+        .chat-footer button { background: #0084ff; color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
 
         /* شاشة المكالمة الصوتية */
         #messengerCallScreen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #1c1e21; display: none; flex-direction: column; justify-content: space-between; align-items: center; z-index: 9999; padding: 50px 0;
+            background: #1c1e21; display: none; flex-direction: column; justify-content: space-between; align-items: center; z-index: 9999; padding: 40px 20px;
         }
         .messenger-header {
-            text-align: center; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 15px;
+            text-align: center; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 20px;
         }
-        .messenger-header img { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #31a24c; object-fit: cover; }
-        .messenger-header h2 { font-size: 22px; }
+        .messenger-header img { width: 90px; height: 90px; border-radius: 50%; border: 3px solid #31a24c; object-fit: cover; }
+        .messenger-header h2 { font-size: 20px; }
         .messenger-header p { font-size: 14px; color: #a3a6ad; }
 
         .messenger-controls {
-            display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 20px;
+            display: flex; justify-content: center; align-items: center; gap: 25px; margin-bottom: 30px; width: 100%;
         }
         .m-btn {
-            width: 65px; height: 65px; border-radius: 50%; border: none; color: #fff; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;
+            width: 60px; height: 60px; border-radius: 50%; border: none; color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s;
         }
         .m-btn-mute { background: #3a3b3c; }
         .m-btn-mute.active { background: #e41e3f; }
@@ -164,7 +173,6 @@
         function initClientSession(clientName) {
             const clientChatRef = ref(db, 'chats/' + clientName);
             
-            // جلب وعرض محادثة هذا العميل المستقلة فقط
             onValue(clientChatRef, (snapshot) => {
                 const data = snapshot.val();
                 chatBody.innerHTML = `
