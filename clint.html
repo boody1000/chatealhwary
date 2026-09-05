@@ -138,7 +138,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -153,7 +153,6 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const messagesRef = ref(db, 'chats/');
 
         const chatBody = document.getElementById('clientMessages');
         const ringAudio = document.getElementById('ringSound');
@@ -162,9 +161,32 @@
         let callObject = null;
         let isMuted = false;
 
-        function listenToCalls() {
-            const clientName = sessionStorage.getItem('chatClientName');
-            if (!clientName) return;
+        function initClientSession(clientName) {
+            const clientChatRef = ref(db, 'chats/' + clientName);
+            
+            // جلب وعرض محادثة هذا العميل المستقلة فقط
+            onValue(clientChatRef, (snapshot) => {
+                const data = snapshot.val();
+                chatBody.innerHTML = `
+                    <div class="msg-time-header">اليوم</div>
+                    <div class="message-wrapper support">
+                        <div class="message support">
+                            <p>أهلاً بك يا ${clientName}، كيف يمكننا مساعدتك اليوم؟</p>
+                        </div>
+                        <span class="msg-timestamp">الآن</span>
+                    </div>
+                `;
+                if (data) {
+                    Object.values(data).forEach(msg => {
+                        appendMessageToUI(msg);
+                    });
+                }
+            });
+
+            listenToCalls(clientName);
+        }
+
+        function listenToCalls(clientName) {
             const callRef = ref(db, 'calls/' + clientName);
             onValue(callRef, (snapshot) => {
                 const data = snapshot.val();
@@ -277,7 +299,7 @@
             document.getElementById('nameModal').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
             document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
-            listenToCalls();
+            initClientSession(nameInput);
         };
 
         window.onload = function() {
@@ -286,7 +308,7 @@
                 document.getElementById('nameModal').style.display = 'none';
                 document.getElementById('chatContainer').style.display = 'flex';
                 document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + savedName;
-                listenToCalls();
+                initClientSession(savedName);
             }
         };
 
@@ -299,11 +321,7 @@
             return hours + ':' + minutes + ' ' + ampm;
         }
 
-        onChildAdded(messagesRef, (snapshot) => {
-            const data = snapshot.val();
-            const currentClientName = sessionStorage.getItem('chatClientName');
-            if (data.clientName && currentClientName && data.clientName !== currentClientName) return;
-
+        function appendMessageToUI(data) {
             const wrapperDiv = document.createElement('div');
             wrapperDiv.classList.add('message-wrapper');
             const msgDiv = document.createElement('div');
@@ -322,7 +340,7 @@
             wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
             chatBody.appendChild(wrapperDiv);
             chatBody.scrollTop = chatBody.scrollHeight;
-        });
+        }
 
         window.sendClientMessage = function() {
             const input = document.getElementById('clientInput');
@@ -330,7 +348,9 @@
             const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
             if (text === "") return;
             const now = new Date();
-            push(messagesRef, {
+            
+            const clientChatRef = ref(db, 'chats/' + clientName);
+            push(clientChatRef, {
                 sender: 'client', clientName: clientName, text: text,
                 timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now)
             });
