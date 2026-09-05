@@ -31,6 +31,16 @@
         .client-card-info h4 { font-size: 15px; color: #050505; display: flex; justify-content: space-between; align-items: center; }
         .client-card-info p { font-size: 13px; color: #65676b; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; }
 
+        /* إضافة ستايل لعداد الرسائل غير المقروءة بجوار صورة العميل */
+        .client-avatar-container { position: relative; display: inline-block; }
+        .unread-badge {
+            position: absolute; top: 0; left: 0;
+            background: #e41e3f; color: #fff; border-radius: 50%;
+            padding: 2px 6px; font-size: 11px; font-weight: bold;
+            min-width: 18px; text-align: center; border: 2px solid #fff;
+            display: none;
+        }
+
         .chat-section { width: 100%; height: 100%; display: flex; flex-direction: column; background: #fff; position: absolute; top: 0; right: 0; transform: translateX(-100%); transition: transform 0.3s ease-in-out; z-index: 3; }
         .chat-section.show-screen { transform: translateX(0); }
         
@@ -48,7 +58,7 @@
 
         .call-actions { display: flex; gap: 10px; }
         .call-actions button { background: #f0f2f5; border: none; color: #0084ff; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .call-actions button:hover { background: #e4e6eb; }
+        .call-actions button:hover { background: #e41e3f; }
 
         .chat-messages-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f4f5f7; }
         .message-wrapper { display: flex; flex-direction: column; max-width: 65%; }
@@ -180,6 +190,9 @@
         const db = getDatabase(app);
         const chatsRef = ref(db, 'chats/');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
+
+        // تخزين عدد الرسائل غير المقروءة لكل عميل محلياً
+        let unreadCounts = JSON.parse(localStorage.getItem('employeeUnreadCounts')) || {};
 
         // بيانات بوت التليجرام المدمجة
         const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
@@ -530,6 +543,12 @@
                         let newMsg = data[key];
                         if (newMsg.sender === 'client') {
                             playNotificationSound();
+                            // زيادة عدد الرسائل غير المقروءة للعميل إذا لم يكن هو الشات المفتوح حالياً
+                            let cName = newMsg.clientName || 'زائر';
+                            if (activeClientName !== cName) {
+                                unreadCounts[cName] = (unreadCounts[cName] || 0) + 1;
+                                localStorage.setItem('employeeUnreadCounts', JSON.stringify(unreadCounts));
+                            }
                             // إرسال إشعار تليجرام عند استلام رسالة جديدة من العميل
                             sendTelegramNotification(`💬 <b>رسالة جديدة من عميل</b>\n👤 الاسم: ${newMsg.clientName || 'زائر'}\n✉️ النص: ${newMsg.text}`);
                             // إظهار إشعار سطح المكتب والموبايل عبر الـ Service Worker
@@ -555,8 +574,15 @@
                 let cardDiv = document.createElement('div');
                 cardDiv.classList.add('client-card');
                 if (activeClientName === cName) cardDiv.classList.add('active');
+                
+                let unreadNum = unreadCounts[cName] || 0;
+                let badgeDisplay = unreadNum > 0 ? `display: block;` : `display: none;`;
+
                 cardDiv.innerHTML = `
-                    <img src="https://i.pravatar.cc/150?img=${cName.length + 10}" alt="avatar">
+                    <div class="client-avatar-container">
+                        <img src="https://i.pravatar.cc/150?img=${cName.length + 10}" alt="avatar">
+                        <span class="unread-badge" id="badge_${cName}" style="${badgeDisplay}">${unreadNum}</span>
+                    </div>
                     <div class="client-card-info">
                         <h4>${cName}</h4>
                         <p>${lastMsg.text}</p>
@@ -573,6 +599,16 @@
 
         window.openClientChat = function(cName, messages, element) {
             activeClientName = cName;
+            
+            // تصفير عداد الرسائل غير المقروءة عند فتح الشات للعميل
+            unreadCounts[cName] = 0;
+            localStorage.setItem('employeeUnreadCounts', JSON.stringify(unreadCounts));
+            let badgeEl = document.getElementById(`badge_${cName}`);
+            if (badgeEl) {
+                badgeEl.innerText = '0';
+                badgeEl.style.display = 'none';
+            }
+
             document.getElementById('noChatScreen').style.display = 'none';
             document.getElementById('chatBoxContainer').style.display = 'flex';
             document.getElementById('currentChatClientName').innerText = cName;
@@ -631,4 +667,3 @@
     </script>
 </body>
 </html>
-
