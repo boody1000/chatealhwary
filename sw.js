@@ -1,43 +1,36 @@
-// Service Worker المتكامل لإدارة الإشعارات في الخلفية - شركة الهواري للزواج
+// استيراد مكتبات Firebase متوافقة مع Service Worker
+importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js');
 
-self.addEventListener('install', (event) => {
-    self.skipWaiting();
+firebase.initializeApp({
+    apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
+    authDomain: "marry-55604.firebaseapp.com",
+    databaseURL: "https://marry-55604-default-rtdb.firebaseio.com",
+    projectId: "marry-55604",
+    storageBucket: "marry-55604.firebasestorage.app",
+    messagingSenderId: "524067560260",
+    appId: "1:524067560260:web:adc87a02eadf098d5a5511"
 });
 
-self.addEventListener('activate', (event) => {
-    event.waitUntil(clients.claim());
+const messaging = firebase.messaging();
+
+// استقبال الإشعارات في الخلفية التامة (حتى لو المتصفح مغلق)
+messaging.onBackgroundMessage((payload) => {
+    const notificationTitle = payload.notification?.title || 'رسالة جديدة - الهواري للزواج';
+    const notificationOptions = {
+        body: payload.notification?.body || 'لديك رسالة جديدة في الشات',
+        icon: './22.jpg',
+        badge: './22.jpg',
+        vibrate: [300, 100, 300, 100, 300],
+        data: { url: payload.data?.url || './clint.html' }
+    };
+
+    self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// استقبال أمر إظهار الإشعار من صفحة الشات الرئيسية
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-        const title = event.data.title || 'رسالة جديدة - شركة الهواري للزواج';
-        const options = {
-            body: event.data.body || 'لديك رسالة جديدة في الشات',
-            icon: './22.jpg', // تأكد أن هذه الصورة موجودة في مشروعك
-            badge: './22.jpg',
-            vibrate: [300, 100, 300, 100, 300], // اهتزاز قوي ومتكرر لجذب الانتباه مثل الواتساب
-            tag: 'hawary-client-chat-msg', // منع تكرار الإشعارات المزعجة وتحديثها
-            renotify: true, // إصدار تنبيه صوتي/اهتزاز حتى لو كان هناك إشعار سابق
-            requireInteraction: false, 
-            actions: [
-                { action: 'open', title: 'فتح المحادثة' }
-            ],
-            data: { url: event.data.url || self.location.origin }
-        };
-
-        event.waitUntil(
-            self.registration.showNotification(title, options)
-        );
-    }
-});
-
-// عند الضغط على الإشعار الخارجي، يفتح الموقع أو يعيد التركيز عليه فوراً
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    
-    const targetUrl = event.notification.data.url || './clint.html';
-
+    const targetUrl = event.notification.data?.url || './clint.html';
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             for (let i = 0; i < clientList.length; i++) {
@@ -51,4 +44,23 @@ self.addEventListener('notificationclick', (event) => {
             }
         })
     );
+});
+
+// استقبال طلب إظهار إشعار جاي من صفحة clint.html نفسها عن طريق postMessage
+// (ده اللي كان ناقص - من غيره showPushNotification في الصفحة كانت بتبعت
+// الرسالة للـ Service Worker من غير ما حد يستقبلها أو يعرض أي إشعار فعلي)
+self.addEventListener('message', (event) => {
+    const data = event.data;
+    if (!data || data.type !== 'SHOW_NOTIFICATION') return;
+
+    const title = data.title || 'رسالة جديدة - الهواري للزواج';
+    const options = {
+        body: data.body || 'لديك رسالة جديدة في الشات',
+        icon: './22.jpg',
+        badge: './22.jpg',
+        vibrate: [300, 100, 300, 100, 300],
+        data: { url: data.url || './clint.html' }
+    };
+
+    self.registration.showNotification(title, options);
 });
