@@ -1,344 +1,408 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تليجرام - لوحة تحكم الموظفين</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="icon" href="22.jpg" type="image/jpeg">
-  <!-- مكتبة Daily.co للمكالمات -->
-  <script crossorigin src="https://unpkg.com/@daily-co/daily-js"></script>
-  
-  <style>
-   ::-webkit-scrollbar { width: 4px; }
-   ::-webkit-scrollbar-track { background: #0e1621; }
-   ::-webkit-scrollbar-thumb { background: #232e3c; border-radius: 4px; }
-   .telegram-bg { background-color: #0e1621; }
-  </style>
-</head>
-<body class="bg-[#0e1621] text-white font-sans h-[100dvh] overflow-hidden telegram-bg">
-
-  <div class="flex h-full w-full relative overflow-hidden">
-    
-    <section id="sidebarPage" class="w-full h-full bg-[#17212b] border-r border-[#232e3c] flex flex-col z-20 absolute inset-0">
-      <div class="p-3.5 border-b border-[#232e3c] flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <img src="22.jpg" class="w-9 h-9 rounded-full object-cover border border-[#2b5278]">
-          <div>
-            <h2 class="text-sm font-bold text-white">تليجرام الإدارة</h2>
-            <span class="text-[10px] text-[#8796a5]">رسائل العملاء الواردة</span>
-          </div>
-        </div>
-        <div class="text-xs text-[#6ab2f2] bg-[#232e3c] px-3 py-1 rounded-full" id="loggedInUsername">موظف الدعم</div>
-      </div>
-      
-      <div class="p-2.5 bg-[#17212b] border-b border-[#232e3c]">
-        <input type="text" id="searchClient" oninput="filterClients()" placeholder="بحث في المحادثات..." class="w-full bg-[#212f3d] border border-transparent rounded-xl px-3.5 py-2 text-xs focus:outline-none text-white placeholder-[#8796a5]">
-      </div>
-      
-      <div id="chatsList" class="flex-1 overflow-y-auto divide-y divide-[#232e3c]/50">
-        <div class="p-6 text-center text-[#8796a5] text-xs">جاري جلب المحادثات...</div>
-      </div>
-    </section>
-
-    <main id="chatPage" class="hidden w-full h-full flex-col bg-[#0e1621] z-30 absolute inset-0">
-      <header class="h-14 border-b border-[#232e3c] px-4 flex items-center justify-between bg-[#17212b]">
-        <div class="flex items-center space-x-3 space-x-reverse min-w-0">
-          <button onclick="backToSidebar()" class="bg-[#212f3d] text-[#6ab2f2] w-9 h-9 rounded-full flex items-center justify-center transition border border-[#232e3c]" title="رجوع">
-            <i class="fa-solid fa-arrow-right text-xs"></i>
-          </button>
-          <div class="relative">
-            <img id="currentAvatar" src="22.jpg" class="w-9 h-9 rounded-full object-cover">
-            <span id="headerClientStatusDot" class="absolute bottom-0 left-0 w-2.5 h-2.5 bg-slate-500 border-2 border-[#17212b] rounded-full"></span>
-          </div>
-          <div class="min-w-0">
-            <h3 id="currentName" class="text-xs font-bold text-white truncate">اسم العميل</h3>
-            <span id="chatLockStatus" class="text-[10px] text-[#6ab2f2] block">متصل</span>
-          </div>
-        </div>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الدعم الفني - قائمة العملاء والشات</title>
+    <!-- FontAwesome للأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f0f2f5; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
         
-        <div class="flex items-center gap-2">
-          <button onclick="startCall('video')" class="w-9 h-9 bg-[#212f3d] hover:bg-[#2b5278] text-[#6ab2f2] hover:text-white rounded-full flex items-center justify-center transition border border-[#232e3c]" title="مكالمة مرئية">
-            <i class="fa-solid fa-video text-xs"></i>
-          </button>
-          <button onclick="startCall('audio')" class="w-9 h-9 bg-[#212f3d] hover:bg-[#2b5278] text-[#6ab2f2] hover:text-white rounded-full flex items-center justify-center transition border border-[#232e3c]" title="مكالمة صوتية">
-            <i class="fa-solid fa-phone text-xs"></i>
-          </button>
-          <button onclick="openTransferModal()" class="w-9 h-9 bg-[#212f3d] text-[#6ab2f2] rounded-full flex items-center justify-center transition border border-[#232e3c]" title="تحويل لموظف آخر">
-            <i class="fa-solid fa-share text-xs"></i>
-          </button>
-          <button onclick="deleteCurrentChat()" class="w-9 h-9 bg-red-600/20 text-red-400 rounded-full flex items-center justify-center transition border border-red-500/30" title="حذف المحادثة">
-            <i class="fa-solid fa-trash text-xs"></i>
-          </button>
+        .main-container { display: flex; width: 95vw; height: 90vh; background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); overflow: hidden; position: relative; }
+        
+        /* قائمة العملاء */
+        .clients-sidebar { width: 100%; height: 100%; display: flex; flex-direction: column; background: #fff; position: absolute; top: 0; right: 0; transition: transform 0.3s ease-in-out; z-index: 2; }
+        .clients-sidebar.hide-screen { transform: translateX(100%); }
+
+        .sidebar-header { padding: 15px 20px; border-bottom: 1px solid #f0f2f5; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header h2 { font-size: 18px; color: #050505; }
+        
+        /* زر تفعيل الصوت الإجباري */
+        .sound-enable-banner { background: #e7f3ff; color: #1877f2; padding: 10px 15px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d0e8ff; font-weight: bold; }
+        .sound-enable-banner button { background: #1877f2; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .sound-enable-banner button:hover { background: #166fe5; }
+        
+        .search-box { padding: 15px 20px; position: relative; }
+        .search-box input { width: 100%; padding: 10px 35px 10px 15px; background: #f0f2f5; border: none; border-radius: 20px; outline: none; font-size: 14px; }
+        .search-box i { position: absolute; right: 35px; top: 25px; color: #65676b; }
+        
+        .clients-list { overflow-y: auto; flex: 1; }
+        .client-card { display: flex; align-items: center; padding: 15px 20px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #f9f9f9; position: relative; }
+        .client-card:hover, .client-card.active { background: #f0f2f5; }
+        .client-card img { width: 50px; height: 50px; border-radius: 50%; margin-left: 15px; object-fit: cover; }
+        .client-card-info { flex: 1; }
+        .client-card-info h4 { font-size: 15px; color: #050505; display: flex; justify-content: space-between; align-items: center; }
+        .client-card-info p { font-size: 13px; color: #65676b; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; }
+
+        .unread-badge { background-color: #0084ff; color: #fff; font-size: 11px; font-weight: bold; padding: 2px 7px; border-radius: 50px; display: inline-block; min-width: 20px; text-align: center; }
+
+        /* واجهة الشات المستقلة */
+        .chat-section { width: 100%; height: 100%; display: flex; flex-direction: column; background: #fff; position: absolute; top: 0; right: 0; transform: translateX(-100%); transition: transform 0.3s ease-in-out; z-index: 3; }
+        .chat-section.show-screen { transform: translateX(0); }
+        
+        .no-chat-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; color: #8a8d91; gap: 10px; }
+        .no-chat-screen i { font-size: 50px; color: #ccd0d5; }
+        .no-chat-screen h3 { font-size: 18px; color: #65676b; }
+
+        .chat-box-container { display: none; flex-direction: column; height: 100%; }
+        
+        .chat-header { padding: 15px 20px; border-bottom: 1px solid #e4e6eb; display: flex; align-items: center; background: #fff; gap: 12px; }
+        .back-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #0084ff; padding: 5px 10px; display: flex; align-items: center; }
+        .chat-header img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
+        .chat-header h3 { font-size: 16px; color: #050505; }
+        .chat-header .status { font-size: 12px; color: #31a24c; }
+
+        .chat-messages-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f4f5f7; }
+        
+        .message-wrapper { display: flex; flex-direction: column; max-width: 65%; }
+        .message-wrapper.client { align-self: flex-start; align-items: flex-start; }
+        .message-wrapper.support { align-self: flex-end; align-items: flex-end; }
+
+        .message { padding: 10px 15px; border-radius: 15px; font-size: 14px; word-break: break-word; }
+        .message.client { background: #fff; color: #050505; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .message.support { background: #0084ff; color: #fff; }
+
+        .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
+        .msg-sender-name { font-size: 11px; font-weight: bold; margin-bottom: 2px; color: #65676b; }
+
+        .chat-footer-input { padding: 15px 20px; background: #fff; border-top: 1px solid #e4e6eb; display: flex; align-items: center; gap: 15px; }
+        .chat-footer-input input { flex: 1; padding: 12px 18px; background: #f0f2f5; border: none; border-radius: 25px; outline: none; font-size: 14px; }
+        .chat-footer-input input:focus { background: #e4e6eb; }
+        .chat-footer-input button { background: #0084ff; color: #fff; border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 16px; transition: background 0.2s; }
+        .chat-footer-input button:hover { background: #006dd6; }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <!-- شاشة قائمة العملاء -->
+        <div class="clients-sidebar" id="clientsSidebar">
+            <div class="sidebar-header">
+                <h2>لوحة تحكم الموظف - العملاء المتواصلون</h2>
+            </div>
+            
+            <!-- شريط تفعيل الصوت الإجباري -->
+            <div class="sound-enable-banner" id="soundBanner">
+                <span><i class="fa-solid fa-volume-high"></i> اضغط لتفعيل صوت التنبيهات وإشعارات المتصفح</span>
+                <button onclick="enableAudioAndNotifications()">تفعيل التنبيهات</button>
+            </div>
+            
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchClientInput" placeholder="بحث عن اسم العميل...">
+            </div>
+
+            <div class="clients-list" id="clientsListContainer">
+                <!-- قائمة العملاء -->
+            </div>
         </div>
-      </header>
 
-      <div id="messageContainer" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2 text-sm">
-        <div class="text-center text-[#8796a5] my-auto bg-[#17212b] p-4 rounded-xl border border-[#232e3c] max-w-sm mx-auto text-xs">اختر محادثة لبدء الرد</div>
-      </div>
+        <!-- شاشة المحادثة المستقلة -->
+        <div class="chat-section" id="chatSection">
+            <div class="no-chat-screen" id="noChatScreen">
+                <i class="fa-regular fa-comments"></i>
+                <h3>اختر عميلاً من القائمة لبدء المحادثة</h3>
+            </div>
 
-      <div class="p-3 border-t border-[#232e3c] bg-[#17212b]">
-        <form id="messageForm" class="flex items-center space-x-2 space-x-reverse" onsubmit="sendMessage(event)">
-          <input type="text" id="messageInput" placeholder="اكتب ردك هنا..." autocomplete="off" class="flex-1 bg-[#212f3d] border border-transparent text-white rounded-full px-4 py-2.5 text-xs focus:outline-none">
-          <button type="submit" class="bg-[#2b5278] hover:bg-[#386d9d] text-white px-5 py-2.5 rounded-full text-xs font-semibold transition">إرسال</button>
-        </form>
-      </div>
-    </main>
+            <div class="chat-box-container" id="chatBoxContainer">
+                <div class="chat-header">
+                    <button class="back-btn" onclick="goBackToClients()"><i class="fa-solid fa-arrow-right"></i></button>
+                    <img src="" id="currentChatAvatar" alt="Client Avatar">
+                    <div>
+                        <h3 id="currentChatClientName">اسم العميل</h3>
+                        <span class="status"><i class="fa-solid fa-circle" style="font-size: 8px;"></i> متصل الآن</span>
+                    </div>
+                </div>
 
-  </div>
+                <div class="chat-messages-body" id="chatMessagesBody"></div>
 
-  <!-- نافذة المكالمة (Modal) -->
-  <div id="callModal" class="fixed inset-0 bg-black/90 z-50 hidden flex flex-col items-center justify-center">
-      <div class="w-full max-w-4xl h-[80vh] bg-[#17212b] rounded-2xl overflow-hidden flex flex-col border border-[#232e3c] shadow-2xl relative m-4">
-          <div class="bg-[#212f3d] px-4 py-3 flex justify-between items-center border-b border-[#232e3c]">
-              <h3 id="callTitle" class="text-white text-xs font-bold">مكالمة نشطة</h3>
-              <button onclick="endCall()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-full text-xs font-semibold transition">إغلاق المكالمة</button>
-          </div>
-          <div id="callContainer" class="flex-1 w-full h-full bg-black relative"></div>
-      </div>
-  </div>
-
-  <!-- نافذة التحويل -->
-  <div id="transferModal" class="fixed inset-0 bg-[#0e1621]/90 z-50 hidden flex-col items-center justify-center p-4">
-    <div class="bg-[#17212b] border border-[#232e3c] p-5 rounded-2xl shadow-2xl flex flex-col max-w-sm w-full">
-      <h3 class="text-xs font-bold text-[#6ab2f2] mb-3">تحويل المحادثة لموظف</h3>
-      <div id="employeesListContainer" class="flex flex-col gap-2 max-h-40 overflow-y-auto mb-3 text-xs text-[#8796a5]">جاري البحث...</div>
-      <button onclick="document.getElementById('transferModal').style.display='none'" class="w-full bg-[#212f3d] py-2 rounded-xl text-xs">إلغاء</button>
+                <div class="chat-footer-input">
+                    <input type="text" id="supportReplyInput" placeholder="اكتب ردك هنا...">
+                    <button onclick="sendSupportReply()"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <audio id="msgNotificationAudio" src="mes.mp3" preload="auto"></audio>
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+        import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-    import { getDatabase, ref, push, onValue, set, remove, onDisconnect, update, off } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
+            authDomain: "marry-55604.firebaseapp.com",
+            databaseURL: "https://marry-55604-default-rtdb.firebaseio.com",
+            projectId: "marry-55604",
+            storageBucket: "marry-55604.firebasestorage.app",
+            messagingSenderId: "524067560260",
+            appId: "1:524067560260:web:adc87a02eadf098d5a5511",
+            measurementId: "G-0QW3CXTSM3"
+        };
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
-        authDomain: "marry-55604.firebaseapp.com",
-        databaseURL: "https://marry-55604-default-rtdb.firebaseio.com",
-        projectId: "marry-55604",
-        storageBucket: "marry-55604.firebasestorage.app",
-        messagingSenderId: "524067560260",
-        appId: "1:524067560260:web:adc87a02eadf098d5a5511"
-    };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const chatsRef = ref(db, 'chats/');
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+        let activeClientName = null;
+        const currentEmployeeName = "فريق الدعم";
+        let isInitialLoad = true;
+        let knownMessagesKeys = new Set();
+        let audioCtx = null;
+        let isAudioUnlocked = false;
 
-    let activeClientKey = null, activeClientDisplayName = null, currentEmpName = "موظف الدعم", empCleanId = "default_emp";
-    let unreadCounts = {}, previousMessagesCounts = {}, isFirstLoad = true, allRoomsCache = [];
-    let callFrame = null;
-    const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
+        // تسجيل Service Worker الخاص بملف sw_2_2.js
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw_2_2.js')
+                    .then(reg => console.log('Service Worker Registered successfully!', reg))
+                    .catch(err => console.log('Service Worker Failed:', err));
+            });
+        }
 
-    window.backToSidebar = function() {
-      document.getElementById('chatPage').classList.add('hidden');
-      document.getElementById('chatPage').classList.remove('flex');
-      document.getElementById('sidebarPage').classList.remove('hidden');
-      document.getElementById('sidebarPage').classList.add('flex');
-      if (activeClientKey) set(ref(db, `single_chat_room/${activeClientKey}/lockedBy`), null);
-    };
+        // تفعيل الصوت وصلاحية إشعارات المتصفح عند الضغط على الزر
+        window.enableAudioAndNotifications = function() {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                
+                // تشغيل صوت تجريبي قصير لفك قفل المتصفح للأصوات
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
 
-    window.addEventListener('DOMContentLoaded', () => {
-      const loggedUser = localStorage.getItem('loggedUsername');
-      if (loggedUser) { currentEmpName = loggedUser; document.getElementById('loggedInUsername').innerText = currentEmpName; }
-      empCleanId = currentEmpName.replace(/\s+/g, '_');
+                isAudioUnlocked = true;
 
-      const empStatusRef = ref(db, 'online_employees/' + empCleanId);
-      set(empStatusRef, { name: currentEmpName, inCall: false, lastActive: Date.now() });
-      onDisconnect(empStatusRef).remove();
+                // طلب صلاحية إشعارات المتصفح
+                if ('Notification' in window) {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            console.log('Notification permission granted.');
+                        }
+                    });
+                }
 
-      onValue(ref(db, 'single_chat_room'), (snapshot) => {
-        if (snapshot.exists()) {
-          let roomsArray = [];
-          snapshot.forEach((roomSnap) => {
-            const roomKey = roomSnap.key;
-            let originalName = roomKey.replace(/_/g, ' ');
-            let lastMsg = "انقر لعرض المحادثة", totalCount = 0, assignedTo = null, lastTimestamp = 0, clientStatus = "offline";
+                document.getElementById('soundBanner').style.display = 'none';
+            } catch (e) {
+                alert("حدث خطأ أثناء تفعيل التنبيهات، حاول مرة أخرى.");
+            }
+        };
 
-            if (unreadCounts[roomKey] === undefined) unreadCounts[roomKey] = 0;
+        // دالة تشغيل صوت الرنة للموظف
+        function playNotificationSound() {
+            if (!isAudioUnlocked || !audioCtx) return;
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
 
-            roomSnap.forEach((child) => {
-              if(child.key === 'assignedTo') { assignedTo = child.val(); return; }
-              if(child.key === 'status') { clientStatus = child.val() || "offline"; return; }
-              if(child.key === 'client_info') {
-                if(child.val() && child.val().name) originalName = child.val().name;
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); 
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.12);
+
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.5);
+            } catch (e) {
+                console.log("Playback error: ", e);
+            }
+        }
+
+        // إرسال أمر إشعار لملف Service Worker (sw_2_2.js)
+        function triggerServiceWorkerNotification(clientName, messageText) {
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title: `رسالة جديدة من: ${clientName}`,
+                    body: messageText,
+                    url: window.location.href
+                });
+            } else if ('Notification' in window && Notification.permission === 'granted') {
+                // بديل احتياطي في حال لم يعمل الـ SW مباشرة
+                new Notification(`رسالة جديدة من: ${clientName}`, { body: messageText, icon: './22.jpg' });
+            }
+        }
+
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            let hours = date.getHours();
+            let minutes = date.getMinutes();
+            let ampm = hours >= 12 ? 'م' : 'ص';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            return hours + ':' + minutes + ' ' + ampm;
+        }
+
+        // مراقبة الرسائل في قاعدة البيانات وتفعيل التنبيهات
+        onValue(chatsRef, (snapshot) => {
+            const data = snapshot.val();
+            const clientsListEl = document.getElementById('clientsListContainer');
+            clientsListEl.innerHTML = '';
+
+            if (!data) {
+                clientsListEl.innerHTML = '<p style="text-align:center; color:#8a8d91; padding:20px;">لا توجد محادثات حتى الآن</p>';
+                isInitialLoad = false;
                 return;
-              }
-              const msg = child.val();
-              if (msg && msg.text) { totalCount++; lastMsg = msg.text; if (msg.timestamp) lastTimestamp = Number(msg.timestamp); }
+            }
+
+            let currentKeys = Object.keys(data);
+            
+            if (!isInitialLoad) {
+                currentKeys.forEach(key => {
+                    if (!knownMessagesKeys.has(key)) {
+                        let newMsg = data[key];
+                        // إذا كانت الرسالة الواردة من العميل، يتم تشغيل الصوت وإرسال إشعار الخلفية
+                        if (newMsg.sender === 'client') {
+                            playNotificationSound(); 
+                            triggerServiceWorkerNotification(newMsg.clientName || 'عميل جديد', newMsg.text);
+                        }
+                    }
+                });
+            }
+
+            knownMessagesKeys = new Set(currentKeys);
+            isInitialLoad = false;
+
+            let clientsMap = {};
+            currentKeys.forEach(key => {
+                let msg = data[key];
+                let cName = msg.clientName || 'زائر';
+                if (!clientsMap[cName]) clientsMap[cName] = [];
+                clientsMap[cName].push(msg);
             });
 
-            if (assignedTo && assignedTo !== currentEmpName) return;
+            Object.keys(clientsMap).forEach(cName => {
+                let clientMsgs = clientsMap[cName];
+                let lastMsg = clientMsgs[clientMsgs.length - 1];
 
-            if (!isFirstLoad && previousMessagesCounts[roomKey] !== undefined && totalCount > previousMessagesCounts[roomKey]) {
-              const diff = totalCount - previousMessagesCounts[roomKey];
-              if (activeClientKey !== roomKey && diff > 0) {
-                unreadCounts[roomKey] += diff;
-                document.getElementById("msgNotificationAudio").play().catch(e => {});
-              }
+                let unreadCount = 0;
+                if (activeClientName !== cName) {
+                    for (let i = clientMsgs.length - 1; i >= 0; i--) {
+                        if (clientMsgs[i].sender === 'client') unreadCount++;
+                        else break;
+                    }
+                }
+
+                let cardDiv = document.createElement('div');
+                cardDiv.classList.add('client-card');
+                if (activeClientName === cName) cardDiv.classList.add('active');
+
+                let badgeHTML = unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : '';
+
+                cardDiv.innerHTML = `
+                    <img src="https://i.pravatar.cc/150?img=${cName.length + 10}" alt="avatar">
+                    <div class="client-card-info">
+                        <h4>${cName} ${badgeHTML}</h4>
+                        <p>${lastMsg.text}</p>
+                    </div>
+                `;
+
+                cardDiv.onclick = (e) => openClientChat(cName, clientMsgs, e.currentTarget);
+                clientsListEl.appendChild(cardDiv);
+            });
+
+            if (activeClientName && clientsMap[activeClientName]) {
+                renderChatMessages(clientsMap[activeClientName]);
             }
-            previousMessagesCounts[roomKey] = totalCount;
-            roomsArray.push({ roomKey, originalName, lastMsg, assignedTo, lastTimestamp, clientStatus });
-          });
+        });
 
-          roomsArray.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
-          allRoomsCache = roomsArray;
-          renderRoomsList(allRoomsCache);
-          isFirstLoad = false;
-        } else {
-          document.getElementById('chatsList').innerHTML = '<div class="p-6 text-center text-[#8796a5] text-xs">لا توجد محادثات عملاء</div>';
+        window.openClientChat = function(cName, messages, element) {
+            activeClientName = cName;
+            document.getElementById('noChatScreen').style.display = 'none';
+            document.getElementById('chatBoxContainer').style.display = 'flex';
+            document.getElementById('currentChatClientName').innerText = cName;
+            document.getElementById('currentChatAvatar').src = `https://i.pravatar.cc/150?img=${cName.length + 10}`;
+            document.getElementById('chatSection').classList.add('show-screen');
+            document.querySelectorAll('.client-card').forEach(el => el.classList.remove('active'));
+            if(element) element.classList.add('active');
+            renderChatMessages(messages);
+        };
+
+        window.goBackToClients = function() {
+            document.getElementById('chatSection').classList.remove('show-screen');
+            activeClientName = null;
+        };
+
+        function renderChatMessages(messages) {
+            const chatBody = document.getElementById('chatMessagesBody');
+            chatBody.innerHTML = '';
+            messages.forEach(msg => {
+                const wrapperDiv = document.createElement('div');
+                wrapperDiv.classList.add('message-wrapper');
+                const msgDiv = document.createElement('div');
+                msgDiv.classList.add('message');
+                const timeSpan = document.createElement('span');
+                timeSpan.classList.add('msg-timestamp');
+                timeSpan.innerText = formatTime(msg.timestamp);
+
+                if (msg.sender === 'client') {
+                    wrapperDiv.classList.add('client');
+                    msgDiv.classList.add('client');
+                    const senderSpan = document.createElement('span');
+                    senderSpan.classList.add('msg-sender-name');
+                    senderSpan.innerText = msg.clientName;
+                    wrapperDiv.appendChild(senderSpan);
+                    msgDiv.innerHTML = `<p>${msg.text}</p>`;
+                } else {
+                    wrapperDiv.classList.add('support');
+                    msgDiv.classList.add('support');
+                    const senderSpan = document.createElement('span');
+                    senderSpan.classList.add('msg-sender-name');
+                    senderSpan.innerText = msg.employeeName || currentEmployeeName;
+                    wrapperDiv.appendChild(senderSpan);
+                    msgDiv.innerHTML = `<p>${msg.text}</p>`;
+                }
+                wrapperDiv.appendChild(msgDiv);
+                wrapperDiv.appendChild(timeSpan);
+                chatBody.appendChild(wrapperDiv);
+            });
+            chatBody.scrollTop = chatBody.scrollHeight;
         }
-      });
-    });
 
-    function renderRoomsList(rooms) {
-      const list = document.getElementById('chatsList');
-      list.innerHTML = '';
-      rooms.forEach(r => {
-        const count = unreadCounts[r.roomKey];
-        const badge = count > 0 ? `<div class="bg-[#2b5278] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">${count}</div>` : '';
-        const isOnline = r.clientStatus === 'online';
-        
-        list.innerHTML += `
-          <div onclick="switchChat('${r.roomKey}', '${r.originalName}')" class="p-3 hover:bg-[#212f3d] cursor-pointer transition flex items-center space-x-3 space-x-reverse border-b border-[#232e3c]/40">
-            <div class="relative">
-              <img src="22.jpg" class="w-11 h-11 rounded-full object-cover">
-              <span class="absolute bottom-0 left-0 w-3 h-3 ${isOnline ? 'bg-emerald-500' : 'bg-slate-500'} border-2 border-[#17212b] rounded-full"></span>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between mb-1">
-                <h3 class="text-xs font-bold text-white truncate">${r.originalName}</h3>
-                <div>${badge}</div>
-              </div>
-              <p class="text-[11px] text-[#8796a5] truncate">${r.lastMsg}</p>
-            </div>
-          </div>`;
-      });
-    }
+        window.sendSupportReply = function() {
+            const input = document.getElementById('supportReplyInput');
+            const text = input.value.trim();
+            if (text === "" || !activeClientName) return;
+            const now = new Date();
+            
+            // حفظ رد الموظف في Firebase
+            push(chatsRef, {
+                sender: 'support',
+                clientName: activeClientName,
+                employeeName: currentEmployeeName,
+                text: text,
+                timestamp: now.getTime(),
+                dateString: now.toLocaleDateString('ar-EG'),
+                timeString: formatTime(now.getTime())
+            });
 
-    window.filterClients = function() {
-      const q = document.getElementById('searchClient').value.trim().toLowerCase();
-      renderRoomsList(q ? allRoomsCache.filter(r => r.originalName.toLowerCase().includes(q)) : allRoomsCache);
-    };
+            input.value = "";
+        };
 
-    window.switchChat = function(roomKey, displayName) {
-      document.getElementById('sidebarPage').classList.add('hidden');
-      document.getElementById('sidebarPage').classList.remove('flex');
-      document.getElementById('chatPage').classList.remove('hidden');
-      document.getElementById('chatPage').classList.add('flex');
-
-      activeClientKey = roomKey;
-      activeClientDisplayName = displayName;
-      unreadCounts[roomKey] = 0;
-
-      document.getElementById('currentName').innerText = displayName;
-      update(ref(db, `single_chat_room/${roomKey}`), { assignedTo: currentEmpName });
-
-      onValue(ref(db, 'single_chat_room/' + roomKey), (snapshot) => {
-        const container = document.getElementById('messageContainer');
-        container.innerHTML = '';
-        if (snapshot.exists()) {
-          snapshot.forEach((child) => {
-            if(['assignedTo','status','lockedBy','client_info'].includes(child.key)) return;
-            const msg = child.val();
-            if(msg && msg.text) {
-              const isClient = (msg.senderRole === 'client' || msg.sender === displayName);
-              appendMessageToUI(msg.text, msg.sender || displayName, msg.timestamp, isClient);
-            }
-          });
-        }
-        container.scrollTop = container.scrollHeight;
-      });
-    };
-
-    window.sendMessage = async function(event) {
-      event.preventDefault();
-      const input = document.getElementById('messageInput');
-      const text = input.value.trim();
-      if(!text || !activeClientKey) return;
-      await push(ref(db, `single_chat_room/${activeClientKey}`), { text, sender: currentEmpName, senderRole: "employee", timestamp: Date.now() });
-      input.value = '';
-    };
-
-    window.startCall = async function(type) {
-      document.getElementById('callModal').classList.remove('hidden');
-      document.getElementById('callTitle').innerText = type === 'video' ? 'مكالمة مرئية نشطة' : 'مكالمة صوتية نشطة';
-      
-      if (!callFrame) {
-          const container = document.getElementById('callContainer');
-          callFrame = window.DailyIframe.createFrame(container, {
-              showLeaveButton: true,
-              showFullscreenButton: true,
-              lang: 'en'
-          });
-      }
-
-      try {
-          await callFrame.join({ 
-              url: DAILY_ROOM_URL,
-              audioSource: true,
-              videoSource: type === 'video' 
-          });
-      } catch (error) {
-        console.error("خطأ في بدء المكالمة:", error);
-          alert("تعذر بدء المكالمة، يرجى التحقق من صلاحيات الكاميرا والميكروفون.");
-          endCall();
-      }
-    };
-
-    window.endCall = async function() {
-      if (callFrame) {
-          await callFrame.leave();
-      }
-      document.getElementById('callModal').classList.add('hidden');
-    };
-
-    window.openTransferModal = function() {
-      const modal = document.getElementById('transferModal');
-      const container = document.getElementById('employeesListContainer');
-      modal.style.display = 'flex';
-      onValue(ref(db, 'online_employees'), snap => {
-        container.innerHTML = '';
-        if (snap.exists()) {
-          snap.forEach(child => {
-            const emp = child.val();
-            if (emp && emp.name && emp.name !== currentEmpName) {
-              container.innerHTML += `<button onclick="executeTransfer('${emp.name}')" class="w-full bg-[#212f3d] p-2 rounded-lg text-white text-xs mb-1 text-right">👤 ${emp.name}</button>`;
-            }
-          });
-        }
-      }, { onlyOnce: true });
-    };
-
-    window.executeTransfer = async function(target) {
-      await update(ref(db, `single_chat_room/${activeClientKey}`), { assignedTo: target });
-      alert("تم التحويل بنجاح");
-      document.getElementById('transferModal').style.display = 'none';
-      backToSidebar();
-    };
-
-    window.deleteCurrentChat = async function() {
-      if (confirm("هل تريد حذف المحادثة بالكامل؟")) {
-        await remove(ref(db, 'single_chat_room/' + activeClientKey));
-        backToSidebar();
-      }
-    };
-
-    function appendMessageToUI(text, sender, timestamp, isClientMsg) {
-      const container = document.getElementById('messageContainer');
-      const time = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'الآن';
-      const html = !isClientMsg 
-        ? `<div class="flex flex-col items-end w-full mb-1"><div class="bg-[#2b5278] text-white p-2.5 px-3.5 rounded-2xl rounded-tl-none max-w-md text-xs shadow"><span class="block text-[9px] text-[#8796a5] font-bold mb-0.5">${sender} (أنت)</span><span>${escapeHtml(text)}</span><span class="block text-[9px] text-[#8796a5] mt-1 text-left">${time}</span></div></div>`
-        : `<div class="flex flex-col items-start w-full mb-1"><div class="bg-[#182533] text-white p-2.5 px-3.5 rounded-2xl rounded-tr-none max-w-md text-xs shadow border border-[#232e3c]"><span class="block text-[9px] text-[#6ab2f2] font-bold mb-0.5">${sender} (عميل)</span><span>${escapeHtml(text)}</span><span class="block text-[9px] text-[#8796a5] mt-1 text-left">${time}</span></div></div>`;
-      container.insertAdjacentHTML('beforeend', html);
-      container.scrollTop = container.scrollHeight;
-    }
-
-    function escapeHtml(str) {
-      return str ? str.toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])) : '';
-    }
-  </script>
+        document.getElementById('supportReplyInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendSupportReply();
+        });
+    </script>
 </body>
 </html>
