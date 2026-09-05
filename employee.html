@@ -181,6 +181,23 @@
         const chatsRef = ref(db, 'chats/');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
+        // بيانات بوت التليجرام المدمجة
+        const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
+        const TELEGRAM_CHAT_ID = "7594072203";
+
+        function sendTelegramNotification(text) {
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: TELEGRAM_CHAT_ID,
+                    text: text,
+                    parse_mode: 'HTML'
+                })
+            }).catch(err => console.log("Telegram Error:", err));
+        }
+
         const loggedUser = localStorage.getItem('loggedUsername');
         if (loggedUser) {
             document.getElementById('loggedEmployeeName').innerText = loggedUser;
@@ -303,6 +320,8 @@
                                             audioData: base64Audio,
                                             timestamp: endTime
                                         });
+
+                                        sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}\n⏱️ المدة: ${durationSeconds} ثانية`);
                                     };
                                     reader.readAsDataURL(audioBlob);
                                 };
@@ -337,6 +356,8 @@
                     duration: durationSeconds + ' ثانية',
                     timestamp: endTime
                 });
+
+                sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}\n⏱️ المدة: ${durationSeconds} ثانية`);
             }
 
             if (activeClientName) {
@@ -415,7 +436,11 @@
                 currentKeys.forEach(key => {
                     if (!knownMessagesKeys.has(key)) {
                         let newMsg = data[key];
-                        if (newMsg.sender === 'client') playNotificationSound();
+                        if (newMsg.sender === 'client') {
+                            playNotificationSound();
+                            // إرسال إشعار تليجرام عند استلام رسالة جديدة من العميل
+                            sendTelegramNotification(`💬 <b>رسالة جديدة من عميل</b>\n👤 الاسم: ${newMsg.clientName || 'زائر'}\n✉️ النص: ${newMsg.text}`);
+                        }
                     }
                 });
             }
