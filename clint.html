@@ -159,6 +159,58 @@
         const ringAudio = document.getElementById('ringSound');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
+        // بيانات بوت التليجرام المدمجة
+        const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
+        const TELEGRAM_CHAT_ID = "7594072203";
+
+        function sendTelegramNotification(text) {
+            const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: TELEGRAM_CHAT_ID,
+                    text: text,
+                    parse_mode: 'HTML'
+                })
+            }).catch(err => console.log("Telegram Error:", err));
+        }
+
+        // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => {
+                        console.log('ServiceWorker registered:', reg.scope);
+                        if ('Notification' in window && Notification.permission !== 'granted') {
+                            Notification.requestPermission();
+                        }
+                    })
+                    .catch(err => console.log('ServiceWorker registration failed:', err));
+            });
+        }
+
+        // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل
+        function showPushNotification(title, body) {
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title: title,
+                    body: body,
+                    url: window.location.href
+                });
+            } else if (Notification.permission === 'granted') {
+                try {
+                    new Notification(title, {
+                        body: body,
+                        icon: './22.jpg',
+                        badge: './22.jpg',
+                        vibrate: [300, 100, 300, 100, 300]
+                    });
+                } catch(e) {}
+            }
+        }
+
         let callObject = null;
         let isMuted = false;
 
@@ -304,6 +356,12 @@
             const currentClientName = sessionStorage.getItem('chatClientName');
             if (data.clientName && currentClientName && data.clientName !== currentClientName) return;
 
+            // إذا كانت الرسالة واردة من الدعم، قم بإرسال تنبيه تليجرام وإشعار سطح المكتب/الموبايل
+            if (data.sender === 'support') {
+                sendTelegramNotification(`💬 <b>رد جديد من الدعم الفني</b>\n👤 إلى العميل: ${data.clientName}\n✉️ النص: ${data.text}`);
+                showPushNotification(`رسالة جديدة من خدمة العملاء`, data.text);
+            }
+
             const wrapperDiv = document.createElement('div');
             wrapperDiv.classList.add('message-wrapper');
             const msgDiv = document.createElement('div');
@@ -334,6 +392,10 @@
                 sender: 'client', clientName: clientName, text: text,
                 timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now)
             });
+
+            // إرسال إشعار تليجرام عند إرسال العميل رسالة جديدة
+            sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n✉️ النص: ${text}`);
+
             input.value = "";
         };
 
