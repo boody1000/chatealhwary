@@ -83,6 +83,7 @@
 <body>
 
     <audio id="ringSound" src="ring.mp3" preload="auto" loop></audio>
+    <audio id="msgSound" src="mes.mp3" preload="auto"></audio>
     <audio id="remoteAudio" autoplay></audio>
 
     <div class="name-modal" id="nameModal">
@@ -157,9 +158,10 @@
 
         const chatBody = document.getElementById('clientMessages');
         const ringAudio = document.getElementById('ringSound');
+        const msgAudio = document.getElementById('msgSound');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
-        // بيانات بوت التليجرام المدمجة
+        // بيانات بوت التليجرام المدمجة[cite: 7]
         const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
         const TELEGRAM_CHAT_ID = "7594072203";
 
@@ -176,7 +178,7 @@
             }).catch(err => console.log("Telegram Error:", err));
         }
 
-        // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر
+        // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر[cite: 7, 8]
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
@@ -190,7 +192,7 @@
             });
         }
 
-        // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل
+        // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل[cite: 7, 8]
         function showPushNotification(title, body) {
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
@@ -356,10 +358,11 @@
             const currentClientName = sessionStorage.getItem('chatClientName');
             if (data.clientName && currentClientName && data.clientName !== currentClientName) return;
 
-            // إذا كانت الرسالة واردة من الدعم، قم بإرسال تنبيه تليجرام وإشعار سطح المكتب/الموبايل
+            // إذا كانت الرسالة واردة من الدعم، قم بإرسال تنبيه تليجرام وإشعار سطح المكتب/الموبايل وتشغيل نغمة استلام الرسالة mes.mp3[cite: 7, 8]
             if (data.sender === 'support') {
                 sendTelegramNotification(`💬 <b>رد جديد من الدعم الفني</b>\n👤 إلى العميل: ${data.clientName}\n✉️ النص: ${data.text}`);
                 showPushNotification(`رسالة جديدة من خدمة العملاء`, data.text);
+                if (msgAudio) { msgAudio.currentTime = 0; msgAudio.play().catch(e => {}); }
             }
 
             const wrapperDiv = document.createElement('div');
@@ -393,7 +396,7 @@
                 timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now)
             });
 
-            // إرسال إشعار تليجرام عند إرسال العميل رسالة جديدة
+            // إرسال إشعار تليجرام عند إرسال العميل رسالة جديدة[cite: 7]
             sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n✉️ النص: ${text}`);
 
             input.value = "";
