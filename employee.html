@@ -198,6 +198,36 @@
             }).catch(err => console.log("Telegram Error:", err));
         }
 
+        // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر (مطابق لملف sw_2.js)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw_2.js')
+                    .then(reg => console.log('ServiceWorker registered:', reg.scope))
+                    .catch(err => console.log('ServiceWorker registration failed:', err));
+            });
+        }
+
+        // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل
+        function showPushNotification(title, body) {
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title: title,
+                    body: body,
+                    url: window.location.href
+                });
+            } else if (Notification.permission === 'granted') {
+                try {
+                    new Notification(title, {
+                        body: body,
+                        icon: './22.jpg',
+                        badge: './22.jpg',
+                        vibrate: [300, 100, 300, 100, 300]
+                    });
+                } catch(e) {}
+            }
+        }
+
         const loggedUser = localStorage.getItem('loggedUsername');
         if (loggedUser) {
             document.getElementById('loggedEmployeeName').innerText = loggedUser;
@@ -391,7 +421,13 @@
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
                 isAudioUnlocked = true;
-                if ('Notification' in window) Notification.requestPermission();
+                if ('Notification' in window) {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            showPushNotification('تم تفعيل التنبيهات', 'ستصلك إشعارات الرسائل الجديدة على الموبايل والكمبيوتر');
+                        }
+                    });
+                }
                 document.getElementById('soundBanner').style.display = 'none';
                 listenToAllCalls();
             } catch (e) { alert("حدث خطأ"); }
@@ -440,6 +476,8 @@
                             playNotificationSound();
                             // إرسال إشعار تليجرام عند استلام رسالة جديدة من العميل
                             sendTelegramNotification(`💬 <b>رسالة جديدة من عميل</b>\n👤 الاسم: ${newMsg.clientName || 'زائر'}\n✉️ النص: ${newMsg.text}`);
+                            // إظهار إشعار سطح المكتب والموبايل عبر الـ Service Worker
+                            showPushNotification(`رسالة جديدة من: ${newMsg.clientName || 'زائر'}`, newMsg.text);
                         }
                     }
                 });
@@ -521,12 +559,12 @@
 
         window.sendSupportReply = function() {
             const input = document.getElementById('supportReplyInput');
-            const text = input.value.trim();
-            if (text === "" || !activeClientName) return;
+            const test = input.value.trim();
+            if (test === "" || !activeClientName) return;
             const now = new Date();
             push(chatsRef, {
                 sender: 'support', clientName: activeClientName,
-                text: text, timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now.getTime())
+                text: test, timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now.getTime())
             });
             input.value = "";
         };
