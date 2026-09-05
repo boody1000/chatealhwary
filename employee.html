@@ -76,6 +76,9 @@
 </head>
 <body>
 
+    <!-- عنصر الصوت الخارجي mes.mp3 -->
+    <audio id="msgSound" src="mes.mp3" preload="auto"></audio>
+
     <div class="main-container">
         <!-- شاشة قائمة العملاء -->
         <div class="clients-sidebar" id="clientsSidebar">
@@ -85,7 +88,7 @@
             
             <!-- شريط تفعيل الصوت الإجباري -->
             <div class="sound-enable-banner" id="soundBanner">
-                <span><i class="fa-solid fa-volume-high"></i> اضغط لتفعيل صوت التنبيهات وإشعارات المتصفح</span>
+                <span><i class="fa-solid fa-volume-high"></i> اضغط لتفعيل صوت الرنة والإشعارات</span>
                 <button onclick="enableAudioAndNotifications()">تفعيل التنبيهات</button>
             </div>
             
@@ -150,8 +153,7 @@
         const currentEmployeeName = "فريق الدعم";
         let isInitialLoad = true;
         let knownMessagesKeys = new Set();
-        let audioCtx = null;
-        let isAudioUnlocked = false;
+        const msgSound = document.getElementById('msgSound');
 
         // تسجيل Service Worker الخاص بملف sw_2_2.js
         if ('serviceWorker' in navigator) {
@@ -162,72 +164,37 @@
             });
         }
 
-        // تفعيل الصوت وصلاحية إشعارات المتصفح عند الضغط على الزر
+        // تفعيل الصوت وصلاحية إشعارات المتصفح عند الضغط على الزر (لتجاوز حظر المتصفحات)
         window.enableAudioAndNotifications = function() {
-            try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-                
-                // تشغيل صوت تجريبي قصير لفك قفل المتصفح للأصوات
-                const osc = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
-                osc.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
+            if (msgSound) {
+                msgSound.volume = 0;
+                msgSound.play().then(() => {
+                    msgSound.pause();
+                    msgSound.currentTime = 0;
+                    msgSound.volume = 1;
+                    document.getElementById('soundBanner').style.display = 'none';
+                }).catch(e => {
+                    console.log("Audio unlock failed:", e);
+                });
+            }
 
-                isAudioUnlocked = true;
-
-                // طلب صلاحية إشعارات المتصفح
-                if ('Notification' in window) {
-                    Notification.requestPermission().then(permission => {
-                        if (permission === 'granted') {
-                            console.log('Notification permission granted.');
-                        }
-                    });
-                }
-
-                document.getElementById('soundBanner').style.display = 'none';
-            } catch (e) {
-                alert("حدث خطأ أثناء تفعيل التنبيهات، حاول مرة أخرى.");
+            if ('Notification' in window) {
+                Notification.requestPermission();
             }
         };
 
-        // دالة تشغيل صوت الرنة للموظف
+        // دالة تشغيل ملف الصوت mes.mp3 فور وصول رسالة جديدة
         function playNotificationSound() {
-            if (!isAudioUnlocked || !audioCtx) return;
-            try {
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-
-                const osc = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); 
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.12);
-
-                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
-
-                osc.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.5);
-            } catch (e) {
-                console.log("Playback error: ", e);
+            if (msgSound) {
+                msgSound.pause();
+                msgSound.currentTime = 0;
+                msgSound.play().catch(e => {
+                    console.log("Audio Play Error:", e);
+                });
             }
         }
 
-        // إرسال أمر إشعار لملف Service Worker (sw_2_2.js)
+        // إرسال إشعار لملف Service Worker
         function triggerServiceWorkerNotification(clientName, messageText) {
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
@@ -237,7 +204,6 @@
                     url: window.location.href
                 });
             } else if ('Notification' in window && Notification.permission === 'granted') {
-                // بديل احتياطي في حال لم يعمل الـ SW مباشرة
                 new Notification(`رسالة جديدة من: ${clientName}`, { body: messageText, icon: './22.jpg' });
             }
         }
@@ -254,7 +220,6 @@
             return hours + ':' + minutes + ' ' + ampm;
         }
 
-        // مراقبة الرسائل في قاعدة البيانات وتفعيل التنبيهات
         onValue(chatsRef, (snapshot) => {
             const data = snapshot.val();
             const clientsListEl = document.getElementById('clientsListContainer');
@@ -272,9 +237,8 @@
                 currentKeys.forEach(key => {
                     if (!knownMessagesKeys.has(key)) {
                         let newMsg = data[key];
-                        // إذا كانت الرسالة الواردة من العميل، يتم تشغيل الصوت وإرسال إشعار الخلفية
                         if (newMsg.sender === 'client') {
-                            playNotificationSound(); 
+                            playNotificationSound(); // تشغيل صوت mes.mp3
                             triggerServiceWorkerNotification(newMsg.clientName || 'عميل جديد', newMsg.text);
                         }
                     }
@@ -386,7 +350,6 @@
             if (text === "" || !activeClientName) return;
             const now = new Date();
             
-            // حفظ رد الموظف في Firebase
             push(chatsRef, {
                 sender: 'support',
                 clientName: activeClientName,
