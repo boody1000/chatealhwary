@@ -302,11 +302,16 @@
             const callsRef = ref(db, 'calls/');
             onValue(callsRef, (snapshot) => {
                 const callsData = snapshot.val();
-                if (!callsData) return;
+                if (!callsData) {
+                    closeCallScreenUI();
+                    return;
+                }
                 
+                let hasActiveIncomingCall = false;
                 Object.keys(callsData).forEach(cName => {
                     let callObj = callsData[cName];
                     if (callObj.status === 'calling' && callObj.sender === 'client') {
+                        hasActiveIncomingCall = true;
                         activeClientName = cName;
                         document.getElementById('callStatusText').innerText = `مكالمة واردة من: ${cName}`;
                         document.getElementById('messengerCallScreen').style.display = 'flex';
@@ -314,15 +319,30 @@
                             <button class="m-btn m-btn-accept" onclick="acceptCall()"><i class="fa-solid fa-phone"></i></button>
                             <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
                         `;
-                        startStandardRinging();
-                        if (ringAudio && ringAudio.src && !ringAudio.src.endsWith(window.location.href)) { 
+                        if (!standardRingInterval) {
+                            startStandardRinging();
+                        }
+                        if (ringAudio && ringAudio.src && !ringAudio.src.endsWith(window.location.href) && ringAudio.paused) { 
                             ringAudio.currentTime = 0; 
                             ringAudio.play().catch(e=>{}); 
                         }
-                    } else if (activeClientName === cName && callObj.status === 'ended') {
-                        closeCallScreenUI();
+                    } else if (callObj.status === 'accepted' || callObj.status === 'ended') {
+                        // إذا تم قبول المكالمة أو انتهت، يتم إيقاف الرنين عند باقي الموظفين فوراً لعدم الإزعاج
+                        if (activeClientName === cName && callObj.status === 'ended') {
+                            closeCallScreenUI();
+                        } else if (callObj.status === 'accepted') {
+                            stopStandardRinging();
+                            if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
+                            if (document.getElementById('messengerCallScreen').style.display === 'flex' && callObj.sender !== loggedUser) {
+                                document.getElementById('messengerCallScreen').style.display = 'none';
+                            }
+                        }
                     }
                 });
+
+                if (!hasActiveIncomingCall) {
+                    closeCallScreenUI();
+                }
             });
         }
 
@@ -354,7 +374,11 @@
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             callStartTime = Date.now();
             if (activeClientName) {
-                set(ref(db, 'calls/' + activeClientName + '/status'), 'accepted');
+                set(ref(db, 'calls/' + activeClientName), {
+                    sender: loggedUser || 'support',
+                    status: 'accepted',
+                    timestamp: callStartTime
+                });
             }
 
             document.getElementById('callStatusText').innerText = "المكالمة الصوتية جارية...";
