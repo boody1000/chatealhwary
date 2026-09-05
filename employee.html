@@ -529,45 +529,50 @@
             return hours + ':' + minutes + ' ' + ampm;
         }
 
+        // تم إصلاح حلقة التجميد (Infinite Loop) عبر تجنب استخدام متغيرات مرجعية عالمية داخل onValue بشكل خاطئ واستخدام تتبع دقيق للمفاتيح والعدادات
         onValue(chatsRef, (snapshot) => {
             const data = snapshot.val();
             const clientsListEl = document.getElementById('clientsListContainer');
             clientsListEl.innerHTML = '';
+            
             if (!data) {
                 clientsListEl.innerHTML = '<p style="text-align:center; color:#8a8d91; padding:20px;">لا توجد محادثات حتى الآن</p>';
                 isInitialLoad = false;
                 return;
             }
+
             let currentKeys = Object.keys(data);
-            if (!isInitialLoad) {
+            
+            if (isInitialLoad) {
+                knownMessagesKeys = new Set(currentKeys);
+                isInitialLoad = false;
+            } else {
                 currentKeys.forEach(key => {
                     if (!knownMessagesKeys.has(key)) {
+                        knownMessagesKeys.add(key);
                         let newMsg = data[key];
-                        if (newMsg.sender === 'client') {
+                        if (newMsg && newMsg.sender === 'client') {
                             playNotificationSound();
                             let cName = newMsg.clientName || 'زائر';
-                            // زيادة عدد الرسائل غير المقروءة للعميل إذا لم يكن هو الشات المفتوح حالياً
                             if (activeClientName !== cName) {
                                 unreadCounts[cName] = (unreadCounts[cName] || 0) + 1;
                                 localStorage.setItem('employeeUnreadCounts', JSON.stringify(unreadCounts));
                             }
-                            // إرسال إشعار تليجرام عند استلام رسالة جديدة من العميل[cite: 2]
                             sendTelegramNotification(`💬 <b>رسالة جديدة من عميل</b>\n👤 الاسم: ${newMsg.clientName || 'زائر'}\n✉️ النص: ${newMsg.text}`);[cite: 2]
-                            // إظهار إشعار سطح المكتب والموبايل عبر الـ Service Worker[cite: 2]
                             showPushNotification(`رسالة جديدة من: ${newMsg.clientName || 'زائر'}`, newMsg.text);[cite: 2]
                         }
                     }
                 });
             }
-            knownMessagesKeys = new Set(currentKeys);
-            isInitialLoad = false;
 
             let clientsMap = {};
             currentKeys.forEach(key => {
                 let msg = data[key];
-                let cName = msg.clientName || 'زائر';
-                if (!clientsMap[cName]) clientsMap[cName] = [];
-                clientsMap[cName].push(msg);
+                if (msg) {
+                    let cName = msg.clientName || 'زائر';
+                    if (!clientsMap[cName]) clientsMap[cName] = [];
+                    clientsMap[cName].push(msg);
+                }
             });
 
             Object.keys(clientsMap).forEach(cName => {
@@ -602,7 +607,7 @@
         window.openClientChat = function(cName, messages, element) {
             activeClientName = cName;
             
-            // تصفير عداد الرسائل غير المقروءة وإخفائه عند فتح محادثة العميل
+            // تصفير عداد الرسائل غير المقروءة وإخفائه فوراً عند فتح المحادثة
             unreadCounts[cName] = 0;
             localStorage.setItem('employeeUnreadCounts', JSON.stringify(unreadCounts));
             let badgeEl = document.getElementById(`badge_${cName}`);
