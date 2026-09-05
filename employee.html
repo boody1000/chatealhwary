@@ -16,6 +16,12 @@
         .sidebar-header { padding: 15px 20px; border-bottom: 1px solid #f0f2f5; display: flex; justify-content: space-between; align-items: center; }
         .sidebar-header h2 { font-size: 18px; color: #050505; }
         
+        .header-profile-box { display: flex; align-items: center; gap: 12px; }
+        .header-profile-box img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; border: 2px solid #0084ff; }
+        .header-profile-info { display: flex; flex-direction: column; }
+        .header-profile-info h2 { font-size: 16px; color: #050505; }
+        .header-profile-info span { font-size: 12px; color: #65676b; }
+        
         .sound-enable-banner { background: #e7f3ff; color: #1877f2; padding: 10px 15px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #d0e8ff; font-weight: bold; }
         .sound-enable-banner button { background: #1877f2; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         
@@ -30,6 +36,18 @@
         .client-card-info { flex: 1; }
         .client-card-info h4 { font-size: 15px; color: #050505; display: flex; justify-content: space-between; align-items: center; }
         .client-card-info p { font-size: 13px; color: #65676b; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; }
+
+        .unread-badge {
+            background-color: #e41e3f;
+            color: #fff;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 7px;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+            display: inline-block;
+        }
 
         .chat-section { width: 100%; height: 100%; display: flex; flex-direction: column; background: #fff; position: absolute; top: 0; right: 0; transform: translateX(-100%); transition: transform 0.3s ease-in-out; z-index: 3; }
         .chat-section.show-screen { transform: translateX(0); }
@@ -63,7 +81,6 @@
         .chat-footer-input input { flex: 1; padding: 12px 18px; background: #f0f2f5; border: none; border-radius: 25px; outline: none; font-size: 14px; }
         .chat-footer-input button { background: #0084ff; color: #fff; border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 16px; }
 
-        /* شاشة المكالمة الصوتية للموظف */
         #messengerCallScreen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #1c1e21; display: none; flex-direction: column; justify-content: space-between; align-items: center; z-index: 9999; padding: 50px 0;
@@ -93,10 +110,9 @@
     <audio id="ringSound" src="ring.mp3" preload="auto" loop></audio>
     <audio id="remoteAudio" autoplay></audio>
 
-    <!-- شاشة المكالمة الصوتية للموظف -->
     <div id="messengerCallScreen">
         <div class="messenger-header">
-            <img src="https://i.pravatar.cc/150?img=12" id="messengerAvatar" alt="User">
+            <img src="22.jpg" id="messengerAvatar" alt="User">
             <h2 id="callStatusText">مكالمة صوتية واردة...</h2>
             <p id="callSubText">الدعم الفني</p>
         </div>
@@ -110,7 +126,13 @@
     <div class="main-container">
         <div class="clients-sidebar" id="clientsSidebar">
             <div class="sidebar-header">
-                <h2>لوحة تحكم الموظف - العملاء المتواصلون</h2>
+                <div class="header-profile-box">
+                    <img src="22.jpg" alt="صورة الموظف">
+                    <div class="header-profile-info">
+                        <h2 id="employeeNameDisplay">جارِ التحميل...</h2>
+                        <span>لوحة تحكم الموظف</span>
+                    </div>
+                </div>
             </div>
             
             <div class="sound-enable-banner" id="soundBanner">
@@ -159,7 +181,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onValue, update, get } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -174,20 +196,49 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const chatsRef = ref(db, 'chats/');
+        
+        const currentEmployee = localStorage.getItem('loggedUsername') || "default_employee";
+        const safeEmpName = currentEmployee.replace(/[.#$[\]]/g, "_");
+
+        const chatsRef = ref(db, 'employee_chats/' + safeEmpName + '/chats/');
+        const oldGlobalChatsRef = ref(db, 'chats/');
+        const callsRef = ref(db, 'employee_chats/' + safeEmpName + '/calls/');
+        const globalActiveCallRef = ref(db, 'global_active_call/');
+        const statusRef = ref(db, 'employee_status/' + safeEmpName);
+
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
         let activeClientName = null;
         let isInitialLoad = true;
-        let knownMessagesKeys = new Set();
         let audioCtx = null;
         let isAudioUnlocked = false;
         let callObject = null;
         let isMuted = false;
+        let isInCall = false;
         const ringAudio = document.getElementById('ringSound');
 
+        const employeeNameDisplay = document.getElementById('employeeNameDisplay');
+        employeeNameDisplay.innerText = currentEmployee;
+
+        function updateMyStatus(statusVal) {
+            set(statusRef, {
+                status: statusVal,
+                lastActive: Date.now()
+            });
+        }
+        updateMyStatus('available');
+
+        onValue(oldGlobalChatsRef, (snapshot) => {
+            const oldData = snapshot.val();
+            if (oldData) {
+                Object.keys(oldData).forEach(cName => {
+                    const clientMsgs = oldData[cName];
+                    set(ref(db, 'employee_chats/' + safeEmpName + '/chats/' + cName), clientMsgs);
+                });
+            }
+        }, { onlyOnce: true });
+
         function listenToAllCalls() {
-            const callsRef = ref(db, 'calls/');
             onValue(callsRef, (snapshot) => {
                 const callsData = snapshot.val();
                 if (!callsData) return;
@@ -195,29 +246,76 @@
                 Object.keys(callsData).forEach(cName => {
                     let callObj = callsData[cName];
                     if (callObj.status === 'calling' && callObj.sender === 'client') {
-                        activeClientName = cName;
-                        document.getElementById('callStatusText').innerText = `مكالمة صوتية واردة من: ${cName}`;
-                        document.getElementById('messengerCallScreen').style.display = 'flex';
                         
-                        document.getElementById('messengerControlsBar').innerHTML = `
-                            <button class="m-btn m-btn-accept" onclick="acceptCall()"><i class="fa-solid fa-phone"></i></button>
-                            <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
-                        `;
-                        if (ringAudio) { ringAudio.currentTime = 0; ringAudio.play().catch(e=>{}); }
+                        // التحقق المباشر من حالة الموظف: إذا كان مشغولاً في مكالمة أو غير متاح، يتم توجيه المكالمة فوراً لموظف آخر غير مشغول
+                        get(statusRef).then((snapshotStatus) => {
+                            const myCurrentData = snapshotStatus.val();
+                            const currentStatusState = myCurrentData ? myCurrentData.status : 'available';
+
+                            if (isInCall || currentStatusState !== 'available') {
+                                redirectCallToAnotherEmployee(cName);
+                                return;
+                            }
+
+                            activeClientName = cName;
+                            set(globalActiveCallRef, { clientName: cName, status: 'calling' });
+
+                            document.getElementById('callStatusText').innerText = `مكالمة صوتية واردة من: ${cName}`;
+                            document.getElementById('messengerCallScreen').style.display = 'flex';
+                            
+                            document.getElementById('messengerControlsBar').innerHTML = `
+                                <button class="m-btn m-btn-accept" onclick="acceptCall()"><i class="fa-solid fa-phone"></i></button>
+                                <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
+                            `;
+                            if (ringAudio) { ringAudio.currentTime = 0; ringAudio.play().catch(e=>{}); }
+                        });
+
                     } else if (activeClientName === cName && callObj.status === 'ended') {
                         closeCallScreenUI();
                     }
                 });
             });
+
+            onValue(globalActiveCallRef, (snapshot) => {
+                const gCall = snapshot.val();
+                if (!gCall) {
+                    if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
+                    document.getElementById('messengerCallScreen').style.display = 'none';
+                }
+            });
+        }
+
+        function redirectCallToAnotherEmployee(clientName) {
+            set(ref(db, 'employee_chats/' + safeEmpName + '/calls/' + clientName + '/status'), 'redirected');
+            
+            const allStatusRef = ref(db, 'employee_status/');
+            onValue(allStatusRef, (snapshot) => {
+                const employees = snapshot.val();
+                if (!employees) return;
+
+                for (let empKey in employees) {
+                    if (empKey !== safeEmpName && employees[empKey].status === 'available') {
+                        set(ref(db, 'employee_chats/' + empKey + '/calls/' + clientName), {
+                            sender: 'client',
+                            status: 'calling',
+                            timestamp: Date.now()
+                        });
+                        break;
+                    }
+                }
+            }, { onlyOnce: true });
         }
 
         window.initiateCall = function() {
             if (!activeClientName) { alert("اختر عميلاً أولاً"); return; }
-            set(ref(db, 'calls/' + activeClientName), {
+            set(ref(db, 'employee_chats/' + safeEmpName + '/calls/' + activeClientName), {
                 sender: 'support',
                 status: 'calling',
                 timestamp: Date.now()
             });
+
+            isInCall = true;
+            updateMyStatus('busy');
 
             document.getElementById('callStatusText').innerText = "جاري الاتصال الصوتي...";
             document.getElementById('messengerCallScreen').style.display = 'flex';
@@ -231,9 +329,14 @@
 
         window.acceptCall = function() {
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
+            set(globalActiveCallRef, null);
+
             if (activeClientName) {
-                set(ref(db, 'calls/' + activeClientName + '/status'), 'accepted');
+                set(ref(db, 'employee_chats/' + safeEmpName + '/calls/' + activeClientName + '/status'), 'accepted');
             }
+
+            isInCall = true;
+            updateMyStatus('busy');
 
             document.getElementById('callStatusText').innerText = "المكالمة الصوتية جارية...";
             document.getElementById('messengerControlsBar').innerHTML = `
@@ -251,7 +354,6 @@
                 });
 
                 callObject.on('joined-meeting', () => {
-                    console.log("الموظف انضم للمكالمة الصوتية");
                     callObject.setLocalAudio(true);
                 });
 
@@ -260,21 +362,20 @@
                         const audioEl = document.getElementById('remoteAudio');
                         if (audioEl) {
                             audioEl.srcObject = new MediaStream([e.track]);
-                            audioEl.play().catch(err => console.log("خطأ في تشغيل الصوت:", err));
+                            audioEl.play().catch(err => {});
                         }
                     }
                 });
             }
 
-            callObject.join({ url: DAILY_ROOM_URL }).catch(err => {
-                console.error("خطأ في انضمام الموظف للمكالمة:", err);
-            });
+            callObject.join({ url: DAILY_ROOM_URL }).catch(err => {});
         }
 
         window.endCallCompletely = function() {
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
+            set(globalActiveCallRef, null);
             if (activeClientName) {
-                set(ref(db, 'calls/' + activeClientName + '/status'), 'ended');
+                set(ref(db, 'employee_chats/' + safeEmpName + '/calls/' + activeClientName + '/status'), 'ended');
             }
             closeCallScreenUI();
         };
@@ -285,6 +386,8 @@
             if (callObject) {
                 callObject.leave();
             }
+            isInCall = false;
+            updateMyStatus('available');
         }
 
         window.toggleMute = function() {
@@ -304,22 +407,8 @@
                 if ('Notification' in window) Notification.requestPermission();
                 document.getElementById('soundBanner').style.display = 'none';
                 listenToAllCalls();
-            } catch (e) { alert("حدث خطأ"); }
-        };
-
-        function playNotificationSound() {
-            if (!isAudioUnlocked || !audioCtx) return;
-            try {
-                const osc = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
-                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
-                osc.connect(gainNode); gainNode.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.5);
             } catch (e) {}
-        }
+        };
 
         function formatTime(timestamp) {
             if (!timestamp) return '';
@@ -341,49 +430,38 @@
                 isInitialLoad = false;
                 return;
             }
-            let currentKeys = Object.keys(data);
-            if (!isInitialLoad) {
-                currentKeys.forEach(key => {
-                    if (!knownMessagesKeys.has(key)) {
-                        let newMsg = data[key];
-                        if (newMsg.sender === 'client') playNotificationSound();
-                    }
-                });
-            }
-            knownMessagesKeys = new Set(currentKeys);
+
+            let clientNames = Object.keys(data);
             isInitialLoad = false;
 
-            let clientsMap = {};
-            currentKeys.forEach(key => {
-                let msg = data[key];
-                let cName = msg.clientName || 'زائر';
-                if (!clientsMap[cName]) clientsMap[cName] = [];
-                clientsMap[cName].push(msg);
-            });
+            clientNames.forEach(cName => {
+                let clientMessagesObj = data[cName];
+                let msgsArray = clientMessagesObj ? Object.values(clientMessagesObj) : [];
+                if (msgsArray.length === 0) return;
 
-            Object.keys(clientsMap).forEach(cName => {
-                let clientMsgs = clientsMap[cName];
-                let lastMsg = clientMsgs[clientMsgs.length - 1];
+                let lastMsg = msgsArray[msgsArray.length - 1];
+                let unreadCount = msgsArray.filter(msg => msg.sender === 'client' && !msg.read).length;
+
                 let cardDiv = document.createElement('div');
                 cardDiv.classList.add('client-card');
                 if (activeClientName === cName) cardDiv.classList.add('active');
+
                 cardDiv.innerHTML = `
                     <img src="https://i.pravatar.cc/150?img=${cName.length + 10}" alt="avatar">
                     <div class="client-card-info">
-                        <h4>${cName}</h4>
+                        <h4>
+                            ${cName}
+                            ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}
+                        </h4>
                         <p>${lastMsg.text}</p>
                     </div>
                 `;
-                cardDiv.onclick = (e) => openClientChat(cName, clientMsgs, e.currentTarget);
+                cardDiv.onclick = (e) => openClientChat(cName, e.currentTarget);
                 clientsListEl.appendChild(cardDiv);
             });
-
-            if (activeClientName && clientsMap[activeClientName]) {
-                renderChatMessages(clientsMap[activeClientName]);
-            }
         });
 
-        window.openClientChat = function(cName, messages, element) {
+        window.openClientChat = function(cName, element) {
             activeClientName = cName;
             document.getElementById('noChatScreen').style.display = 'none';
             document.getElementById('chatBoxContainer').style.display = 'flex';
@@ -392,7 +470,40 @@
             document.getElementById('chatSection').classList.add('show-screen');
             document.querySelectorAll('.client-card').forEach(el => el.classList.remove('active'));
             if(element) element.classList.add('active');
-            renderChatMessages(messages);
+
+            const clientSpecificRef = ref(db, 'employee_chats/' + safeEmpName + '/chats/' + cName);
+            onValue(clientSpecificRef, (snapshot) => {
+                const data = snapshot.val();
+                const chatBody = document.getElementById('chatMessagesBody');
+                chatBody.innerHTML = '';
+                if (data) {
+                    Object.keys(data).forEach(msgKey => {
+                        let msg = data[msgKey];
+                        if (msg.sender === 'client' && !msg.read) {
+                            update(ref(db, 'employee_chats/' + safeEmpName + '/chats/' + cName + '/' + msgKey), { read: true });
+                        }
+
+                        const wrapperDiv = document.createElement('div');
+                        wrapperDiv.classList.add('message-wrapper');
+                        const msgDiv = document.createElement('div');
+                        msgDiv.classList.add('message');
+                        const timeSpan = document.createElement('span');
+                        timeSpan.classList.add('msg-timestamp');
+                        timeSpan.innerText = formatTime(msg.timestamp);
+
+                        if (msg.sender === 'client') {
+                            wrapperDiv.classList.add('client'); msgDiv.classList.add('client');
+                            msgDiv.innerHTML = `<p>${msg.text}</p>`;
+                        } else {
+                            wrapperDiv.classList.add('support'); msgDiv.classList.add('support');
+                            msgDiv.innerHTML = `<p>${msg.text}</p>`;
+                        }
+                        wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
+                        chatBody.appendChild(wrapperDiv);
+                    });
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                }
+            });
         };
 
         window.goBackToClients = function() {
@@ -400,39 +511,16 @@
             activeClientName = null;
         };
 
-        function renderChatMessages(messages) {
-            const chatBody = document.getElementById('chatMessagesBody');
-            chatBody.innerHTML = '';
-            messages.forEach(msg => {
-                const wrapperDiv = document.createElement('div');
-                wrapperDiv.classList.add('message-wrapper');
-                const msgDiv = document.createElement('div');
-                msgDiv.classList.add('message');
-                const timeSpan = document.createElement('span');
-                timeSpan.classList.add('msg-timestamp');
-                timeSpan.innerText = formatTime(msg.timestamp);
-
-                if (msg.sender === 'client') {
-                    wrapperDiv.classList.add('client'); msgDiv.classList.add('client');
-                    msgDiv.innerHTML = `<p>${msg.text}</p>`;
-                } else {
-                    wrapperDiv.classList.add('support'); msgDiv.classList.add('support');
-                    msgDiv.innerHTML = `<p>${msg.text}</p>`;
-                }
-                wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
-                chatBody.appendChild(wrapperDiv);
-            });
-            chatBody.scrollTop = chatBody.scrollHeight;
-        }
-
         window.sendSupportReply = function() {
             const input = document.getElementById('supportReplyInput');
             const text = input.value.trim();
             if (text === "" || !activeClientName) return;
             const now = new Date();
-            push(chatsRef, {
-                sender: 'support', clientName: activeClientName, employeeName: "الدعم الفني",
-                text: text, timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now.getTime())
+            
+            const clientSpecificRef = ref(db, 'employee_chats/' + safeEmpName + '/chats/' + activeClientName);
+            push(clientSpecificRef, {
+                sender: 'support', clientName: activeClientName, employeeName: currentEmployee,
+                text: text, timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now.getTime()), read: true
             });
             input.value = "";
         };
