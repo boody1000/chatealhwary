@@ -31,6 +31,11 @@
         .client-card-info h4 { font-size: 15px; color: #050505; display: flex; justify-content: space-between; align-items: center; }
         .client-card-info p { font-size: 13px; color: #65676b; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; }
 
+        /* تنسيق شارة عداد الرسائل غير المقروءة مثل الماسنجر */
+        .client-card.unread .client-card-info h4 { font-weight: bold; color: #000; }
+        .client-card.unread .client-card-info p { font-weight: bold; color: #000; }
+        .unread-badge { background-color: #0084ff; color: #fff; font-size: 12px; font-weight: bold; padding: 2px 7px; border-radius: 50%; min-width: 20px; text-align: center; display: inline-block; }
+
         .chat-section { width: 100%; height: 100%; display: flex; flex-direction: column; background: #fff; position: absolute; top: 0; right: 0; transform: translateX(-100%); transition: transform 0.3s ease-in-out; z-index: 3; }
         .chat-section.show-screen { transform: translateX(0); }
         
@@ -180,6 +185,9 @@
         const db = getDatabase(app);
         const chatsRef = ref(db, 'chats/');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
+
+        // تخزين طوابع زمنية آخر قراءة لكل عميل محلياً لتحديد الرسائل غير المقروءة
+        let clientLastSeenMap = JSON.parse(localStorage.getItem('clientLastSeenMap') || '{}');
 
         // بيانات بوت التليجرام المدمجة
         const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
@@ -532,7 +540,7 @@
                             playNotificationSound();
                             // إرسال إشعار تليجرام عند استلام رسالة جديدة من العميل
                             sendTelegramNotification(`💬 <b>رسالة جديدة من عميل</b>\n👤 الاسم: ${newMsg.clientName || 'زائر'}\n✉️ النص: ${newMsg.text}`);
-                            // إظهار إشعار سطح المكتب والموبايل عبر الـ Service Worker
+                            // إشعار سطح المكتب والموبايل عبر الـ Service Worker
                             showPushNotification(`رسالة جديدة من: ${newMsg.clientName || 'زائر'}`, newMsg.text);
                         }
                     }
@@ -549,16 +557,38 @@
                 clientsMap[cName].push(msg);
             });
 
-            Object.keys(clientsMap).forEach(cName => {
+            // تحويل خريطة العملاء إلى مصفوفة وترتيبها تنازلياً بحسب أحدث رسالة لتظهر المحادثة النشطة في الأعلى تماماً مثل الماسنجر
+            let clientsArray = Object.keys(clientsMap).map(cName => {
                 let clientMsgs = clientsMap[cName];
                 let lastMsg = clientMsgs[clientMsgs.length - 1];
+                return {
+                    cName: cName,
+                    messages: clientMsgs,
+                    lastMsg: lastMsg,
+                    lastTimestamp: lastMsg.timestamp || 0
+                };
+            });
+
+            clientsArray.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+
+            clientsArray.forEach(item => {
+                let cName = item.cName;
+                let clientMsgs = item.messages;
+                let lastMsg = item.lastMsg;
+                
+                // حساب عدد الرسائل غير المقروءة للعميل بناءً على رسائل الـ client التي توقيتها أكبر من آخر وقت تمت قراءتها فيه
+                let lastSeen = clientLastSeenMap[cName] || 0;
+                let unreadCount = clientMsgs.filter(m => m.sender === 'client' && m.timestamp > lastSeen).length;
+
                 let cardDiv = document.createElement('div');
                 cardDiv.classList.add('client-card');
                 if (activeClientName === cName) cardDiv.classList.add('active');
+                if (unreadCount > 0) cardDiv.classList.add('unread');
+
                 cardDiv.innerHTML = `
                     <img src="https://i.pravatar.cc/150?img=${cName.length + 10}" alt="avatar">
                     <div class="client-card-info">
-                        <h4>${cName}</h4>
+                        <h4>${cName} ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}</h4>
                         <p>${lastMsg.text}</p>
                     </div>
                 `;
@@ -573,6 +603,18 @@
 
         window.openClientChat = function(cName, messages, element) {
             activeClientName = cName;
+            
+            // تحديث وقت آخر قراءة لرسائل العميل للوقت الحالي لتصفير العداد وتخزينه
+            clientLastSeenMap[cName] = Date.now();
+            localStorage.setItem('clientLastSeenMap', JSON.stringify(clientLastSeenMap));
+            
+            // إزالة حالة الـ unread والشارة من الكارد مباشرة
+            if(element) {
+                element.classList.remove('unread');
+                let badge = element.querySelector('.unread-badge');
+                if(badge) badge.remove();
+            }
+
             document.getElementById('noChatScreen').style.display = 'none';
             document.getElementById('chatBoxContainer').style.display = 'flex';
             document.getElementById('currentChatClientName').innerText = cName;
