@@ -46,7 +46,7 @@
         .support-info { display: flex; align-items: center; }
         .support-info img { width: 40px; height: 40px; border-radius: 50%; margin-left: 10px; border: 2px solid #fff; object-fit: cover; }
         .support-info h3 { font-size: 15px; }
-        .status { font-size: 12px; color: #e4e6eb; display: block; }
+        .status { font-size: 12px; color: #e4e6eb; }
         
         .call-actions { display: flex; gap: 10px; }
         .call-actions button { background: #31a24c; border: none; color: #fff; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
@@ -58,12 +58,10 @@
         .message-wrapper { display: flex; flex-direction: column; max-width: 75%; }
         .message-wrapper.client { align-self: flex-end; align-items: flex-end; }
         .message-wrapper.support { align-self: flex-start; align-items: flex-start; }
-        .message-wrapper.system { align-self: center; align-items: center; max-width: 90%; }
 
         .message { padding: 10px 14px; border-radius: 15px; font-size: 14px; word-break: break-word; }
         .message.support { background: #fff; color: #050505; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .message.client { background: #0084ff; color: #fff; }
-        .message.system { background: #e4e6eb; color: #65676b; font-size: 12px; text-align: center; border-radius: 10px; }
         .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
 
         /* مؤشر "بيكتب الآن..." بنقط متحركة زي الماسنجر */
@@ -255,58 +253,28 @@
         let callObject = null;
         let isMuted = false;
 
-        // اسم آمن للاستخدام كمفتاح مسار في Firebase
+        // اسم آمن للاستخدام كمفتاح مسار في Firebase (بيشيل المسافات والرموز الممنوعة)
         function safeKey(name) {
             return name.replace(/[.#$\[\]\/\s]+/g, '_');
         }
 
         // ربط وتشغيل محادثة العميل بعد إدخال الاسم
-        function initClientChat(clientName, clientPhone, isFirstTime = false) {
-            setupPresence(clientName, clientPhone);
+        function initClientChat(clientName) {
+            setupPresence(clientName);
             listenToCalls(clientName);
             listenToSupportTyping(clientName);
             loadClientMessages(clientName);
-
-            // حفظ بيانات النموذج في قاعدة البيانات وإرسالها للموظف وفي الشات إذا كانت أول مرة
-            if (isFirstTime) {
-                const now = new Date();
-                const formDetailsText = `📋 **بيانات العميل الجديد:**\n👤 الاسم: ${clientName}\n📞 الهاتف: ${clientPhone || 'بدون رقم'}`;
-                
-                // حفظ في جدول مستقل للنماذج في الداتا بيز
-                const formRef = ref(db, 'client_forms/' + safeKey(clientName));
-                set(formRef, {
-                    clientName: clientName,
-                    clientPhone: clientPhone || 'بدون رقم',
-                    timestamp: now.getTime(),
-                    dateString: now.toLocaleDateString('ar-EG'),
-                    timeString: formatTime(now)
-                });
-
-                // إرسال بيانات النموذج كرسالة داخل الشات لكي تظهر للموظف والعميل
-                const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
-                push(clientMessagesRef, {
-                    sender: 'client', 
-                    clientName: clientName, 
-                    clientPhone: clientPhone || 'بدون رقم', 
-                    text: formDetailsText,
-                    timestamp: now.getTime(), 
-                    dateString: now.toLocaleDateString('ar-EG'), 
-                    timeString: formatTime(now)
-                });
-
-                // إرسال إشعار تليجرام بنجاح تسجيل النموذج
-                sendTelegramNotification(`📋 <b>عميل جديد قام بملء النموذج</b>\n👤 الاسم: ${clientName}\n📞 الهاتف: ${clientPhone || 'بدون رقم'}`);
-            }
         }
 
-        // نظام الحضور (Online/Offline) لكل عميل على حدة مع حفظ الهاتف
-        function setupPresence(clientName, clientPhone) {
+        // نظام الحضور (Online/Offline) لكل عميل على حدة
+        function setupPresence(clientName) {
             const safeId = safeKey(clientName);
             const presenceRef = ref(db, 'online_clients/' + safeId);
+            const clientPhone = sessionStorage.getItem('chatClientPhone') || '';
 
             set(presenceRef, {
                 name: clientName,
-                phone: clientPhone || 'بدون رقم',
+                phone: clientPhone,
                 status: 'online',
                 lastActive: Date.now()
             });
@@ -452,37 +420,36 @@
             const nameInput = document.getElementById('clientNameInput').value.trim();
             const phoneInput = document.getElementById('clientPhoneInput').value.trim();
             if (nameInput === "") { alert("الرجاء كتابة اسمك أولاً"); return; }
-            
             sessionStorage.setItem('chatClientName', nameInput);
             sessionStorage.setItem('chatClientPhone', phoneInput);
-            
             document.getElementById('nameModal').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
+            document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
+
+            // حفظ بيانات النموذج الفوري في قاعدة البيانات في نفس مسار الشات وعرضها في الشات
+            const now = new Date();
+            const clientMessagesRef = ref(db, 'chats/' + safeKey(nameInput));
+            const formDetailsText = `📋 بيانات العميل المنضم:\n👤 الاسم: ${nameInput}\n📞 الهاتف: ${phoneInput ? phoneInput : 'غير متوفر'}`;
             
-            // عرض بيانات النموذج (الاسم والهاتف) في شاشة المحادثة
-            let headerText = 'أهلاً بك، ' + nameInput;
-            if (phoneInput) {
-                headerText += ' | الهاتف: ' + phoneInput;
-            }
-            document.getElementById('welcomeUserTitle').innerText = headerText;
-            
-            initClientChat(nameInput, phoneInput, true);
+            push(clientMessagesRef, {
+                sender: 'client', 
+                clientName: nameInput, 
+                text: formDetailsText,
+                timestamp: now.getTime(), 
+                dateString: now.toLocaleDateString('ar-EG'), 
+                timeString: formatTime(now)
+            });
+
+            initClientChat(nameInput);
         };
 
         window.onload = function() {
             const savedName = sessionStorage.getItem('chatClientName');
-            const savedPhone = sessionStorage.getItem('chatClientPhone') || '';
             if (savedName) {
                 document.getElementById('nameModal').style.display = 'none';
                 document.getElementById('chatContainer').style.display = 'flex';
-                
-                let headerText = 'أهلاً بك، ' + savedName;
-                if (savedPhone) {
-                    headerText += ' | الهاتف: ' + savedPhone;
-                }
-                document.getElementById('welcomeUserTitle').innerText = headerText;
-                
-                initClientChat(savedName, savedPhone, false);
+                document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + savedName;
+                initClientChat(savedName);
             }
         };
 
@@ -520,10 +487,10 @@
 
                 if (data.sender === 'client') {
                     wrapperDiv.classList.add('client'); msgDiv.classList.add('client');
-                    msgDiv.innerHTML = `<p>${data.text.replace(/\n/g, '<br>')}</p>`;
+                    msgDiv.innerHTML = `<p style="white-space: pre-line;">${data.text}</p>`;
                 } else {
                     wrapperDiv.classList.add('support'); msgDiv.classList.add('support');
-                    msgDiv.innerHTML = `<p>${data.text.replace(/\n/g, '<br>')}</p>`;
+                    msgDiv.innerHTML = `<p style="white-space: pre-line;">${data.text}</p>`;
                 }
                 wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
                 chatBody.appendChild(wrapperDiv);
@@ -535,17 +502,16 @@
             const input = document.getElementById('clientInput');
             const text = input.value.trim();
             const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
-            const clientPhone = sessionStorage.getItem('chatClientPhone') || 'بدون رقم';
             if (text === "") return;
             const now = new Date();
 
             const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
             push(clientMessagesRef, {
-                sender: 'client', clientName: clientName, clientPhone: clientPhone, text: text,
+                sender: 'client', clientName: clientName, text: text,
                 timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now)
             });
 
-            sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n📞 الهاتف: ${clientPhone}\n✉️ النص: ${text}`);
+            sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n✉️ النص: ${text}`);
 
             clearTimeout(typingTimeout);
             set(ref(db, 'typing/' + safeKey(clientName) + '/client'), null);
