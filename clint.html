@@ -248,13 +248,16 @@
 
 
         // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل[cite: 7, 8]
-        function showPushNotification(title, body) {
+        function showPushNotification(title, body, options) {
+            options = options || {};
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
                     type: 'SHOW_NOTIFICATION',
                     title: title,
                     body: body,
-                    url: window.location.href
+                    url: window.location.href,
+                    tag: options.tag || 'message',
+                    requireInteraction: !!options.requireInteraction
                 });
             } else if (Notification.permission === 'granted') {
                 try {
@@ -262,7 +265,9 @@
                         body: body,
                         icon: './22.jpg',
                         badge: './22.jpg',
-                        vibrate: [300, 100, 300, 100, 300]
+                        vibrate: [300, 100, 300, 100, 300],
+                        tag: options.tag || 'message',
+                        requireInteraction: !!options.requireInteraction
                     });
                 } catch(e) {}
             }
@@ -280,6 +285,7 @@
                 if (!data) return;
 
                 if (data.status === 'calling' && data.sender === 'support') {
+                    const isNewRing = document.getElementById('messengerCallScreen').style.display !== 'flex';
                     document.getElementById('callStatusText').innerText = "مكالمة صوتية واردة...";
                     document.getElementById('messengerCallScreen').style.display = 'flex';
                     
@@ -289,6 +295,9 @@
                     `;
                     if (ringAudio) { ringAudio.currentTime = 0; ringAudio.play().catch(e=>{}); }
                     if (ranAudio) { ranAudio.currentTime = 0; ranAudio.play().catch(e=>{}); }
+                    if (isNewRing) {
+                        showPushNotification('📞 مكالمة واردة', 'خدمة العملاء بتتصل بيك الآن', { tag: 'incoming-call', requireInteraction: true });
+                    }
                 } else if (data.status === 'ended') {
                     closeCallScreenUI();
                 }
@@ -372,6 +381,9 @@
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             if (ranAudio) { ranAudio.pause(); ranAudio.currentTime = 0; }
             document.getElementById('messengerCallScreen').style.display = 'none';
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'CLOSE_NOTIFICATION', tag: 'incoming-call' });
+            }
             if (callObject) {
                 callObject.leave();
             }
