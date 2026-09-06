@@ -64,7 +64,6 @@
         .message.support { background: #fff; color: #050505; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .message.client { background: #0084ff; color: #fff; }
         
-        /* تصميم كارت بيانات العميل داخل الـ Chatbox */
         .message.system-info-card {
             background: #e7f3ff; color: #050505; border: 1px solid #b6d4fe; border-radius: 10px; padding: 10px 14px; width: 100%; text-align: right; font-size: 13px;
         }
@@ -72,7 +71,6 @@
 
         .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
 
-        /* مؤشر "بيكتب الآن..." بنقط متحركة زي الماسنجر */
         .typing-dots { display: flex !important; align-items: center; gap: 4px; padding: 12px 16px !important; }
         .typing-dots span { width: 7px; height: 7px; background: #8a8d91; border-radius: 50%; display: inline-block; animation: typingBlink 1.2s infinite ease-in-out; }
         .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
@@ -83,7 +81,6 @@
         .chat-footer input { flex: 1; padding: 10px 15px; border: 1px solid #ccd0d5; border-radius: 20px; outline: none; font-size: 14px; }
         .chat-footer button { background: #0084ff; color: #fff; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; }
 
-        /* شاشة المكالمة الصوتية */
         #messengerCallScreen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #1c1e21; display: none; flex-direction: column; justify-content: space-between; align-items: center; z-index: 9999; padding: 50px 0;
@@ -134,7 +131,6 @@
         </div>
     </div>
 
-    <!-- شاشة المكالمة الصوتية -->
     <div id="messengerCallScreen">
         <div class="messenger-header">
             <img src="22.jpg" alt="User">
@@ -164,7 +160,6 @@
         <div class="chat-body" id="clientMessages">
             <div class="msg-time-header">اليوم</div>
             
-            <!-- سيتم حقن كارت بيانات النموذج الفوري هنا تلقائياً داخل الـ Chatbox -->
             <div id="clientInfoCardWrapper"></div>
 
             <div class="message-wrapper support">
@@ -210,7 +205,6 @@
         const ranAudio = document.getElementById('ranSound');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
-        // بيانات بوت التليجرام المدمجة
         const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
         const TELEGRAM_CHAT_ID = "7594072203";
 
@@ -227,7 +221,6 @@
             }).catch(err => console.log("Telegram Error:", err));
         }
 
-        // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
@@ -241,7 +234,6 @@
             });
         }
 
-        // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل
         function showPushNotification(title, body) {
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
@@ -265,12 +257,10 @@
         let callObject = null;
         let isMuted = false;
 
-        // اسم آمن للاستخدام كمفتاح مسار في Firebase
         function safeKey(name) {
             return name.replace(/[.#$\[\]\/\s]+/g, '_');
         }
 
-        // عرض بيانات النموذج داخل الـ Chatbox مباشرة
         function renderClientInfoInChat(clientName, clientPhone) {
             const cardWrapper = document.getElementById('clientInfoCardWrapper');
             cardWrapper.innerHTML = `
@@ -284,7 +274,6 @@
             `;
         }
 
-        // ربط وتشغيل محادثة العميل بعد إدخال الاسم
         function initClientChat(clientName, clientPhone) {
             setupPresence(clientName, clientPhone);
             listenToCalls(clientName);
@@ -293,7 +282,6 @@
             renderClientInfoInChat(clientName, clientPhone);
         }
 
-        // نظام الحضور (Online/Offline) لكل عميل على حدة مع حفظ الهاتف
         function setupPresence(clientName, clientPhone) {
             const safeId = safeKey(clientName);
             const presenceRef = ref(db, 'online_clients/' + safeId);
@@ -313,7 +301,6 @@
             onDisconnect(ref(db, 'typing/' + safeId + '/client')).set(null);
         }
 
-        // مؤشر "بيكتب الآن..." الخاص بالدعم الفني لكل عميل
         function listenToSupportTyping(clientName) {
             const typingRef = ref(db, 'typing/' + safeKey(clientName) + '/support');
             onValue(typingRef, (snapshot) => {
@@ -330,7 +317,6 @@
             });
         }
 
-        // الاستماع لمكالمات هذا العميل فقط
         function listenToCalls(clientName) {
             const callRef = ref(db, 'calls/' + safeKey(clientName));
             onValue(callRef, (snapshot) => {
@@ -476,7 +462,6 @@
             return hours + ':' + minutes + ' ' + ampm;
         }
 
-        // تحميل رسائل هذا العميل فقط من مساره الخاص في قاعدة البيانات
         function loadClientMessages(clientName) {
             const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
             
