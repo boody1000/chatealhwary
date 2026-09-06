@@ -95,6 +95,12 @@
     </style>
 </head>
 <body>
+    <!-- كود التأمين الأمني للتحقق من تسجيل الدخول -->
+    <script>
+      if (!localStorage.getItem('loggedAdmin') && !localStorage.getItem('loggedUsername')) {
+        window.location.href = 'index.html';
+      }
+    </script>
 
     <audio id="ringSound" preload="auto" loop></audio>
     <audio id="remoteAudio" autoplay></audio>
@@ -340,7 +346,7 @@
             }
         }
 
-        const loggedUser = localStorage.getItem('loggedUsername');
+        const loggedUser = localStorage.getItem('loggedUsername') || localStorage.getItem('loggedAdmin');
         if (loggedUser) {
             document.getElementById('loggedEmployeeName').innerText = loggedUser;
         }
