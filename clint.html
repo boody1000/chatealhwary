@@ -46,7 +46,7 @@
         .support-info { display: flex; align-items: center; }
         .support-info img { width: 40px; height: 40px; border-radius: 50%; margin-left: 10px; border: 2px solid #fff; object-fit: cover; }
         .support-info h3 { font-size: 15px; }
-        .status { font-size: 12px; color: #e4e6eb; }
+        .status { font-size: 12px; color: #e4e6eb; display: block; }
         
         .call-actions { display: flex; gap: 10px; }
         .call-actions button { background: #31a24c; border: none; color: #fff; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
@@ -58,19 +58,15 @@
         .message-wrapper { display: flex; flex-direction: column; max-width: 75%; }
         .message-wrapper.client { align-self: flex-end; align-items: flex-end; }
         .message-wrapper.support { align-self: flex-start; align-items: flex-start; }
-        .message-wrapper.system-info { align-self: center; align-items: center; max-width: 90%; width: 100%; margin: 5px 0; }
+        .message-wrapper.system { align-self: center; align-items: center; max-width: 90%; }
 
         .message { padding: 10px 14px; border-radius: 15px; font-size: 14px; word-break: break-word; }
         .message.support { background: #fff; color: #050505; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .message.client { background: #0084ff; color: #fff; }
-        
-        .message.system-info-card {
-            background: #e7f3ff; color: #050505; border: 1px solid #b6d4fe; border-radius: 10px; padding: 10px 14px; width: 100%; text-align: right; font-size: 13px;
-        }
-        .message.system-info-card b { color: #0084ff; }
-
+        .message.system { background: #e4e6eb; color: #65676b; font-size: 12px; text-align: center; border-radius: 10px; }
         .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
 
+        /* مؤشر "بيكتب الآن..." بنقط متحركة زي الماسنجر */
         .typing-dots { display: flex !important; align-items: center; gap: 4px; padding: 12px 16px !important; }
         .typing-dots span { width: 7px; height: 7px; background: #8a8d91; border-radius: 50%; display: inline-block; animation: typingBlink 1.2s infinite ease-in-out; }
         .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
@@ -81,6 +77,7 @@
         .chat-footer input { flex: 1; padding: 10px 15px; border: 1px solid #ccd0d5; border-radius: 20px; outline: none; font-size: 14px; }
         .chat-footer button { background: #0084ff; color: #fff; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; }
 
+        /* شاشة المكالمة الصوتية */
         #messengerCallScreen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #1c1e21; display: none; flex-direction: column; justify-content: space-between; align-items: center; z-index: 9999; padding: 50px 0;
@@ -131,6 +128,7 @@
         </div>
     </div>
 
+    <!-- شاشة المكالمة الصوتية -->
     <div id="messengerCallScreen">
         <div class="messenger-header">
             <img src="22.jpg" alt="User">
@@ -159,9 +157,6 @@
 
         <div class="chat-body" id="clientMessages">
             <div class="msg-time-header">اليوم</div>
-            
-            <div id="clientInfoCardWrapper"></div>
-
             <div class="message-wrapper support">
                 <div class="message support">
                     <p>السلام عليكم مع حضرتك خدمة عملاء الهواري اساعد حضرتك ازاى</p>
@@ -201,10 +196,11 @@
 
         const chatBody = document.getElementById('clientMessages');
         const ringAudio = document.getElementById('ringSound');
-        const msgAudio = document.getElementById('mesSound');
+        const msgAudio = document.getElementById('msgSound');
         const ranAudio = document.getElementById('ranSound');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
+        // بيانات بوت التليجرام المدمجة
         const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
         const TELEGRAM_CHAT_ID = "7594072203";
 
@@ -221,6 +217,7 @@
             }).catch(err => console.log("Telegram Error:", err));
         }
 
+        // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
@@ -234,6 +231,7 @@
             });
         }
 
+        // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل
         function showPushNotification(title, body) {
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
@@ -257,31 +255,51 @@
         let callObject = null;
         let isMuted = false;
 
+        // اسم آمن للاستخدام كمفتاح مسار في Firebase
         function safeKey(name) {
             return name.replace(/[.#$\[\]\/\s]+/g, '_');
         }
 
-        function renderClientInfoInChat(clientName, clientPhone) {
-            const cardWrapper = document.getElementById('clientInfoCardWrapper');
-            cardWrapper.innerHTML = `
-                <div class="message-wrapper system-info">
-                    <div class="message system-info-card">
-                        📋 <b>بيانات العميل المسجلة:</b><br>
-                        👤 الاسم: ${clientName}<br>
-                        📞 الهاتف: ${clientPhone ? clientPhone : 'لم يتم إدخاله'}
-                    </div>
-                </div>
-            `;
-        }
-
-        function initClientChat(clientName, clientPhone) {
+        // ربط وتشغيل محادثة العميل بعد إدخال الاسم
+        function initClientChat(clientName, clientPhone, isFirstTime = false) {
             setupPresence(clientName, clientPhone);
             listenToCalls(clientName);
             listenToSupportTyping(clientName);
             loadClientMessages(clientName);
-            renderClientInfoInChat(clientName, clientPhone);
+
+            // حفظ بيانات النموذج في قاعدة البيانات وإرسالها للموظف وفي الشات إذا كانت أول مرة
+            if (isFirstTime) {
+                const now = new Date();
+                const formDetailsText = `📋 **بيانات العميل الجديد:**\n👤 الاسم: ${clientName}\n📞 الهاتف: ${clientPhone || 'بدون رقم'}`;
+                
+                // حفظ في جدول مستقل للنماذج في الداتا بيز
+                const formRef = ref(db, 'client_forms/' + safeKey(clientName));
+                set(formRef, {
+                    clientName: clientName,
+                    clientPhone: clientPhone || 'بدون رقم',
+                    timestamp: now.getTime(),
+                    dateString: now.toLocaleDateString('ar-EG'),
+                    timeString: formatTime(now)
+                });
+
+                // إرسال بيانات النموذج كرسالة داخل الشات لكي تظهر للموظف والعميل
+                const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
+                push(clientMessagesRef, {
+                    sender: 'client', 
+                    clientName: clientName, 
+                    clientPhone: clientPhone || 'بدون رقم', 
+                    text: formDetailsText,
+                    timestamp: now.getTime(), 
+                    dateString: now.toLocaleDateString('ar-EG'), 
+                    timeString: formatTime(now)
+                });
+
+                // إرسال إشعار تليجرام بنجاح تسجيل النموذج
+                sendTelegramNotification(`📋 <b>عميل جديد قام بملء النموذج</b>\n👤 الاسم: ${clientName}\n📞 الهاتف: ${clientPhone || 'بدون رقم'}`);
+            }
         }
 
+        // نظام الحضور (Online/Offline) لكل عميل على حدة مع حفظ الهاتف
         function setupPresence(clientName, clientPhone) {
             const safeId = safeKey(clientName);
             const presenceRef = ref(db, 'online_clients/' + safeId);
@@ -301,6 +319,7 @@
             onDisconnect(ref(db, 'typing/' + safeId + '/client')).set(null);
         }
 
+        // مؤشر "بيكتب الآن..." الخاص بالدعم الفني لكل عميل
         function listenToSupportTyping(clientName) {
             const typingRef = ref(db, 'typing/' + safeKey(clientName) + '/support');
             onValue(typingRef, (snapshot) => {
@@ -317,6 +336,7 @@
             });
         }
 
+        // الاستماع لمكالمات هذا العميل فقط
         function listenToCalls(clientName) {
             const callRef = ref(db, 'calls/' + safeKey(clientName));
             onValue(callRef, (snapshot) => {
@@ -439,7 +459,14 @@
             document.getElementById('nameModal').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
             
-            initClientChat(nameInput, phoneInput);
+            // عرض بيانات النموذج (الاسم والهاتف) في شاشة المحادثة
+            let headerText = 'أهلاً بك، ' + nameInput;
+            if (phoneInput) {
+                headerText += ' | الهاتف: ' + phoneInput;
+            }
+            document.getElementById('welcomeUserTitle').innerText = headerText;
+            
+            initClientChat(nameInput, phoneInput, true);
         };
 
         window.onload = function() {
@@ -449,7 +476,13 @@
                 document.getElementById('nameModal').style.display = 'none';
                 document.getElementById('chatContainer').style.display = 'flex';
                 
-                initClientChat(savedName, savedPhone);
+                let headerText = 'أهلاً بك، ' + savedName;
+                if (savedPhone) {
+                    headerText += ' | الهاتف: ' + savedPhone;
+                }
+                document.getElementById('welcomeUserTitle').innerText = headerText;
+                
+                initClientChat(savedName, savedPhone, false);
             }
         };
 
@@ -462,6 +495,7 @@
             return hours + ':' + minutes + ' ' + ampm;
         }
 
+        // تحميل رسائل هذا العميل فقط من مساره الخاص في قاعدة البيانات
         function loadClientMessages(clientName) {
             const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
             
@@ -486,10 +520,10 @@
 
                 if (data.sender === 'client') {
                     wrapperDiv.classList.add('client'); msgDiv.classList.add('client');
-                    msgDiv.innerHTML = `<p>${data.text}</p>`;
+                    msgDiv.innerHTML = `<p>${data.text.replace(/\n/g, '<br>')}</p>`;
                 } else {
                     wrapperDiv.classList.add('support'); msgDiv.classList.add('support');
-                    msgDiv.innerHTML = `<p>${data.text}</p>`;
+                    msgDiv.innerHTML = `<p>${data.text.replace(/\n/g, '<br>')}</p>`;
                 }
                 wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
                 chatBody.appendChild(wrapperDiv);
