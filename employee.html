@@ -112,7 +112,6 @@
         }
       }
       checkEmployeeAuth();
-      // إعادة التحقق لو الصفحة رجعت من كاش المتصفح (زرار الرجوع) بعد تسجيل خروج
       window.addEventListener('pageshow', function(event) {
         if (event.persisted) checkEmployeeAuth();
       });
@@ -187,7 +186,7 @@
                     </div>
                 </div>
 
-                    <div class="chat-footer-input">
+                <div class="chat-footer-input">
                     <input type="text" id="supportReplyInput" placeholder="اكتب ردك هنا...">
                     <button onclick="sendSupportReply()"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
@@ -197,7 +196,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onValue, off } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -212,20 +211,34 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const chatsRef = ref(db, 'chats/');
+        const chatsRootRef = ref(db, 'chats/');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
-        // اسم آمن للاستخدام كمفتاح مسار في Firebase (بيشيل المسافات والرموز الممنوعة)
+        // اسم آمن للاستخدام كمفتاح مسار في Firebase
         function safeKey(name) {
-            return name.replace(/[.#$\[\]\/\s]+/g, '_');
+            return name ? name.replace(/[.#$\[\]\/\s]+/g, '_') : '';
         }
 
-        // مؤشر "بيكتب الآن..." - بيراقب حالة كتابة العميل الحالي المفتوح في الشات
+        let activeClientName = null;
+        let activeClientOriginalName = null;
+        let currentClientMessagesListener = null;
+        let isInitialLoad = true;
+        let knownMessagesKeys = new Set();
+        let audioCtx = null;
+        let isAudioUnlocked = false;
+        let callObject = null;
+        let isMuted = false;
+        const ringAudio = document.getElementById('ringSound');
+        let callStartTime = null;
+        let mediaRecorder = null;
+        let recordedAudioChunks = [];
+
+        // مؤشر "بيكتب الآن..." - مراقبة حالة الكتابة للعميل الحالي
         let latestTypingData = {};
         function updateTypingIndicatorUI() {
             const indicator = document.getElementById('typingIndicatorWrapperEmp');
-            if (!indicator || !activeClientName) return;
-            const clientTyping = latestTypingData[safeKey(activeClientName)]?.client;
+            if (!indicator || !activeClientOriginalName) return;
+            const clientTyping = latestTypingData[safeKey(activeClientOriginalName)]?.client;
             const isRecentlyTyping = clientTyping && (Date.now() - clientTyping < 3000);
             const chatBody = document.getElementById('chatMessagesBody');
             if (isRecentlyTyping) {
@@ -242,13 +255,12 @@
             updateTypingIndicatorUI();
         });
 
-        // حالة أونلاين/أوفلاين للعميل - بتراقب عقدة online_clients/ اللي بيحدثها clint.html
-        // (بتتحول لـ offline تلقائيًا لو العميل قفل الصفحة، عن طريق onDisconnect)
+        // حالة أونلاين/أوفلاين للعميل
         let latestPresenceData = {};
         function updatePresenceIndicatorUI() {
             const statusEl = document.getElementById('currentChatStatus');
-            if (!statusEl || !activeClientName) return;
-            const info = latestPresenceData[safeKey(activeClientName)];
+            if (!statusEl || !activeClientOriginalName) return;
+            const info = latestPresenceData[safeKey(activeClientOriginalName)];
             const isOnline = info && info.status === 'online';
             statusEl.classList.toggle('offline', !isOnline);
             statusEl.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 8px;"></i> ${isOnline ? 'متصل الآن' : 'غير متصل'}`;
@@ -259,10 +271,8 @@
             updatePresenceIndicatorUI();
         });
 
-        // تخزين طوابع زمنية آخر قراءة لكل عميل محلياً لتحديد الرسائل غير المقروءة
         let clientLastSeenMap = JSON.parse(localStorage.getItem('clientLastSeenMap') || '{}');
 
-        // بيانات بوت التليجرام المدمجة
         const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
         const TELEGRAM_CHAT_ID = "7594072203";
 
@@ -279,7 +289,6 @@
             }).catch(err => console.log("Telegram Error:", err));
         }
 
-        // توليد رنة اتصال قياسية (نغمة هاتف منتظمة باستخدام Web Audio API) لتجنب مشاكل الملفات الخارجية
         function playStandardRingTone() {
             if (!audioCtx) return;
             try {
@@ -290,12 +299,11 @@
 
                 osc1.type = 'sine';
                 osc2.type = 'sine';
-                // الترددات المتعارف عليها لنغمات الهواتف القياسية (US standard ringback tone approx 440 + 480 Hz)
                 osc1.frequency.setValueAtTime(440, now);
                 osc2.frequency.setValueAtTime(480, now);
 
                 gain.gain.setValueAtTime(0.15, now);
-                gain.gain.setValueAtTime(0, now + 2.0); // رنة لمدة ثانيتين ثم صمت
+                gain.gain.setValueAtTime(0, now + 2.0);
 
                 osc1.connect(gain);
                 osc2.connect(gain);
@@ -314,7 +322,7 @@
             playStandardRingTone();
             standardRingInterval = setInterval(() => {
                 playStandardRingTone();
-            }, 4000); // تكرار النغمة كل 4 ثوانٍ تماماً كالهواتف الحقيقية
+            }, 4000);
         }
 
         function stopStandardRinging() {
@@ -324,10 +332,6 @@
             }
         }
 
-        // ============================================================
-        // OneSignal — إشعارات فعلية حتى لو التطبيق مقفول تمامًا (مجانًا 100%، من غير سيرفر أو Cloud Functions)
-        // ⚠️ لازم تستبدل القيمتين دول من: OneSignal Dashboard > Settings > Keys & IDs
-        // ============================================================
         const ONESIGNAL_APP_ID = "9785b8da-85a0-43e5-95f6-4c272e9e96be";
         const ONESIGNAL_REST_API_KEY = "os_v2_app_s6c3rwufubb6lfpwjqts5huwx2toppfrzdseob53odgfmanozyvb4ju4xjrnymetg7spwxho7u2yjmg46kgk2qds5gkol72vjaxzyia";
 
@@ -335,12 +339,11 @@
         OneSignalDeferred.push(async function (OneSignal) {
             await OneSignal.init({
                 appId: ONESIGNAL_APP_ID,
-                serviceWorkerPath: 'sw_2.js', // بنستخدم نفس الـ Service Worker بتاعنا (مدمج فيه كود OneSignal)
+                serviceWorkerPath: 'sw_2.js',
                 notifyButton: { enable: false }
             });
         });
 
-        // تسجيل الموظف عند OneSignal بالاسم بتاعه + تاج "role=employee" عشان نقدر نبعت لكل الموظفين مرة واحدة
         function registerEmployeeForPush(employeeName) {
             if (!employeeName) return;
             OneSignalDeferred.push(async function (OneSignal) {
@@ -354,7 +357,6 @@
             });
         }
 
-        // إرسال إشعار Push مباشر لعميل معيّن (بيتنادى وقت ما الموظف يرد أو يعمل مكالمة)
         async function sendPushToClient(clientName, title, body) {
             if (!clientName) return;
             try {
@@ -377,7 +379,6 @@
             }
         }
 
-        // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر (مطابق لملف sw_2.js)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw_2.js')
@@ -386,7 +387,6 @@
             });
         }
 
-        // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل
         function showPushNotification(title, body, options) {
             options = options || {};
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
@@ -417,18 +417,6 @@
             document.getElementById('loggedEmployeeName').innerText = loggedUser;
         }
 
-        let activeClientName = null;
-        let isInitialLoad = true;
-        let knownMessagesKeys = new Set();
-        let audioCtx = null;
-        let isAudioUnlocked = false;
-        let callObject = null;
-        let isMuted = false;
-        const ringAudio = document.getElementById('ringSound');
-        let callStartTime = null;
-        let mediaRecorder = null;
-        let recordedAudioChunks = [];
-
         function listenToAllCalls() {
             const callsRef = ref(db, 'calls/');
             onValue(callsRef, (snapshot) => {
@@ -443,7 +431,7 @@
                     let callObj = callsData[cName];
                     if (callObj.status === 'calling' && callObj.sender === 'client') {
                         hasActiveIncomingCall = true;
-                        activeClientName = cName;
+                        activeClientOriginalName = cName;
                         document.getElementById('callStatusText').innerText = `مكالمة واردة من: ${cName}`;
                         document.getElementById('messengerCallScreen').style.display = 'flex';
                         document.getElementById('messengerControlsBar').innerHTML = `
@@ -459,8 +447,7 @@
                             ringAudio.play().catch(e=>{}); 
                         }
                     } else if (callObj.status === 'accepted' || callObj.status === 'ended') {
-                        // إذا تم قبول المكالمة أو انتهت، يتم إيقاف الرنين عند باقي الموظفين فوراً لعدم الإزعاج
-                        if (activeClientName === cName && callObj.status === 'ended') {
+                        if (activeClientOriginalName === cName && callObj.status === 'ended') {
                             closeCallScreenUI();
                         } else if (callObj.status === 'accepted') {
                             stopStandardRinging();
@@ -479,15 +466,15 @@
         }
 
         window.initiateCall = function() {
-            if (!activeClientName) { alert("اختر عميلاً أولاً"); return; }
+            if (!activeClientOriginalName) { alert("اختر عميلاً أولاً"); return; }
             callStartTime = Date.now();
-            set(ref(db, 'calls/' + activeClientName), {
+            set(ref(db, 'calls/' + activeClientOriginalName), {
                 sender: 'support',
                 status: 'calling',
                 timestamp: callStartTime
             });
 
-            sendPushToClient(activeClientName, '📞 مكالمة واردة', 'خدمة العملاء بتتصل بيك الآن');
+            sendPushToClient(activeClientOriginalName, '📞 مكالمة واردة', 'خدمة العملاء بتتصل بيك الآن');
 
             document.getElementById('callStatusText').innerText = "جاري الاتصال الصوتي...";
             document.getElementById('messengerCallScreen').style.display = 'flex';
@@ -507,8 +494,8 @@
             stopStandardRinging();
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             callStartTime = Date.now();
-            if (activeClientName) {
-                set(ref(db, 'calls/' + activeClientName), {
+            if (activeClientOriginalName) {
+                set(ref(db, 'calls/' + activeClientOriginalName), {
                     sender: loggedUser || 'support',
                     status: 'accepted',
                     timestamp: callStartTime
@@ -542,7 +529,6 @@
                             audioEl.srcObject = new MediaStream([e.track]);
                             audioEl.play().catch(err => console.log("خطأ في تشغيل الصوت:", err));
                             
-                            // بدء تسجيل المكالمة أثناء حدوثها باستخدام دمج الصوتيات وتخزينها بعد الإغلاق
                             try {
                                 const localStream = callObject.participants().local?.audioStream || new MediaStream();
                                 const combinedStream = new MediaStream([...localStream.getTracks(), ...e.track.clone().mediaStream.getTracks()]);
@@ -562,7 +548,7 @@
                                         const durationSeconds = callStartTime ? Math.floor((endTime - callStartTime) / 1000) : 0;
                                         
                                         push(ref(db, 'call_logs/'), {
-                                            clientName: activeClientName,
+                                            clientName: activeClientOriginalName,
                                             employeeName: loggedUser || 'موظف',
                                             startTime: callStartTime ? new Date(callStartTime).toLocaleString('ar-EG') : '',
                                             endTime: new Date(endTime).toLocaleString('ar-EG'),
@@ -571,7 +557,7 @@
                                             timestamp: endTime
                                         });
 
-                                        sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}\n⏱️ المدة: ${durationSeconds} ثانية`);
+                                        sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientOriginalName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}\n⏱️ المدة: ${durationSeconds} ثانية`);
                                     };
                                     reader.readAsDataURL(audioBlob);
                                 };
@@ -595,12 +581,12 @@
             
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.stop();
-            } else if (activeClientName) {
+            } else if (activeClientOriginalName) {
                 const endTime = Date.now();
                 const durationSeconds = callStartTime ? Math.floor((endTime - callStartTime) / 1000) : 0;
                 
                 push(ref(db, 'call_logs/'), {
-                    clientName: activeClientName,
+                    clientName: activeClientOriginalName,
                     employeeName: loggedUser || 'موظف',
                     startTime: callStartTime ? new Date(callStartTime).toLocaleString('ar-EG') : '',
                     endTime: new Date(endTime).toLocaleString('ar-EG'),
@@ -608,11 +594,11 @@
                     timestamp: endTime
                 });
 
-                sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}\n⏱️ المدة: ${durationSeconds} ثانية`);
+                sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientOriginalName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}\n⏱️ المدة: ${durationSeconds} ثانية`);
             }
 
-            if (activeClientName) {
-                set(ref(db, 'calls/' + activeClientName + '/status'), 'ended');
+            if (activeClientOriginalName) {
+                set(ref(db, 'calls/' + activeClientOriginalName + '/status'), 'ended');
             }
             closeCallScreenUI();
         };
@@ -681,93 +667,118 @@
             return hours + ':' + minutes + ' ' + ampm;
         }
 
-        onValue(chatsRef, (snapshot) => {
-            const data = snapshot.val();
+        // الاستماع لجذر الـ chats لكشف جميع المحادثات وتحديث القائمة الجانبية بشكل صحيح ودقيق
+        onValue(chatsRootRef, (snapshot) => {
+            const allChatsData = snapshot.val();
             const clientsListEl = document.getElementById('clientsListContainer');
             clientsListEl.innerHTML = '';
-            if (!data) {
+            
+            if (!allChatsData) {
                 clientsListEl.innerHTML = '<p style="text-align:center; color:#8a8d91; padding:20px;">لا توجد محادثات حتى الآن</p>';
                 isInitialLoad = false;
                 return;
             }
-            let currentKeys = Object.keys(data);
-            if (!isInitialLoad) {
-                currentKeys.forEach(key => {
-                    if (!knownMessagesKeys.has(key)) {
-                        let newMsg = data[key];
-                        if (newMsg.sender === 'client') {
-                            playNotificationSound();
-                            // إرسال إشعار تليجرام عند استلام رسالة جديدة من العميل
-                            sendTelegramNotification(`💬 <b>رسالة جديدة من عميل</b>\n👤 الاسم: ${newMsg.clientName || 'زائر'}\n✉️ النص: ${newMsg.text}`);
-                            // إشعار سطح المكتب والموبايل عبر الـ Service Worker
-                            showPushNotification(`رسالة جديدة من: ${newMsg.clientName || 'زائر'}`, newMsg.text);
-                        }
-                    }
-                });
-            }
-            knownMessagesKeys = new Set(currentKeys);
-            isInitialLoad = false;
 
             let clientsMap = {};
-            currentKeys.forEach(key => {
-                let msg = data[key];
-                let cName = msg.clientName || 'زائر';
-                if (!clientsMap[cName]) clientsMap[cName] = [];
-                clientsMap[cName].push(msg);
+            
+            // التعامل مع الهيكل الذي يرسل فيه العميل رسائله تحت كل مسار باسم العميل `chats/اسم_العميل`
+            Object.keys(allChatsData).forEach(clientKey => {
+                let clientMessagesObj = allChatsData[clientKey];
+                if (clientMessagesObj && typeof clientMessagesObj === 'object') {
+                    let messagesArray = [];
+                    let realClientName = clientKey.replace(/_/g, ' '); // محاولة استعادة الاسم الأصلي
+                    
+                    Object.keys(clientMessagesObj).forEach(msgKey => {
+                        let msg = clientMessagesObj[msgKey];
+                        if (msg && typeof msg === 'object') {
+                            if (msg.clientName) {
+                                realClientName = msg.clientName;
+                            }
+                            messagesArray.push({
+                                ...msg,
+                                firebaseKey: msgKey
+                            });
+                        }
+                    });
+
+                    if (messagesArray.length > 0) {
+                        messagesArray.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+                        clientsMap[realClientName] = {
+                            safeKeyName: clientKey,
+                            messages: messagesArray,
+                            lastMsg: messagesArray[messagesArray.length - 1],
+                            lastTimestamp: messagesArray[messagesArray.length - 1].timestamp || 0
+                        };
+                    }
+                }
             });
 
-            // تحويل خريطة العملاء إلى مصفوفة وترتيبها تنازلياً بحسب أحدث رسالة لتظهر المحادثة النشطة في الأعلى تماماً مثل الماسنجر
             let clientsArray = Object.keys(clientsMap).map(cName => {
-                let clientMsgs = clientsMap[cName];
-                let lastMsg = clientMsgs[clientMsgs.length - 1];
                 return {
                     cName: cName,
-                    messages: clientMsgs,
-                    lastMsg: lastMsg,
-                    lastTimestamp: lastMsg.timestamp || 0
+                    ...clientsMap[cName]
                 };
             });
 
             clientsArray.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+
+            let allKeysSet = new Set();
+            clientsArray.forEach(item => {
+                item.messages.forEach(m => allKeysSet.add(m.firebaseKey));
+            });
+
+            if (!isInitialLoad) {
+                clientsArray.forEach(item => {
+                    item.messages.forEach(newMsg => {
+                        if (!knownMessagesKeys.has(newMsg.firebaseKey)) {
+                            if (newMsg.sender === 'client') {
+                                playNotificationSound();
+                                sendTelegramNotification(`💬 <b>رسالة جديدة من عميل</b>\n👤 الاسم: ${item.cName}\n✉️ النص: ${newMsg.text}`);
+                                showPushNotification(`رسالة جديدة من: ${item.cName}`, newMsg.text);
+                            }
+                        }
+                    });
+                });
+            }
+            knownMessagesKeys = allKeysSet;
+            isInitialLoad = false;
 
             clientsArray.forEach(item => {
                 let cName = item.cName;
                 let clientMsgs = item.messages;
                 let lastMsg = item.lastMsg;
                 
-                // حساب عدد الرسائل غير المقروءة للعميل بناءً على رسائل الـ client التي توقيتها أكبر من آخر وقت تمت قراءتها فيه
                 let lastSeen = clientLastSeenMap[cName] || 0;
-                let unreadCount = clientMsgs.filter(m => m.sender === 'client' && m.timestamp > lastSeen).length;
+                let unreadCount = clientMsgs.filter(m => m.sender === 'client' && (m.timestamp || 0) > lastSeen).length;
 
                 let cardDiv = document.createElement('div');
                 cardDiv.classList.add('client-card');
-                if (activeClientName === cName) cardDiv.classList.add('active');
+                if (activeClientOriginalName === cName) cardDiv.classList.add('active');
                 if (unreadCount > 0) cardDiv.classList.add('unread');
 
                 cardDiv.innerHTML = `
                     <img src="https://i.pravatar.cc/150?img=${cName.length + 10}" alt="avatar">
                     <div class="client-card-info">
                         <h4>${cName} ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}</h4>
-                        <p>${lastMsg.text}</p>
+                        <p>${lastMsg.text || ''}</p>
                     </div>
                 `;
-                cardDiv.onclick = (e) => openClientChat(cName, clientMsgs, e.currentTarget);
+                cardDiv.onclick = (e) => openClientChat(cName, item.safeKeyName, clientMsgs, e.currentTarget);
                 clientsListEl.appendChild(cardDiv);
             });
 
-            if (activeClientName && clientsMap[activeClientName]) {
-                renderChatMessages(clientsMap[activeClientName]);
+            if (activeClientOriginalName && clientsMap[activeClientOriginalName]) {
+                renderChatMessages(clientsMap[activeClientOriginalName].messages);
             }
         });
 
-        window.openClientChat = function(cName, messages, element) {
-            activeClientName = cName;
+        window.openClientChat = function(cName, safeKeyName, messages, element) {
+            activeClientOriginalName = cName;
+            activeClientName = safeKeyName;
             
-            // تحديث وقت آخر قراءة لرسائل العميل للوقت الحالي لتصفير العداد وتخزينه
             clientLastSeenMap[cName] = Date.now();
             localStorage.setItem('clientLastSeenMap', JSON.stringify(clientLastSeenMap));
             
-            // إزالة حالة الـ unread والشارة من الكارد مباشرة
             if(element) {
                 element.classList.remove('unread');
                 let badge = element.querySelector('.unread-badge');
@@ -781,6 +792,7 @@
             document.getElementById('chatSection').classList.add('show-screen');
             document.querySelectorAll('.client-card').forEach(el => el.classList.remove('active'));
             if(element) element.classList.add('active');
+            
             renderChatMessages(messages);
             updateTypingIndicatorUI();
             updatePresenceIndicatorUI();
@@ -788,6 +800,7 @@
 
         window.goBackToClients = function() {
             document.getElementById('chatSection').classList.remove('show-screen');
+            activeClientOriginalName = null;
             activeClientName = null;
         };
 
@@ -814,7 +827,6 @@
                 wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
                 chatBody.appendChild(wrapperDiv);
             });
-            // إعادة إضافة مؤشر الكتابة في آخر المحادثة (اتشال مع الـ innerHTML فوق)
             if (typingIndicator) chatBody.appendChild(typingIndicator);
             chatBody.scrollTop = chatBody.scrollHeight;
         }
@@ -822,25 +834,31 @@
         window.sendSupportReply = function() {
             const input = document.getElementById('supportReplyInput');
             const text = input.value.trim();
-            if (text === "" || !activeClientName) return;
+            if (text === "" || !activeClientOriginalName) return;
             const now = new Date();
-            push(chatsRef, {
-                sender: 'support', clientName: activeClientName,
-                text: text, timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now.getTime())
+            
+            const clientChatRef = ref(db, 'chats/' + safeKey(activeClientOriginalName));
+            push(clientChatRef, {
+                sender: 'support', 
+                clientName: activeClientOriginalName,
+                text: text, 
+                timestamp: now.getTime(), 
+                dateString: now.toLocaleDateString('ar-EG'), 
+                timeString: formatTime(now.getTime())
             });
-            sendPushToClient(activeClientName, '💬 رسالة جديدة من خدمة العملاء', text);
+            
+            sendPushToClient(activeClientOriginalName, '💬 رسالة جديدة من خدمة العملاء', text);
 
-            // إخفاء حالة "بيكتب الآن" فورًا بعد إرسال الرد
             clearTimeout(supportTypingTimeout);
-            set(ref(db, 'typing/' + safeKey(activeClientName) + '/support'), null);
+            set(ref(db, 'typing/' + safeKey(activeClientOriginalName) + '/support'), null);
 
             input.value = "";
         };
 
         let supportTypingTimeout = null;
         document.getElementById('supportReplyInput').addEventListener('input', function() {
-            if (!activeClientName) return;
-            const typingRef = ref(db, 'typing/' + safeKey(activeClientName) + '/support');
+            if (!activeClientOriginalName) return;
+            const typingRef = ref(db, 'typing/' + safeKey(activeClientOriginalName) + '/support');
             set(typingRef, Date.now());
             clearTimeout(supportTypingTimeout);
             supportTypingTimeout = setTimeout(() => set(typingRef, null), 2000);
