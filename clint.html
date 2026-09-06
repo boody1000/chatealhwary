@@ -6,7 +6,6 @@
     <title>تواصل معنا - المكالمة الصوتية</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #e9ebee; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
@@ -52,6 +51,13 @@
         .message.client { background: #0084ff; color: #fff; }
         .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
 
+        /* مؤشر "بيكتب الآن..." بنقط متحركة زي الماسنجر */
+        .typing-dots { display: flex !important; align-items: center; gap: 4px; padding: 12px 16px !important; }
+        .typing-dots span { width: 7px; height: 7px; background: #8a8d91; border-radius: 50%; display: inline-block; animation: typingBlink 1.2s infinite ease-in-out; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingBlink { 0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
         .chat-footer { padding: 12px; background: #fff; border-top: 1px solid #e4e6eb; display: flex; gap: 10px; align-items: center; }
         .chat-footer input { flex: 1; padding: 10px 15px; border: 1px solid #ccd0d5; border-radius: 20px; outline: none; font-size: 14px; }
         .chat-footer button { background: #0084ff; color: #fff; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; }
@@ -80,23 +86,6 @@
         .m-btn-accept { background: #31a24c; }
         .m-btn:hover { opacity: 0.85; }
     </style>
-    <!-- Meta Pixel Code -->
-<script>
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '2500843507000877');
-fbq('track', 'PageView');
-</script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
-/></noscript>
-<!-- End Meta Pixel Code -->
 </head>
 <body>
 
@@ -148,6 +137,11 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
                 </div>
                 <span class="msg-timestamp">الآن</span>
             </div>
+            <div class="message-wrapper support" id="typingIndicatorWrapper" style="display:none;">
+                <div class="message support typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
         </div>
 
         <div class="chat-footer">
@@ -158,7 +152,7 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onChildAdded, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -198,57 +192,6 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
             }).catch(err => console.log("Telegram Error:", err));
         }
 
-        // ============================================================
-        // OneSignal — إشعارات فعلية حتى لو التطبيق مقفول تمامًا (مجانًا 100%، من غير سيرفر أو Cloud Functions)
-        // ⚠️ لازم تستبدل القيمتين دول من: OneSignal Dashboard > Settings > Keys & IDs
-        // ============================================================
-        const ONESIGNAL_APP_ID = "9785b8da-85a0-43e5-95f6-4c272e9e96be";
-        const ONESIGNAL_REST_API_KEY = "os_v2_app_s6c3rwufubb6lfpwjqts5huwx2toppfrzdseob53odgfmanozyvb4ju4xjrnymetg7spwxho7u2yjmg46kgk2qds5gkol72vjaxzyia";
-
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        OneSignalDeferred.push(async function (OneSignal) {
-            await OneSignal.init({
-                appId: ONESIGNAL_APP_ID,
-                serviceWorkerPath: 'sw.js', // بنستخدم نفس الـ Service Worker بتاعنا (مدمج فيه كود OneSignal)
-                notifyButton: { enable: false }
-            });
-        });
-
-        // تسجيل العميل عند OneSignal بالاسم بتاعه، عشان لما حد يبعتله رسالة/مكالمة يوصله إشعار حتى لو التطبيق مقفول
-        function registerClientForPush(clientName) {
-            if (!clientName) return;
-            OneSignalDeferred.push(async function (OneSignal) {
-                try {
-                    await OneSignal.Notifications.requestPermission();
-                    await OneSignal.login(clientName);
-                } catch (err) {
-                    console.log('خطأ في تسجيل إشعارات OneSignal:', err);
-                }
-            });
-        }
-
-        // إرسال إشعار Push مباشر لكل الموظفين (بيتنادى وقت ما العميل يبعت رسالة أو يعمل مكالمة)
-        async function sendPushToEmployees(title, body) {
-            try {
-                await fetch('https://api.onesignal.com/notifications?c=push', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Key ' + ONESIGNAL_REST_API_KEY
-                    },
-                    body: JSON.stringify({
-                        app_id: ONESIGNAL_APP_ID,
-                        target_channel: 'push',
-                        filters: [{ field: 'tag', key: 'role', relation: '=', value: 'employee' }],
-                        headings: { en: title },
-                        contents: { en: body }
-                    })
-                });
-            } catch (err) {
-                console.log('خطأ في إرسال إشعار OneSignal:', err);
-            }
-        }
-
         // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر[cite: 7, 8]
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -263,18 +206,14 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
             });
         }
 
-
         // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل[cite: 7, 8]
-        function showPushNotification(title, body, options) {
-            options = options || {};
+        function showPushNotification(title, body) {
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
                     type: 'SHOW_NOTIFICATION',
                     title: title,
                     body: body,
-                    url: window.location.href,
-                    tag: options.tag || 'message',
-                    requireInteraction: !!options.requireInteraction
+                    url: window.location.href
                 });
             } else if (Notification.permission === 'granted') {
                 try {
@@ -282,9 +221,7 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
                         body: body,
                         icon: './22.jpg',
                         badge: './22.jpg',
-                        vibrate: [300, 100, 300, 100, 300],
-                        tag: options.tag || 'message',
-                        requireInteraction: !!options.requireInteraction
+                        vibrate: [300, 100, 300, 100, 300]
                     });
                 } catch(e) {}
             }
@@ -292,6 +229,51 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
 
         let callObject = null;
         let isMuted = false;
+
+        // اسم آمن للاستخدام كمفتاح مسار في Firebase (بيشيل المسافات والرموز الممنوعة)
+        function safeKey(name) {
+            return name.replace(/[.#$\[\]\/\s]+/g, '_');
+        }
+
+        // نظام الحضور (Online/Offline): بيسجل العميل أونلاين، وبيستخدم onDisconnect
+        // اللي بيتنفذ تلقائيًا من سيرفر Firebase نفسه لو التاب اتقفل أو النت
+        // اتقطع فجأة - يعني هيتحول أوفلاين حتى لو العميل مسبش الصفحة بطريقة عادية
+        function setupPresence(clientName) {
+            const safeId = safeKey(clientName);
+            const presenceRef = ref(db, 'online_clients/' + safeId);
+
+            set(presenceRef, {
+                name: clientName,
+                status: 'online',
+                lastActive: Date.now()
+            });
+
+            onDisconnect(presenceRef).set({
+                name: clientName,
+                status: 'offline',
+                lastActive: Date.now()
+            });
+
+            // لو العميل قفل الصفحة وهو لسه بيكتب، امسح حالة الكتابة بتاعته كمان
+            onDisconnect(ref(db, 'typing/' + safeId + '/client')).set(null);
+        }
+
+        // مؤشر "بيكتب الآن..." - بيراقب حالة كتابة الدعم الفني ويظهر/يخفي النقط المتحركة
+        function listenToSupportTyping(clientName) {
+            const typingRef = ref(db, 'typing/' + safeKey(clientName) + '/support');
+            onValue(typingRef, (snapshot) => {
+                const ts = snapshot.val();
+                const indicator = document.getElementById('typingIndicatorWrapper');
+                const isRecentlyTyping = ts && (Date.now() - ts < 3000);
+                if (isRecentlyTyping) {
+                    indicator.style.display = 'flex';
+                    chatBody.appendChild(indicator); // يضمن إن المؤشر يفضل آخر حاجة في المحادثة
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                } else {
+                    indicator.style.display = 'none';
+                }
+            });
+        }
 
         function listenToCalls() {
             const clientName = sessionStorage.getItem('chatClientName');
@@ -302,7 +284,6 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
                 if (!data) return;
 
                 if (data.status === 'calling' && data.sender === 'support') {
-                    const isNewRing = document.getElementById('messengerCallScreen').style.display !== 'flex';
                     document.getElementById('callStatusText').innerText = "مكالمة صوتية واردة...";
                     document.getElementById('messengerCallScreen').style.display = 'flex';
                     
@@ -312,9 +293,6 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
                     `;
                     if (ringAudio) { ringAudio.currentTime = 0; ringAudio.play().catch(e=>{}); }
                     if (ranAudio) { ranAudio.currentTime = 0; ranAudio.play().catch(e=>{}); }
-                    if (isNewRing) {
-                        showPushNotification('📞 مكالمة واردة', 'خدمة العملاء بتتصل بيك الآن', { tag: 'incoming-call', requireInteraction: true });
-                    }
                 } else if (data.status === 'ended') {
                     closeCallScreenUI();
                 }
@@ -328,8 +306,6 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
                 status: 'calling',
                 timestamp: Date.now()
             });
-
-            sendPushToEmployees(`📞 مكالمة واردة من: ${clientName}`, 'اضغط للرد على المكالمة');
 
             document.getElementById('callStatusText').innerText = "جاري الاتصال الصوتي...";
             document.getElementById('messengerCallScreen').style.display = 'flex';
@@ -398,9 +374,6 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             if (ranAudio) { ranAudio.pause(); ranAudio.currentTime = 0; }
             document.getElementById('messengerCallScreen').style.display = 'none';
-            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({ type: 'CLOSE_NOTIFICATION', tag: 'incoming-call' });
-            }
             if (callObject) {
                 callObject.leave();
             }
@@ -422,8 +395,9 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
             document.getElementById('nameModal').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
             document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
+            setupPresence(nameInput);
             listenToCalls();
-            registerClientForPush(nameInput);
+            listenToSupportTyping(nameInput);
         };
 
         window.onload = function() {
@@ -432,8 +406,9 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
                 document.getElementById('nameModal').style.display = 'none';
                 document.getElementById('chatContainer').style.display = 'flex';
                 document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + savedName;
+                setupPresence(savedName);
                 listenToCalls();
-                registerClientForPush(savedName);
+                listenToSupportTyping(savedName);
             }
         };
 
@@ -492,11 +467,23 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
 
             // إرسال إشعار تليجرام عند إرسال العميل رسالة جديدة[cite: 7]
             sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n✉️ النص: ${text}`);
-            // إرسال إشعار Push (OneSignal) لكل الموظفين حتى لو التطبيق قافل عندهم
-            sendPushToEmployees(`💬 رسالة جديدة من ${clientName}`, text);
+
+            // إخفاء حالة "بيكتب الآن" فورًا بعد الإرسال
+            clearTimeout(typingTimeout);
+            set(ref(db, 'typing/' + safeKey(clientName) + '/client'), null);
 
             input.value = "";
         };
+
+        let typingTimeout = null;
+        document.getElementById('clientInput').addEventListener('input', function() {
+            const clientName = sessionStorage.getItem('chatClientName');
+            if (!clientName) return;
+            const typingRef = ref(db, 'typing/' + safeKey(clientName) + '/client');
+            set(typingRef, Date.now());
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => set(typingRef, null), 2000);
+        });
 
         document.getElementById('clientInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') sendClientMessage();
