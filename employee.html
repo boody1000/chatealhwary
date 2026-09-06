@@ -51,6 +51,8 @@
         .chat-header img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
         .chat-header h3 { font-size: 16px; color: #050505; }
         .chat-header .status { font-size: 12px; color: #31a24c; }
+        .chat-header .status.offline { color: #8a8d91; }
+        .chat-header .status.offline i { color: #8a8d91 !important; }
 
         .call-actions { display: flex; gap: 10px; }
         .call-actions button { background: #f0f2f5; border: none; color: #0084ff; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
@@ -64,6 +66,13 @@
         .message.client { background: #fff; color: #050505; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .message.support { background: #0084ff; color: #fff; }
         .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
+
+        /* مؤشر "بيكتب الآن..." بنقط متحركة زي الماسنجر */
+        .typing-dots { display: flex !important; align-items: center; gap: 4px; padding: 12px 15px !important; }
+        .typing-dots span { width: 7px; height: 7px; background: #8a8d91; border-radius: 50%; display: inline-block; animation: typingBlink 1.2s infinite ease-in-out; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingBlink { 0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
 
         .chat-footer-input { padding: 15px 20px; background: #fff; border-top: 1px solid #e4e6eb; display: flex; align-items: center; gap: 15px; }
         .chat-footer-input input { flex: 1; padding: 12px 18px; background: #f0f2f5; border: none; border-radius: 25px; outline: none; font-size: 14px; }
@@ -93,30 +102,20 @@
         .m-btn-accept { background: #31a24c; }
         .m-btn:hover { opacity: 0.85; }
     </style>
-    <!-- Meta Pixel Code -->
-<script>
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '2500843507000877');
-fbq('track', 'PageView');
-</script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
-/></noscript>
-<!-- End Meta Pixel Code -->
 </head>
 <body>
     <!-- كود التأمين الأمني للتحقق من تسجيل الدخول -->
     <script>
-      if (!localStorage.getItem('loggedAdmin') && !localStorage.getItem('loggedUsername')) {
-        window.location.href = 'index.html';
+      function checkEmployeeAuth() {
+        if (!localStorage.getItem('loggedAdmin') && !localStorage.getItem('loggedUsername')) {
+          window.location.replace('index.html');
+        }
       }
+      checkEmployeeAuth();
+      // إعادة التحقق لو الصفحة رجعت من كاش المتصفح (زرار الرجوع) بعد تسجيل خروج
+      window.addEventListener('pageshow', function(event) {
+        if (event.persisted) checkEmployeeAuth();
+      });
     </script>
 
     <audio id="ringSound" preload="auto" loop></audio>
@@ -172,7 +171,7 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
                         <img src="" id="currentChatAvatar" alt="Client Avatar">
                         <div>
                             <h3 id="currentChatClientName">اسم العميل</h3>
-                            <span class="status"><i class="fa-solid fa-circle" style="font-size: 8px;"></i> متصل الآن</span>
+                            <span class="status" id="currentChatStatus"><i class="fa-solid fa-circle" style="font-size: 8px;"></i> متصل الآن</span>
                         </div>
                     </div>
                     <div class="call-actions">
@@ -180,7 +179,13 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
                     </div>
                 </div>
 
-                <div class="chat-messages-body" id="chatMessagesBody"></div>
+                <div class="chat-messages-body" id="chatMessagesBody">
+                    <div class="message-wrapper client" id="typingIndicatorWrapperEmp" style="display:none;">
+                        <div class="message client typing-dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
 
                     <div class="chat-footer-input">
                     <input type="text" id="supportReplyInput" placeholder="اكتب ردك هنا...">
@@ -209,6 +214,50 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
         const db = getDatabase(app);
         const chatsRef = ref(db, 'chats/');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
+
+        // اسم آمن للاستخدام كمفتاح مسار في Firebase (بيشيل المسافات والرموز الممنوعة)
+        function safeKey(name) {
+            return name.replace(/[.#$\[\]\/\s]+/g, '_');
+        }
+
+        // مؤشر "بيكتب الآن..." - بيراقب حالة كتابة العميل الحالي المفتوح في الشات
+        let latestTypingData = {};
+        function updateTypingIndicatorUI() {
+            const indicator = document.getElementById('typingIndicatorWrapperEmp');
+            if (!indicator || !activeClientName) return;
+            const clientTyping = latestTypingData[safeKey(activeClientName)]?.client;
+            const isRecentlyTyping = clientTyping && (Date.now() - clientTyping < 3000);
+            const chatBody = document.getElementById('chatMessagesBody');
+            if (isRecentlyTyping) {
+                indicator.style.display = 'flex';
+                chatBody.appendChild(indicator);
+                chatBody.scrollTop = chatBody.scrollHeight;
+            } else {
+                indicator.style.display = 'none';
+            }
+        }
+        const typingRootRef = ref(db, 'typing/');
+        onValue(typingRootRef, (snapshot) => {
+            latestTypingData = snapshot.val() || {};
+            updateTypingIndicatorUI();
+        });
+
+        // حالة أونلاين/أوفلاين للعميل - بتراقب عقدة online_clients/ اللي بيحدثها clint.html
+        // (بتتحول لـ offline تلقائيًا لو العميل قفل الصفحة، عن طريق onDisconnect)
+        let latestPresenceData = {};
+        function updatePresenceIndicatorUI() {
+            const statusEl = document.getElementById('currentChatStatus');
+            if (!statusEl || !activeClientName) return;
+            const info = latestPresenceData[safeKey(activeClientName)];
+            const isOnline = info && info.status === 'online';
+            statusEl.classList.toggle('offline', !isOnline);
+            statusEl.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 8px;"></i> ${isOnline ? 'متصل الآن' : 'غير متصل'}`;
+        }
+        const presenceRootRef = ref(db, 'online_clients/');
+        onValue(presenceRootRef, (snapshot) => {
+            latestPresenceData = snapshot.val() || {};
+            updatePresenceIndicatorUI();
+        });
 
         // تخزين طوابع زمنية آخر قراءة لكل عميل محلياً لتحديد الرسائل غير المقروءة
         let clientLastSeenMap = JSON.parse(localStorage.getItem('clientLastSeenMap') || '{}');
@@ -733,6 +782,8 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
             document.querySelectorAll('.client-card').forEach(el => el.classList.remove('active'));
             if(element) element.classList.add('active');
             renderChatMessages(messages);
+            updateTypingIndicatorUI();
+            updatePresenceIndicatorUI();
         };
 
         window.goBackToClients = function() {
@@ -742,6 +793,7 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
 
         function renderChatMessages(messages) {
             const chatBody = document.getElementById('chatMessagesBody');
+            const typingIndicator = document.getElementById('typingIndicatorWrapperEmp');
             chatBody.innerHTML = '';
             messages.forEach(msg => {
                 const wrapperDiv = document.createElement('div');
@@ -762,6 +814,8 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
                 wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
                 chatBody.appendChild(wrapperDiv);
             });
+            // إعادة إضافة مؤشر الكتابة في آخر المحادثة (اتشال مع الـ innerHTML فوق)
+            if (typingIndicator) chatBody.appendChild(typingIndicator);
             chatBody.scrollTop = chatBody.scrollHeight;
         }
 
@@ -775,8 +829,22 @@ src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
                 text: text, timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now.getTime())
             });
             sendPushToClient(activeClientName, '💬 رسالة جديدة من خدمة العملاء', text);
+
+            // إخفاء حالة "بيكتب الآن" فورًا بعد إرسال الرد
+            clearTimeout(supportTypingTimeout);
+            set(ref(db, 'typing/' + safeKey(activeClientName) + '/support'), null);
+
             input.value = "";
         };
+
+        let supportTypingTimeout = null;
+        document.getElementById('supportReplyInput').addEventListener('input', function() {
+            if (!activeClientName) return;
+            const typingRef = ref(db, 'typing/' + safeKey(activeClientName) + '/support');
+            set(typingRef, Date.now());
+            clearTimeout(supportTypingTimeout);
+            supportTypingTimeout = setTimeout(() => set(typingRef, null), 2000);
+        });
 
         document.getElementById('supportReplyInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') sendSupportReply();
