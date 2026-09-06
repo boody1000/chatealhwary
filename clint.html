@@ -8,25 +8,38 @@
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #e9ebee; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        body { background:url(22.jpg); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
         
         .name-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;
+            background: rgba(0, 0, 0, 0.45); display: flex; justify-content: center; align-items: center; z-index: 1000;
+            padding: 20px;
         }
         .name-box {
-            background: #fff; padding: 30px; border-radius: 12px; width: 320px; text-align: center;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            background: #fff; padding: 28px 26px; border-radius: 18px; width: 100%; max-width: 340px; text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.25);
         }
-        .name-box h3 { margin-bottom: 15px; color: #050505; font-size: 18px; }
+        .name-box .messenger-icon {
+            width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #00c6ff, #0084ff);
+            display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; color: #fff;
+        }
+        .name-box .messenger-icon svg { width: 28px; height: 28px; fill: currentColor; }
+        .name-box h3 { margin-bottom: 6px; color: #050505; font-size: 19px; font-weight: 700; }
+        .name-box .fb-tagline { color: #65676b; font-size: 13.5px; margin-bottom: 18px; }
+        .fb-field { text-align: right; margin-bottom: 12px; }
+        .fb-field label { display: block; font-size: 12.5px; font-weight: 600; color: #65676b; margin-bottom: 5px; }
         .name-box input {
-            width: 100%; padding: 10px 15px; border: 1px solid #ccd0d5; border-radius: 20px;
-            outline: none; font-size: 14px; margin-bottom: 15px; text-align: center;
+            width: 100%; padding: 12px 14px; border: 1px solid #e4e6eb; background: #f0f2f5; border-radius: 22px;
+            outline: none; font-size: 14px; transition: border-color 0.15s, background 0.15s;
         }
+        .name-box input:focus { border-color: #0084ff; background: #fff; }
+        .fb-field .optional-tag { font-weight: 400; color: #8a8d91; font-size: 11.5px; }
         .name-box button {
-            background: #0084ff; color: #fff; border: none; padding: 10px 20px;
-            border-radius: 20px; cursor: pointer; font-size: 14px; width: 100%;
+            background: #0084ff; color: #fff; border: none; padding: 12px 20px;
+            border-radius: 22px; cursor: pointer; font-size: 15px; font-weight: 700; width: 100%; margin-top: 6px;
+            transition: background 0.15s;
         }
+        .name-box button:hover { background: #006fd6; }
 
         .client-chat-container { width: 380px; height: 550px; background: #fff; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; position: relative; }
         .chat-header { background: #0084ff; color: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
@@ -45,10 +58,18 @@
         .message-wrapper { display: flex; flex-direction: column; max-width: 75%; }
         .message-wrapper.client { align-self: flex-end; align-items: flex-end; }
         .message-wrapper.support { align-self: flex-start; align-items: flex-start; }
+        .message-wrapper.system-info { align-self: center; align-items: center; max-width: 90%; width: 100%; margin: 5px 0; }
 
         .message { padding: 10px 14px; border-radius: 15px; font-size: 14px; word-break: break-word; }
         .message.support { background: #fff; color: #050505; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .message.client { background: #0084ff; color: #fff; }
+        
+        /* تصميم كارت بيانات العميل داخل الـ Chatbox */
+        .message.system-info-card {
+            background: #e7f3ff; color: #050505; border: 1px solid #b6d4fe; border-radius: 10px; padding: 10px 14px; width: 100%; text-align: right; font-size: 13px;
+        }
+        .message.system-info-card b { color: #0084ff; }
+
         .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
 
         /* مؤشر "بيكتب الآن..." بنقط متحركة زي الماسنجر */
@@ -96,8 +117,19 @@
 
     <div class="name-modal" id="nameModal">
         <div class="name-box">
-            <h3>أدخل اسمك للبدء</h3>
-            <input type="text" id="clientNameInput" placeholder="اكتب اسمك هنا...">
+            <div class="messenger-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.145 2 11.243c0 2.91 1.455 5.49 3.733 7.152V22l3.415-1.874c.904.252 1.868.387 2.852.387 5.523 0 10-4.145 10-9.243S17.523 2 12 2zm1.05 "/></svg>
+            </div>
+            <h3>أهلاً بيك 👋</h3>
+            <p class="fb-tagline">قولنا اسمك عشان نبدأ المحادثة على طول</p>
+            <div class="fb-field">
+                <label for="clientNameInput">الاسم</label>
+                <input type="text" id="clientNameInput" placeholder="اكتب اسمك هنا...">
+            </div>
+            <div class="fb-field">
+                <label for="clientPhoneInput">رقم الهاتف <span class="optional-tag">(اختياري)</span></label>
+                <input type="tel" id="clientPhoneInput" placeholder="01xxxxxxxxx">
+            </div>
             <button onclick="startChat()">بدء المحادثة</button>
         </div>
     </div>
@@ -131,9 +163,13 @@
 
         <div class="chat-body" id="clientMessages">
             <div class="msg-time-header">اليوم</div>
+            
+            <!-- سيتم حقن كارت بيانات النموذج الفوري هنا تلقائياً داخل الـ Chatbox -->
+            <div id="clientInfoCardWrapper"></div>
+
             <div class="message-wrapper support">
                 <div class="message support">
-                    <p>مرحباً بك! كيف يمكننا مساعدتك اليوم؟</p>
+                    <p>السلام عليكم مع حضرتك خدمة عملاء الهواري اساعد حضرتك ازاى</p>
                 </div>
                 <span class="msg-timestamp">الآن</span>
             </div>
@@ -167,15 +203,14 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const messagesRef = ref(db, 'chats/');
 
         const chatBody = document.getElementById('clientMessages');
         const ringAudio = document.getElementById('ringSound');
-        const msgAudio = document.getElementById('msgSound');
+        const msgAudio = document.getElementById('mesSound');
         const ranAudio = document.getElementById('ranSound');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
-        // بيانات بوت التليجرام المدمجة[cite: 7]
+        // بيانات بوت التليجرام المدمجة
         const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
         const TELEGRAM_CHAT_ID = "7594072203";
 
@@ -192,7 +227,7 @@
             }).catch(err => console.log("Telegram Error:", err));
         }
 
-        // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر[cite: 7, 8]
+        // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
@@ -206,7 +241,7 @@
             });
         }
 
-        // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل[cite: 7, 8]
+        // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل
         function showPushNotification(title, body) {
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
@@ -230,35 +265,55 @@
         let callObject = null;
         let isMuted = false;
 
-        // اسم آمن للاستخدام كمفتاح مسار في Firebase (بيشيل المسافات والرموز الممنوعة)
+        // اسم آمن للاستخدام كمفتاح مسار في Firebase
         function safeKey(name) {
             return name.replace(/[.#$\[\]\/\s]+/g, '_');
         }
 
-        // نظام الحضور (Online/Offline): بيسجل العميل أونلاين، وبيستخدم onDisconnect
-        // اللي بيتنفذ تلقائيًا من سيرفر Firebase نفسه لو التاب اتقفل أو النت
-        // اتقطع فجأة - يعني هيتحول أوفلاين حتى لو العميل مسبش الصفحة بطريقة عادية
-        function setupPresence(clientName) {
+        // عرض بيانات النموذج داخل الـ Chatbox مباشرة
+        function renderClientInfoInChat(clientName, clientPhone) {
+            const cardWrapper = document.getElementById('clientInfoCardWrapper');
+            cardWrapper.innerHTML = `
+                <div class="message-wrapper system-info">
+                    <div class="message system-info-card">
+                        📋 <b>بيانات العميل المسجلة:</b><br>
+                        👤 الاسم: ${clientName}<br>
+                        📞 الهاتف: ${clientPhone ? clientPhone : 'لم يتم إدخاله'}
+                    </div>
+                </div>
+            `;
+        }
+
+        // ربط وتشغيل محادثة العميل بعد إدخال الاسم
+        function initClientChat(clientName, clientPhone) {
+            setupPresence(clientName, clientPhone);
+            listenToCalls(clientName);
+            listenToSupportTyping(clientName);
+            loadClientMessages(clientName);
+            renderClientInfoInChat(clientName, clientPhone);
+        }
+
+        // نظام الحضور (Online/Offline) لكل عميل على حدة مع حفظ الهاتف
+        function setupPresence(clientName, clientPhone) {
             const safeId = safeKey(clientName);
             const presenceRef = ref(db, 'online_clients/' + safeId);
 
             set(presenceRef, {
                 name: clientName,
+                phone: clientPhone || 'بدون رقم',
                 status: 'online',
                 lastActive: Date.now()
             });
 
-            onDisconnect(presenceRef).set({
-                name: clientName,
+            onDisconnect(presenceRef).update({
                 status: 'offline',
                 lastActive: Date.now()
             });
 
-            // لو العميل قفل الصفحة وهو لسه بيكتب، امسح حالة الكتابة بتاعته كمان
             onDisconnect(ref(db, 'typing/' + safeId + '/client')).set(null);
         }
 
-        // مؤشر "بيكتب الآن..." - بيراقب حالة كتابة الدعم الفني ويظهر/يخفي النقط المتحركة
+        // مؤشر "بيكتب الآن..." الخاص بالدعم الفني لكل عميل
         function listenToSupportTyping(clientName) {
             const typingRef = ref(db, 'typing/' + safeKey(clientName) + '/support');
             onValue(typingRef, (snapshot) => {
@@ -267,7 +322,7 @@
                 const isRecentlyTyping = ts && (Date.now() - ts < 3000);
                 if (isRecentlyTyping) {
                     indicator.style.display = 'flex';
-                    chatBody.appendChild(indicator); // يضمن إن المؤشر يفضل آخر حاجة في المحادثة
+                    chatBody.appendChild(indicator);
                     chatBody.scrollTop = chatBody.scrollHeight;
                 } else {
                     indicator.style.display = 'none';
@@ -275,10 +330,9 @@
             });
         }
 
-        function listenToCalls() {
-            const clientName = sessionStorage.getItem('chatClientName');
-            if (!clientName) return;
-            const callRef = ref(db, 'calls/' + clientName);
+        // الاستماع لمكالمات هذا العميل فقط
+        function listenToCalls(clientName) {
+            const callRef = ref(db, 'calls/' + safeKey(clientName));
             onValue(callRef, (snapshot) => {
                 const data = snapshot.val();
                 if (!data) return;
@@ -301,7 +355,7 @@
 
         window.initiateCall = function() {
             const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
-            set(ref(db, 'calls/' + clientName), {
+            set(ref(db, 'calls/' + safeKey(clientName)), {
                 sender: 'client',
                 status: 'calling',
                 timestamp: Date.now()
@@ -322,7 +376,7 @@
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             if (ranAudio) { ranAudio.pause(); ranAudio.currentTime = 0; }
             const clientName = sessionStorage.getItem('chatClientName');
-            set(ref(db, 'calls/' + clientName + '/status'), 'accepted');
+            set(ref(db, 'calls/' + safeKey(clientName) + '/status'), 'accepted');
 
             document.getElementById('callStatusText').innerText = "المكالمة الصوتية جارية...";
             document.getElementById('messengerControlsBar').innerHTML = `
@@ -365,7 +419,7 @@
             if (ranAudio) { ranAudio.pause(); ranAudio.currentTime = 0; }
             const clientName = sessionStorage.getItem('chatClientName');
             if (clientName) {
-                set(ref(db, 'calls/' + clientName + '/status'), 'ended');
+                set(ref(db, 'calls/' + safeKey(clientName) + '/status'), 'ended');
             }
             closeCallScreenUI();
         };
@@ -390,25 +444,26 @@
 
         window.startChat = function() {
             const nameInput = document.getElementById('clientNameInput').value.trim();
+            const phoneInput = document.getElementById('clientPhoneInput').value.trim();
             if (nameInput === "") { alert("الرجاء كتابة اسمك أولاً"); return; }
+            
             sessionStorage.setItem('chatClientName', nameInput);
+            sessionStorage.setItem('chatClientPhone', phoneInput);
+            
             document.getElementById('nameModal').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
-            document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
-            setupPresence(nameInput);
-            listenToCalls();
-            listenToSupportTyping(nameInput);
+            
+            initClientChat(nameInput, phoneInput);
         };
 
         window.onload = function() {
             const savedName = sessionStorage.getItem('chatClientName');
+            const savedPhone = sessionStorage.getItem('chatClientPhone') || '';
             if (savedName) {
                 document.getElementById('nameModal').style.display = 'none';
                 document.getElementById('chatContainer').style.display = 'flex';
-                document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + savedName;
-                setupPresence(savedName);
-                listenToCalls();
-                listenToSupportTyping(savedName);
+                
+                initClientChat(savedName, savedPhone);
             }
         };
 
@@ -421,54 +476,58 @@
             return hours + ':' + minutes + ' ' + ampm;
         }
 
-        onChildAdded(messagesRef, (snapshot) => {
-            const data = snapshot.val();
-            const currentClientName = sessionStorage.getItem('chatClientName');
-            if (data.clientName && currentClientName && data.clientName !== currentClientName) return;
+        // تحميل رسائل هذا العميل فقط من مساره الخاص في قاعدة البيانات
+        function loadClientMessages(clientName) {
+            const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
+            
+            onChildAdded(clientMessagesRef, (snapshot) => {
+                const data = snapshot.val();
+                if (!data) return;
 
-            // إذا كانت الرسالة واردة من الدعم، قم بإرسال تنبيه تليجرام وإشعار سطح المكتب/الموبايل وتشغيل نغمة استلام الرسالة mes.mp3[cite: 7, 8]
-            if (data.sender === 'support') {
-                sendTelegramNotification(`💬 <b>رد جديد من الدعم الفني</b>\n👤 إلى العميل: ${data.clientName}\n✉️ النص: ${data.text}`);
-                showPushNotification(`رسالة جديدة من خدمة العملاء`, data.text);
-                if (msgAudio) { msgAudio.currentTime = 0; msgAudio.play().catch(e => {}); }
-                if (ranAudio) { ranAudio.currentTime = 0; ranAudio.play().catch(e => {}); }
-            }
+                if (data.sender === 'support') {
+                    sendTelegramNotification(`💬 <b>رد جديد من الدعم الفني</b>\n👤 إلى العميل: ${clientName}\n✉️ النص: ${data.text}`);
+                    showPushNotification(`رسالة جديدة من خدمة العملاء`, data.text);
+                    if (msgAudio) { msgAudio.currentTime = 0; msgAudio.play().catch(e => {}); }
+                    if (ranAudio) { ranAudio.currentTime = 0; ranAudio.play().catch(e => {}); }
+                }
 
-            const wrapperDiv = document.createElement('div');
-            wrapperDiv.classList.add('message-wrapper');
-            const msgDiv = document.createElement('div');
-            msgDiv.classList.add('message');
-            const timeSpan = document.createElement('span');
-            timeSpan.classList.add('msg-timestamp');
-            timeSpan.innerText = formatTime(new Date(data.timestamp || Date.now()));
+                const wrapperDiv = document.createElement('div');
+                wrapperDiv.classList.add('message-wrapper');
+                const msgDiv = document.createElement('div');
+                msgDiv.classList.add('message');
+                const timeSpan = document.createElement('span');
+                timeSpan.classList.add('msg-timestamp');
+                timeSpan.innerText = formatTime(new Date(data.timestamp || Date.now()));
 
-            if (data.sender === 'client') {
-                wrapperDiv.classList.add('client'); msgDiv.classList.add('client');
-                msgDiv.innerHTML = `<p>${data.text}</p>`;
-            } else {
-                wrapperDiv.classList.add('support'); msgDiv.classList.add('support');
-                msgDiv.innerHTML = `<p>${data.text}</p>`;
-            }
-            wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
-            chatBody.appendChild(wrapperDiv);
-            chatBody.scrollTop = chatBody.scrollHeight;
-        });
+                if (data.sender === 'client') {
+                    wrapperDiv.classList.add('client'); msgDiv.classList.add('client');
+                    msgDiv.innerHTML = `<p>${data.text}</p>`;
+                } else {
+                    wrapperDiv.classList.add('support'); msgDiv.classList.add('support');
+                    msgDiv.innerHTML = `<p>${data.text}</p>`;
+                }
+                wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
+                chatBody.appendChild(wrapperDiv);
+                chatBody.scrollTop = chatBody.scrollHeight;
+            });
+        }
 
         window.sendClientMessage = function() {
             const input = document.getElementById('clientInput');
             const text = input.value.trim();
             const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
+            const clientPhone = sessionStorage.getItem('chatClientPhone') || 'بدون رقم';
             if (text === "") return;
             const now = new Date();
-            push(messagesRef, {
-                sender: 'client', clientName: clientName, text: text,
+
+            const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
+            push(clientMessagesRef, {
+                sender: 'client', clientName: clientName, clientPhone: clientPhone, text: text,
                 timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now)
             });
 
-            // إرسال إشعار تليجرام عند إرسال العميل رسالة جديدة[cite: 7]
-            sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n✉️ النص: ${text}`);
+            sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n📞 الهاتف: ${clientPhone}\n✉️ النص: ${text}`);
 
-            // إخفاء حالة "بيكتب الآن" فورًا بعد الإرسال
             clearTimeout(typingTimeout);
             set(ref(db, 'typing/' + safeKey(clientName) + '/client'), null);
 
