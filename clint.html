@@ -98,7 +98,45 @@
         .m-btn-hangup { background: #e41e3f; }
         .m-btn-accept { background: #31a24c; }
         .m-btn:hover { opacity: 0.85; }
+
+        /* قواعد التجاوب مع الشاشات الصغيرة والهواتف */
+        @media (max-width: 480px) {
+            body {
+                align-items: flex-end;
+                height: 100dvh;
+            }
+            .client-chat-container {
+                width: 100%;
+                height: 100dvh;
+                border-radius: 0;
+            }
+            .name-modal {
+                padding: 10px;
+            }
+            .name-box {
+                max-width: 100%;
+                padding: 22px 18px;
+                border-radius: 14px;
+            }
+        }
     </style>
+    <!-- Meta Pixel Code -->
+<script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)n.push;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '2500843507000877');
+  fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 </head>
 <body>
 
