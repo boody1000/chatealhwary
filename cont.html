@@ -10,6 +10,19 @@
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen p-6">
 
+    <!-- كود التأمين الأمني للتحقق من تسجيل الدخول -->
+    <script>
+      function checkAdminAuth() {
+        if (!localStorage.getItem('loggedAdmin') && !localStorage.getItem('loggedUsername')) {
+          window.location.replace('index.html');
+        }
+      }
+      checkAdminAuth();
+      window.addEventListener('pageshow', function(event) {
+        if (event.persisted) checkAdminAuth();
+      });
+    </script>
+
     <div class="max-w-7xl mx-auto space-y-8">
         
         <!-- الهيدر -->
