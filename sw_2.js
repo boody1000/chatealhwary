@@ -1,86 +1,45 @@
-// Service Worker المحدث لإشعارات شركة الهواري للزواج (يعمل في الخلفية التامة)
+// Service Worker لصفحة الموظف (employee.html)
+// المهمة: (1) إظهار إشعارات عادية وقت ما الصفحة شغالة عن طريق postMessage (زي القديم بالظبط)
+//         (2) تشغيل OneSignal عشان يقدر يبعت Push Notifications حتى لو التطبيق مقفول تمامًا (مجانًا)
 
-self.addEventListener('install', (event) => {
-    self.skipWaiting();
-});
+importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
-self.addEventListener('activate', (event) => {
-    event.waitUntil(clients.claim());
-});
-
-// استقبال أوامر الإشعارات والمكالمات في الخلفية
+// إشعار عادي بييجي من الصفحة نفسها وهي شغالة
 self.addEventListener('message', (event) => {
-    if (event.data) {
-        if (event.data.type === 'SHOW_NOTIFICATION') {
-            const title = event.data.title || 'رسالة جديدة - شركة الهواري للزواج';
-            const options = {
-                body: event.data.body || 'لديك رسالة جديدة في الشات',
-                icon: './22.jpg',
-                badge: './22.jpg',
-                vibrate: [300, 100, 300, 100, 300],
-                tag: 'hawary-chat-' + Date.now(),
-                renotify: true,
-                requireInteraction: false,
-                actions: [
-                    { action: 'open', title: 'فتح المحادثة' }
-                ],
-                data: { url: event.data.url || self.location.origin }
-            };
+    if (!event.data) return;
 
-            event.waitUntil(
-                self.registration.showNotification(title, options)
-            );
-        } else if (event.data.type === 'SHOW_CALL_NOTIFICATION') {
-            // إشعار المكالمة الواردة بطابع زمني وتثبيت تام في شريط الإشعارات مثل الماسنجر
-            const title = event.data.title || '📞 مكالمة صوتية واردة...';
-            const options = {
-                body: event.data.body || 'شركة الهواري للزواج - اضغط للرد أو الرفض',
-                icon: './22.jpg',
-                badge: './22.jpg',
-                vibrate: [500, 200, 500, 200, 500, 200, 500, 200],
-                tag: 'incoming-call-' + Date.now(), // تگ متجدد لمنع حذف الإشعار
-                renotify: true,
-                requireInteraction: true, // يظل ثابتاً في شريط الإشعارات ولا تختفي المكالمة
-                dir: 'rtl',
-                lang: 'ar',
-                actions: [
-                    { action: 'answer_call', title: '📞 رد على المكالمة' },
-                    { action: 'reject_call', title: '❌ إنهاء / رفض' }
-                ],
-                data: { url: event.data.url || self.location.origin, type: 'call' }
-            };
+    if (event.data.type === 'SHOW_NOTIFICATION') {
+        self.registration.showNotification(event.data.title, {
+            body: event.data.body,
+            icon: './22.jpg',
+            badge: './22.jpg',
+            vibrate: [300, 100, 300, 100, 300],
+            tag: event.data.tag || 'message',
+            requireInteraction: !!event.data.requireInteraction,
+            renotify: true,
+            data: { url: event.data.url }
+        });
+    }
 
-            event.waitUntil(
-                self.registration.showNotification(title, options)
-            );
-        }
+    if (event.data.type === 'CLOSE_NOTIFICATION') {
+        self.registration.getNotifications({ tag: event.data.tag }).then((notifications) => {
+            notifications.forEach((n) => n.close());
+        });
     }
 });
 
-// التعامل مع الضغط على الإشعار أو أزرار (رد / رفض)
+// لما المستخدم يدوس على إشعار من النوع القديم (postMessage) - يفتح الصفحة أو يركّز عليها لو مفتوحة أصلاً
+// (إشعارات OneSignal ليها التصرف بتاعها المدمج جوه الملف اللي استوردناه فوق)
 self.addEventListener('notificationclick', (event) => {
-    const action = event.action;
+    if (!event.notification.data || !event.notification.data.url) return; // سيبها لـ OneSignal لو مش من عندنا
     event.notification.close();
-    
-    const targetUrl = event.notification.data.url || './clint_2.html';
-
+    const targetUrl = event.notification.data.url;
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            for (let i = 0; i < clientList.length; i++) {
-                let client = clientList[i];
-                if ('focus' in client) {
-                    client.focus();
-                    if (action === 'answer_call') {
-                        client.postMessage({ type: 'TRIGGER_ANSWER_CALL' });
-                    } else if (action === 'reject_call') {
-                        client.postMessage({ type: 'TRIGGER_REJECT_CALL' });
-                    }
-                    return;
-                }
+            for (const client of clientList) {
+                if ('focus' in client) return client.focus();
             }
-            if (clients.openWindow) {
-                return clients.openWindow(targetUrl);
-            }
+            if (clients.openWindow) return clients.openWindow(targetUrl);
         })
     );
 });
