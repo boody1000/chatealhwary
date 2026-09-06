@@ -6,6 +6,7 @@
     <title>تواصل معنا - المكالمة الصوتية</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/@daily-co/daily-js"></script>
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #e9ebee; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
@@ -140,7 +141,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onChildAdded, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -180,6 +181,57 @@
             }).catch(err => console.log("Telegram Error:", err));
         }
 
+        // ============================================================
+        // OneSignal — إشعارات فعلية حتى لو التطبيق مقفول تمامًا (مجانًا 100%، من غير سيرفر أو Cloud Functions)
+        // ⚠️ لازم تستبدل القيمتين دول من: OneSignal Dashboard > Settings > Keys & IDs
+        // ============================================================
+        const ONESIGNAL_APP_ID = "9785b8da-85a0-43e5-95f6-4c272e9e96be";
+        const ONESIGNAL_REST_API_KEY = "os_v2_app_s6c3rwufubb6lfpwjqts5huwx2toppfrzdseob53odgfmanozyvb4ju4xjrnymetg7spwxho7u2yjmg46kgk2qds5gkol72vjaxzyia";
+
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        OneSignalDeferred.push(async function (OneSignal) {
+            await OneSignal.init({
+                appId: ONESIGNAL_APP_ID,
+                serviceWorkerPath: 'sw.js', // بنستخدم نفس الـ Service Worker بتاعنا (مدمج فيه كود OneSignal)
+                notifyButton: { enable: false }
+            });
+        });
+
+        // تسجيل العميل عند OneSignal بالاسم بتاعه، عشان لما حد يبعتله رسالة/مكالمة يوصله إشعار حتى لو التطبيق مقفول
+        function registerClientForPush(clientName) {
+            if (!clientName) return;
+            OneSignalDeferred.push(async function (OneSignal) {
+                try {
+                    await OneSignal.Notifications.requestPermission();
+                    await OneSignal.login(clientName);
+                } catch (err) {
+                    console.log('خطأ في تسجيل إشعارات OneSignal:', err);
+                }
+            });
+        }
+
+        // إرسال إشعار Push مباشر لكل الموظفين (بيتنادى وقت ما العميل يبعت رسالة أو يعمل مكالمة)
+        async function sendPushToEmployees(title, body) {
+            try {
+                await fetch('https://api.onesignal.com/notifications?c=push', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Key ' + ONESIGNAL_REST_API_KEY
+                    },
+                    body: JSON.stringify({
+                        app_id: ONESIGNAL_APP_ID,
+                        target_channel: 'push',
+                        filters: [{ field: 'tag', key: 'role', relation: '=', value: 'employee' }],
+                        headings: { en: title },
+                        contents: { en: body }
+                    })
+                });
+            } catch (err) {
+                console.log('خطأ في إرسال إشعار OneSignal:', err);
+            }
+        }
+
         // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر[cite: 7, 8]
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -193,6 +245,7 @@
                     .catch(err => console.log('ServiceWorker registration failed:', err));
             });
         }
+
 
         // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل[cite: 7, 8]
         function showPushNotification(title, body) {
@@ -217,26 +270,6 @@
 
         let callObject = null;
         let isMuted = false;
-
-        // نظام الحضور (Online/Offline): بيسجل العميل أونلاين، وبيستخدم onDisconnect
-        // اللي بيتنفذ تلقائيًا من سيرفر Firebase نفسه لو التاب اتقفل أو النت
-        // اتقطع فجأة - يعني هيتحول أوفلاين حتى لو العميل مسبش الصفحة بطريقة عادية
-        function setupPresence(clientName) {
-            const safeId = clientName.replace(/[.#$\[\]\/\s]+/g, '_');
-            const presenceRef = ref(db, 'online_clients/' + safeId);
-
-            set(presenceRef, {
-                name: clientName,
-                status: 'online',
-                lastActive: Date.now()
-            });
-
-            onDisconnect(presenceRef).set({
-                name: clientName,
-                status: 'offline',
-                lastActive: Date.now()
-            });
-        }
 
         function listenToCalls() {
             const clientName = sessionStorage.getItem('chatClientName');
@@ -269,6 +302,8 @@
                 status: 'calling',
                 timestamp: Date.now()
             });
+
+            sendPushToEmployees(`📞 مكالمة واردة من: ${clientName}`, 'اضغط للرد على المكالمة');
 
             document.getElementById('callStatusText').innerText = "جاري الاتصال الصوتي...";
             document.getElementById('messengerCallScreen').style.display = 'flex';
@@ -358,8 +393,8 @@
             document.getElementById('nameModal').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
             document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
-            setupPresence(nameInput);
             listenToCalls();
+            registerClientForPush(nameInput);
         };
 
         window.onload = function() {
@@ -368,8 +403,8 @@
                 document.getElementById('nameModal').style.display = 'none';
                 document.getElementById('chatContainer').style.display = 'flex';
                 document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + savedName;
-                setupPresence(savedName);
                 listenToCalls();
+                registerClientForPush(savedName);
             }
         };
 
@@ -428,6 +463,8 @@
 
             // إرسال إشعار تليجرام عند إرسال العميل رسالة جديدة[cite: 7]
             sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n✉️ النص: ${text}`);
+            // إرسال إشعار Push (OneSignal) لكل الموظفين حتى لو التطبيق قافل عندهم
+            sendPushToEmployees(`💬 رسالة جديدة من ${clientName}`, text);
 
             input.value = "";
         };
