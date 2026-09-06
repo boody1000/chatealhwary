@@ -110,22 +110,6 @@
         .m-btn-accept { background: #31a24c; }
         .m-btn:hover { opacity: 0.85; }
     </style>
-    <script>
-  !function(f,b,e,v,n,t,s)
-  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-  if(!f._fbq)n.push;n.loaded=!0;n.version='2.0';
-  n.queue=[];t=b.createElement(e);t.async=!0;
-  t.src=v;s=b.getElementsByTagName(e)[0];
-  s.parentNode.insertBefore(t,s)}(window, document,'script',
-  'https://connect.facebook.net/en_US/fbevents.js');
-  fbq('init', '2500843507000877');
-  fbq('track', 'PageView');
-</script>
-<noscript><img height="1" width="1" style="display:none"
-  src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
-/></noscript>
-<!-- End Meta Pixel Code -->
 </head>
 <body>
     <!-- كود التأمين الأمني للتحقق من تسجيل الدخول -->
@@ -218,9 +202,12 @@
         </div>
     </div>
 
+    <!-- مكتبة lamejs - المتصفحات مش بتدعم تصدير MP3 بشكل أصلي، فمحتاجين مكتبة تحول التسجيل الخام لصيغة MP3 حقيقية -->
+    <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, push, set, onValue, off } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -235,6 +222,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+        const storage = getStorage(app);
         const chatsRootRef = ref(db, 'chats/');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
@@ -256,6 +244,7 @@
         let callStartTime = null;
         let mediaRecorder = null;
         let recordedAudioChunks = [];
+        let mixAudioContext = null; // بيستخدم لدمج صوت الموظف والعميل مع بعض في تسجيل واحد صحيح
 
         // مؤشر "بيكتب الآن..." - مراقبة حالة الكتابة للعميل الحالي
         let latestTypingData = {};
@@ -534,6 +523,46 @@
             startDailyAudioFrame();
         };
 
+        // تحويل تسجيل webm الخام لصيغة MP3 حقيقية باستخدام مكتبة lamejs
+        // (المتصفحات مفيهاش تشفير MP3 مدمج، فبنفك ترميز الصوت لعينات خام
+        // (PCM) ونعيد ترميزها بصيغة MP3 يدويًا)
+        async function convertWebmBlobToMp3(webmBlob) {
+            const arrayBuffer = await webmBlob.arrayBuffer();
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+            const numChannels = Math.min(audioBuffer.numberOfChannels, 2);
+            const sampleRate = audioBuffer.sampleRate;
+            const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, 128); // 128kbps جودة جيدة وحجم معقول
+
+            const left = floatTo16BitPCM(audioBuffer.getChannelData(0));
+            const right = numChannels > 1 ? floatTo16BitPCM(audioBuffer.getChannelData(1)) : null;
+
+            const mp3Data = [];
+            const sampleBlockSize = 1152; // حجم الكتلة المطلوب من lamejs
+
+            for (let i = 0; i < left.length; i += sampleBlockSize) {
+                const leftChunk = left.subarray(i, i + sampleBlockSize);
+                const rightChunk = right ? right.subarray(i, i + sampleBlockSize) : null;
+                const mp3buf = right ? mp3encoder.encodeBuffer(leftChunk, rightChunk) : mp3encoder.encodeBuffer(leftChunk);
+                if (mp3buf.length > 0) mp3Data.push(new Uint8Array(mp3buf));
+            }
+            const finalBuf = mp3encoder.flush();
+            if (finalBuf.length > 0) mp3Data.push(new Uint8Array(finalBuf));
+
+            audioCtx.close();
+            return new Blob(mp3Data, { type: 'audio/mpeg' });
+        }
+
+        function floatTo16BitPCM(floatSamples) {
+            const output = new Int16Array(floatSamples.length);
+            for (let i = 0; i < floatSamples.length; i++) {
+                const s = Math.max(-1, Math.min(1, floatSamples[i]));
+                output[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            return output;
+        }
+
         function startDailyAudioFrame() {
             if (!callObject) {
                 callObject = window.DailyIframe.createCallObject({
@@ -552,38 +581,76 @@
                         if (audioEl) {
                             audioEl.srcObject = new MediaStream([e.track]);
                             audioEl.play().catch(err => console.log("خطأ في تشغيل الصوت:", err));
-                            
+
                             try {
                                 const localStream = callObject.participants().local?.audioStream || new MediaStream();
-                                const combinedStream = new MediaStream([...localStream.getTracks(), ...e.track.clone().mediaStream.getTracks()]);
-                                mediaRecorder = new MediaRecorder(combinedStream);
+                                const remoteStream = new MediaStream([e.track]);
+
+                                // دمج صوت الموظف والعميل في مسار واحد فعليًا (بدل ما يتحطوا
+                                // جنب بعض في نفس الـ MediaStream من غير دمج حقيقي، وده كان بيخلي
+                                // MediaRecorder يسجل طرف واحد بس في أغلب المتصفحات)
+                                mixAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                                const destination = mixAudioContext.createMediaStreamDestination();
+
+                                const localSource = mixAudioContext.createMediaStreamSource(localStream);
+                                localSource.connect(destination);
+
+                                const remoteSource = mixAudioContext.createMediaStreamSource(remoteStream);
+                                remoteSource.connect(destination);
+
+                                mediaRecorder = new MediaRecorder(destination.stream);
                                 recordedAudioChunks = [];
                                 mediaRecorder.ondataavailable = (event) => {
                                     if (event.data.size > 0) {
                                         recordedAudioChunks.push(event.data);
                                     }
                                 };
-                                mediaRecorder.onstop = () => {
-                                    const audioBlob = new Blob(recordedAudioChunks, { type: 'audio/webm' });
-                                    const reader = new FileReader();
-                                    reader.onloadend = function() {
-                                        const base64Audio = reader.result;
-                                        const endTime = Date.now();
-                                        const durationSeconds = callStartTime ? Math.floor((endTime - callStartTime) / 1000) : 0;
-                                        
+                                mediaRecorder.onstop = async () => {
+                                    const webmBlob = new Blob(recordedAudioChunks, { type: 'audio/webm' });
+                                    const endTime = Date.now();
+                                    const durationSeconds = callStartTime ? Math.floor((endTime - callStartTime) / 1000) : 0;
+
+                                    try {
+                                        // تحويل التسجيل الفعلي لصيغة MP3 حقيقية (المتصفح مابيسجلش MP3
+                                        // مباشرة، فمحتاجين نحوّل العينات الصوتية الخام بمكتبة lamejs)
+                                        const mp3Blob = await convertWebmBlobToMp3(webmBlob);
+
+                                        const safeClientName = (activeClientOriginalName || 'unknown').replace(/[.#$\[\]\/\s]+/g, '_');
+                                        const fileName = `call_recordings/${safeClientName}_${endTime}.mp3`;
+                                        const fileRef = storageRef(storage, fileName);
+
+                                        await uploadBytes(fileRef, mp3Blob, { contentType: 'audio/mpeg' });
+                                        const downloadUrl = await getDownloadURL(fileRef);
+
                                         push(ref(db, 'call_logs/'), {
                                             clientName: activeClientOriginalName,
                                             employeeName: loggedUser || 'موظف',
                                             startTime: callStartTime ? new Date(callStartTime).toLocaleString('ar-EG') : '',
                                             endTime: new Date(endTime).toLocaleString('ar-EG'),
                                             duration: durationSeconds + ' ثانية',
-                                            audioData: base64Audio,
+                                            recordingUrl: downloadUrl,
                                             timestamp: endTime
                                         });
 
                                         sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientOriginalName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}\n⏱️ المدة: ${durationSeconds} ثانية`);
-                                    };
-                                    reader.readAsDataURL(audioBlob);
+                                    } catch (uploadErr) {
+                                        console.error("خطأ أثناء تحويل/رفع تسجيل المكالمة:", uploadErr);
+                                        // حتى لو فشل التسجيل الصوتي، نحفظ سجل المكالمة نفسه من غير رابط تسجيل
+                                        push(ref(db, 'call_logs/'), {
+                                            clientName: activeClientOriginalName,
+                                            employeeName: loggedUser || 'موظف',
+                                            startTime: callStartTime ? new Date(callStartTime).toLocaleString('ar-EG') : '',
+                                            endTime: new Date(endTime).toLocaleString('ar-EG'),
+                                            duration: durationSeconds + ' ثانية',
+                                            recordingUrl: null,
+                                            timestamp: endTime
+                                        });
+                                    } finally {
+                                        if (mixAudioContext) {
+                                            mixAudioContext.close();
+                                            mixAudioContext = null;
+                                        }
+                                    }
                                 };
                                 mediaRecorder.start();
                             } catch (err) {
@@ -615,6 +682,7 @@
                     startTime: callStartTime ? new Date(callStartTime).toLocaleString('ar-EG') : '',
                     endTime: new Date(endTime).toLocaleString('ar-EG'),
                     duration: durationSeconds + ' ثانية',
+                    recordingUrl: null,
                     timestamp: endTime
                 });
 
