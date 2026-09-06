@@ -315,13 +315,16 @@
         }
 
         // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل
-        function showPushNotification(title, body) {
+        function showPushNotification(title, body, options) {
+            options = options || {};
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
                     type: 'SHOW_NOTIFICATION',
                     title: title,
                     body: body,
-                    url: window.location.href
+                    url: window.location.href,
+                    tag: options.tag || 'message',
+                    requireInteraction: !!options.requireInteraction
                 });
             } else if (Notification.permission === 'granted') {
                 try {
@@ -329,7 +332,9 @@
                         body: body,
                         icon: './22.jpg',
                         badge: './22.jpg',
-                        vibrate: [300, 100, 300, 100, 300]
+                        vibrate: [300, 100, 300, 100, 300],
+                        tag: options.tag || 'message',
+                        requireInteraction: !!options.requireInteraction
                     });
                 } catch(e) {}
             }
@@ -375,6 +380,7 @@
                         `;
                         if (!standardRingInterval) {
                             startStandardRinging();
+                            showPushNotification(`📞 مكالمة واردة من: ${cName}`, 'اضغط للرد على المكالمة', { tag: 'incoming-call', requireInteraction: true });
                         }
                         if (ringAudio && ringAudio.src && !ringAudio.src.endsWith(window.location.href) && ringAudio.paused) { 
                             ringAudio.currentTime = 0; 
