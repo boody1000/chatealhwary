@@ -58,14 +58,22 @@
         .call-actions button { background: #f0f2f5; border: none; color: #0084ff; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         .call-actions button:hover { background: #e4e6eb; }
 
-        .chat-messages-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #f4f5f7; }
-        .message-wrapper { display: flex; flex-direction: column; max-width: 65%; }
+        .chat-messages-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; background: #f4f5f7; }
+        .message-wrapper { display: flex; flex-direction: column; max-width: 65%; margin-top: 2px; }
+        .message-wrapper.group-start { margin-top: 14px; }
         .message-wrapper.client { align-self: flex-start; align-items: flex-start; }
         .message-wrapper.support { align-self: flex-end; align-items: flex-end; }
-        .message { padding: 10px 15px; border-radius: 15px; font-size: 14px; word-break: break-word; }
+        .message { padding: 10px 15px; border-radius: 18px; font-size: 14px; word-break: break-word; }
         .message.client { background: #fff; color: #050505; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .message.support { background: #0084ff; color: #fff; }
+        /* تقريب الرسائل المتتالية من نفس المرسل من بعض زي الماسنجر بالظبط */
+        .message-wrapper.grouped-top .message { border-top-left-radius: 6px; border-top-right-radius: 6px; }
+        .message-wrapper.grouped-bottom .message { border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
         .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
+        .client-row { display: flex; flex-direction: row-reverse; align-items: flex-end; gap: 7px; }
+        .client-avatar { width: 24px; height: 24px; border-radius: 50%; background: #cfd4da; color: #4b4f56; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .client-avatar.spacer { visibility: hidden; }
+        .client-bubble-col { display: flex; flex-direction: column; align-items: flex-start; }
 
         /* مؤشر "بيكتب الآن..." بنقط متحركة زي الماسنجر */
         .typing-dots { display: flex !important; align-items: center; gap: 4px; padding: 12px 15px !important; }
@@ -808,25 +816,59 @@
             const chatBody = document.getElementById('chatMessagesBody');
             const typingIndicator = document.getElementById('typingIndicatorWrapperEmp');
             chatBody.innerHTML = '';
-            messages.forEach(msg => {
+
+            messages.forEach((msg, index) => {
+                const prevMsg = messages[index - 1];
+                const nextMsg = messages[index + 1];
+                const isFirstInGroup = !prevMsg || prevMsg.sender !== msg.sender;
+                const isLastInGroup = !nextMsg || nextMsg.sender !== msg.sender;
+
                 const wrapperDiv = document.createElement('div');
-                wrapperDiv.classList.add('message-wrapper');
+                wrapperDiv.classList.add('message-wrapper', msg.sender === 'client' ? 'client' : 'support');
+                if (isFirstInGroup) wrapperDiv.classList.add('group-start');
+                if (!isFirstInGroup) wrapperDiv.classList.add('grouped-top');
+                if (!isLastInGroup) wrapperDiv.classList.add('grouped-bottom');
+
                 const msgDiv = document.createElement('div');
-                msgDiv.classList.add('message');
-                const timeSpan = document.createElement('span');
-                timeSpan.classList.add('msg-timestamp');
-                timeSpan.innerText = formatTime(msg.timestamp);
+                msgDiv.classList.add('message', msg.sender === 'client' ? 'client' : 'support');
+                msgDiv.innerHTML = `<p>${msg.text}</p>`;
+
+                // الوقت بيظهر بس تحت آخر رسالة في المجموعة المتتالية (زي الماسنجر بالظبط)
+                let timeSpan = null;
+                if (isLastInGroup) {
+                    timeSpan = document.createElement('span');
+                    timeSpan.classList.add('msg-timestamp');
+                    timeSpan.innerText = formatTime(msg.timestamp);
+                }
 
                 if (msg.sender === 'client') {
-                    wrapperDiv.classList.add('client'); msgDiv.classList.add('client');
-                    msgDiv.innerHTML = `<p>${msg.text}</p>`;
+                    const row = document.createElement('div');
+                    row.classList.add('client-row');
+
+                    const bubbleCol = document.createElement('div');
+                    bubbleCol.classList.add('client-bubble-col');
+                    bubbleCol.appendChild(msgDiv);
+                    if (timeSpan) bubbleCol.appendChild(timeSpan);
+
+                    const avatar = document.createElement('div');
+                    avatar.classList.add('client-avatar');
+                    if (isLastInGroup) {
+                        avatar.innerText = (msg.clientName || activeClientName || '?').trim().charAt(0).toUpperCase();
+                    } else {
+                        avatar.classList.add('spacer');
+                    }
+
+                    row.appendChild(bubbleCol);
+                    row.appendChild(avatar);
+                    wrapperDiv.appendChild(row);
                 } else {
-                    wrapperDiv.classList.add('support'); msgDiv.classList.add('support');
-                    msgDiv.innerHTML = `<p>${msg.text}</p>`;
+                    wrapperDiv.appendChild(msgDiv);
+                    if (timeSpan) wrapperDiv.appendChild(timeSpan);
                 }
-                wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
+
                 chatBody.appendChild(wrapperDiv);
             });
+
             if (typingIndicator) chatBody.appendChild(typingIndicator);
             chatBody.scrollTop = chatBody.scrollHeight;
         }
