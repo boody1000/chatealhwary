@@ -1,66 +1,45 @@
-// استيراد مكتبات Firebase متوافقة مع Service Worker
-importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js');
+// Service Worker لصفحة العميل (clint.html)
+// المهمة: (1) إظهار إشعارات عادية وقت ما الصفحة شغالة عن طريق postMessage (زي القديم بالظبط)
+//         (2) تشغيل OneSignal عشان يقدر يبعت Push Notifications حتى لو التطبيق مقفول تمامًا (مجانًا)
 
-firebase.initializeApp({
-    apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
-    authDomain: "marry-55604.firebaseapp.com",
-    databaseURL: "https://marry-55604-default-rtdb.firebaseio.com",
-    projectId: "marry-55604",
-    storageBucket: "marry-55604.firebasestorage.app",
-    messagingSenderId: "524067560260",
-    appId: "1:524067560260:web:adc87a02eadf098d5a5511"
+importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
+
+// إشعار عادي بييجي من الصفحة نفسها وهي شغالة
+self.addEventListener('message', (event) => {
+    if (!event.data) return;
+
+    if (event.data.type === 'SHOW_NOTIFICATION') {
+        self.registration.showNotification(event.data.title, {
+            body: event.data.body,
+            icon: './22.jpg',
+            badge: './22.jpg',
+            vibrate: [300, 100, 300, 100, 300],
+            tag: event.data.tag || 'message',
+            requireInteraction: !!event.data.requireInteraction,
+            renotify: true,
+            data: { url: event.data.url }
+        });
+    }
+
+    if (event.data.type === 'CLOSE_NOTIFICATION') {
+        self.registration.getNotifications({ tag: event.data.tag }).then((notifications) => {
+            notifications.forEach((n) => n.close());
+        });
+    }
 });
 
-const messaging = firebase.messaging();
-
-// استقبال الإشعارات في الخلفية التامة (حتى لو المتصفح مغلق)
-messaging.onBackgroundMessage((payload) => {
-    const notificationTitle = payload.notification?.title || 'رسالة جديدة - الهواري للزواج';
-    const notificationOptions = {
-        body: payload.notification?.body || 'لديك رسالة جديدة في الشات',
-        icon: './22.jpg',
-        badge: './22.jpg',
-        vibrate: [300, 100, 300, 100, 300],
-        data: { url: payload.data?.url || './clint.html' }
-    };
-
-    self.registration.showNotification(notificationTitle, notificationOptions);
-});
-
+// لما المستخدم يدوس على إشعار من النوع القديم (postMessage) - يفتح الصفحة أو يركّز عليها لو مفتوحة أصلاً
+// (إشعارات OneSignal ليها التصرف بتاعها المدمج جوه الملف اللي استوردناه فوق)
 self.addEventListener('notificationclick', (event) => {
+    if (!event.notification.data || !event.notification.data.url) return; // سيبها لـ OneSignal لو مش من عندنا
     event.notification.close();
-    const targetUrl = event.notification.data?.url || './clint.html';
+    const targetUrl = event.notification.data.url;
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            for (let i = 0; i < clientList.length; i++) {
-                let client = clientList[i];
-                if (client.url.includes('clint.html') && 'focus' in client) {
-                    return client.focus();
-                }
+            for (const client of clientList) {
+                if ('focus' in client) return client.focus();
             }
-            if (clients.openWindow) {
-                return clients.openWindow(targetUrl);
-            }
+            if (clients.openWindow) return clients.openWindow(targetUrl);
         })
     );
-});
-
-// استقبال طلب إظهار إشعار جاي من صفحة clint.html نفسها عن طريق postMessage
-// (ده اللي كان ناقص - من غيره showPushNotification في الصفحة كانت بتبعت
-// الرسالة للـ Service Worker من غير ما حد يستقبلها أو يعرض أي إشعار فعلي)
-self.addEventListener('message', (event) => {
-    const data = event.data;
-    if (!data || data.type !== 'SHOW_NOTIFICATION') return;
-
-    const title = data.title || 'رسالة جديدة - الهواري للزواج';
-    const options = {
-        body: data.body || 'لديك رسالة جديدة في الشات',
-        icon: './22.jpg',
-        badge: './22.jpg',
-        vibrate: [300, 100, 300, 100, 300],
-        data: { url: data.url || './clint.html' }
-    };
-
-    self.registration.showNotification(title, options);
 });
