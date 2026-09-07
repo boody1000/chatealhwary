@@ -27,12 +27,17 @@
         .clients-list { overflow-y: auto; flex: 1; }
         .client-card { display: flex; align-items: center; padding: 15px 20px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #f9f9f9; position: relative; }
         .client-card:hover, .client-card.active { background: #f0f2f5; }
-        .client-card img { width: 50px; height: 50px; border-radius: 50%; margin-left: 15px; object-fit: cover; }
+        
+        /* حاوية الصورة مع نقطة الحالة */
+        .client-avatar-container { position: relative; margin-left: 15px; flex-shrink: 0; }
+        .client-card img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; display: block; }
+        .client-status-dot { position: absolute; bottom: 2px; left: 2px; width: 12px; height: 12px; background-color: #31a24c; border: 2px solid #fff; border-radius: 50%; display: none; }
+        .client-card.online .client-status-dot { display: block; }
+
         .client-card-info { flex: 1; }
         .client-card-info h4 { font-size: 15px; color: #050505; display: flex; justify-content: space-between; align-items: center; }
         .client-card-info p { font-size: 13px; color: #65676b; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; }
 
-        /* تنسيق شارة عداد الرسائل غير المقروءة مثل الماسنجر */
         .client-card.unread .client-card-info h4 { font-weight: bold; color: #000; }
         .client-card.unread .client-card-info p { font-weight: bold; color: #000; }
         .unread-badge { background-color: #0084ff; color: #fff; font-size: 12px; font-weight: bold; padding: 2px 7px; border-radius: 50%; min-width: 20px; text-align: center; display: inline-block; }
@@ -66,16 +71,11 @@
         .message { padding: 10px 15px; border-radius: 18px; font-size: 14px; word-break: break-word; }
         .message.client { background: #fff; color: #050505; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
         .message.support { background: #0084ff; color: #fff; }
-        /* تقريب الرسائل المتتالية من نفس المرسل من بعض زي الماسنجر بالظبط */
-        .message-wrapper.grouped-top .message { border-top-left-radius: 6px; border-top-right-radius: 6px; }
-        .message-wrapper.grouped-bottom .message { border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
-        .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
         .client-row { display: flex; flex-direction: row-reverse; align-items: flex-end; gap: 7px; }
         .client-avatar { width: 24px; height: 24px; border-radius: 50%; background: #cfd4da; color: #4b4f56; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .client-avatar.spacer { visibility: hidden; }
         .client-bubble-col { display: flex; flex-direction: column; align-items: flex-start; }
 
-        /* مؤشر "بيكتب الآن..." بنقط متحركة زي الماسنجر */
         .typing-dots { display: flex !important; align-items: center; gap: 4px; padding: 12px 15px !important; }
         .typing-dots span { width: 7px; height: 7px; background: #8a8d91; border-radius: 50%; display: inline-block; animation: typingBlink 1.2s infinite ease-in-out; }
         .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
@@ -86,7 +86,6 @@
         .chat-footer-input input { flex: 1; padding: 12px 18px; background: #f0f2f5; border: none; border-radius: 25px; outline: none; font-size: 14px; }
         .chat-footer-input button { background: #0084ff; color: #fff; border: none; width: 42px; height: 42px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 16px; }
 
-        /* شاشة المكالمة الصوتية للموظف */
         #messengerCallScreen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #1c1e21; display: none; flex-direction: column; justify-content: space-between; align-items: center; z-index: 9999; padding: 50px 0;
@@ -110,9 +109,24 @@
         .m-btn-accept { background: #31a24c; }
         .m-btn:hover { opacity: 0.85; }
     </style>
+    <script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)n.push;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '2500843507000877');
+  fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 </head>
 <body>
-    <!-- كود التأمين الأمني للتحقق من تسجيل الدخول -->
     <script>
       function checkEmployeeAuth() {
         if (!localStorage.getItem('loggedAdmin') && !localStorage.getItem('loggedUsername')) {
@@ -128,7 +142,6 @@
     <audio id="ringSound" preload="auto" loop></audio>
     <audio id="remoteAudio" autoplay></audio>
 
-    <!-- شاشة المكالمة الصوتية للموظف -->
     <div id="messengerCallScreen">
         <div class="messenger-header">
             <img src="https://i.pravatar.cc/150?img=12" id="messengerAvatar" alt="User">
@@ -202,7 +215,6 @@
         </div>
     </div>
 
-    <!-- مكتبة lamejs - المتصفحات مش بتدعم تصدير MP3 بشكل أصلي، فمحتاجين مكتبة تحول التسجيل الخام لصيغة MP3 حقيقية -->
     <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -226,14 +238,12 @@
         const chatsRootRef = ref(db, 'chats/');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
-        // اسم آمن للاستخدام كمفتاح مسار في Firebase
         function safeKey(name) {
             return name ? name.replace(/[.#$\[\]\/\s]+/g, '_') : '';
         }
 
         let activeClientName = null;
         let activeClientOriginalName = null;
-        let currentClientMessagesListener = null;
         let isInitialLoad = true;
         let knownMessagesKeys = new Set();
         let audioCtx = null;
@@ -244,9 +254,8 @@
         let callStartTime = null;
         let mediaRecorder = null;
         let recordedAudioChunks = [];
-        let mixAudioContext = null; // بيستخدم لدمج صوت الموظف والعميل مع بعض في تسجيل واحد صحيح
+        let mixAudioContext = null;
 
-        // مؤشر "بيكتب الآن..." - مراقبة حالة الكتابة للعميل الحالي
         let latestTypingData = {};
         function updateTypingIndicatorUI() {
             const indicator = document.getElementById('typingIndicatorWrapperEmp');
@@ -268,7 +277,6 @@
             updateTypingIndicatorUI();
         });
 
-        // حالة أونلاين/أوفلاين للعميل
         let latestPresenceData = {};
         function updatePresenceIndicatorUI() {
             const statusEl = document.getElementById('currentChatStatus');
@@ -278,11 +286,27 @@
             statusEl.classList.toggle('offline', !isOnline);
             statusEl.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 8px;"></i> ${isOnline ? 'متصل الآن' : 'غير متصل'}`;
         }
+        
         const presenceRootRef = ref(db, 'online_clients/');
         onValue(presenceRootRef, (snapshot) => {
             latestPresenceData = snapshot.val() || {};
             updatePresenceIndicatorUI();
+            // تحديث حالة الأونلاين/الأوفلاين مباشرة في القائمة الجانبية أيضاً
+            updateSidebarPresenceClasses();
         });
+
+        function updateSidebarPresenceClasses() {
+            document.querySelectorAll('.client-card').forEach(card => {
+                const cName = card.getAttribute('data-client-name');
+                const info = latestPresenceData[safeKey(cName)];
+                const isOnline = info && info.status === 'online';
+                if (isOnline) {
+                    card.classList.add('online');
+                } else {
+                    card.classList.remove('online');
+                }
+            });
+        }
 
         let clientLastSeenMap = JSON.parse(localStorage.getItem('clientLastSeenMap') || '{}');
 
@@ -480,11 +504,9 @@
 
         window.initiateCall = function() {
             if (!activeClientOriginalName) { alert("اختر عميلاً أولاً"); return; }
-            callStartTime = Date.now();
             set(ref(db, 'calls/' + activeClientOriginalName), {
                 sender: 'support',
-                status: 'calling',
-                timestamp: callStartTime
+                status: 'calling'
             });
 
             sendPushToClient(activeClientOriginalName, '📞 مكالمة واردة', 'خدمة العملاء بتتصل بيك الآن');
@@ -506,12 +528,10 @@
         window.acceptCall = function() {
             stopStandardRinging();
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
-            callStartTime = Date.now();
             if (activeClientOriginalName) {
                 set(ref(db, 'calls/' + activeClientOriginalName), {
                     sender: loggedUser || 'support',
-                    status: 'accepted',
-                    timestamp: callStartTime
+                    status: 'accepted'
                 });
             }
 
@@ -523,9 +543,6 @@
             startDailyAudioFrame();
         };
 
-        // تحويل تسجيل webm الخام لصيغة MP3 حقيقية باستخدام مكتبة lamejs
-        // (المتصفحات مفيهاش تشفير MP3 مدمج، فبنفك ترميز الصوت لعينات خام
-        // (PCM) ونعيد ترميزها بصيغة MP3 يدويًا)
         async function convertWebmBlobToMp3(webmBlob) {
             const arrayBuffer = await webmBlob.arrayBuffer();
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -533,13 +550,13 @@
 
             const numChannels = Math.min(audioBuffer.numberOfChannels, 2);
             const sampleRate = audioBuffer.sampleRate;
-            const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, 128); // 128kbps جودة جيدة وحجم معقول
+            const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, 128);
 
             const left = floatTo16BitPCM(audioBuffer.getChannelData(0));
             const right = numChannels > 1 ? floatTo16BitPCM(audioBuffer.getChannelData(1)) : null;
 
             const mp3Data = [];
-            const sampleBlockSize = 1152; // حجم الكتلة المطلوب من lamejs
+            const sampleBlockSize = 1152;
 
             for (let i = 0; i < left.length; i += sampleBlockSize) {
                 const leftChunk = left.subarray(i, i + sampleBlockSize);
@@ -586,9 +603,6 @@
                                 const localStream = callObject.participants().local?.audioStream || new MediaStream();
                                 const remoteStream = new MediaStream([e.track]);
 
-                                // دمج صوت الموظف والعميل في مسار واحد فعليًا (بدل ما يتحطوا
-                                // جنب بعض في نفس الـ MediaStream من غير دمج حقيقي، وده كان بيخلي
-                                // MediaRecorder يسجل طرف واحد بس في أغلب المتصفحات)
                                 mixAudioContext = new (window.AudioContext || window.webkitAudioContext)();
                                 const destination = mixAudioContext.createMediaStreamDestination();
 
@@ -608,11 +622,8 @@
                                 mediaRecorder.onstop = async () => {
                                     const webmBlob = new Blob(recordedAudioChunks, { type: 'audio/webm' });
                                     const endTime = Date.now();
-                                    const durationSeconds = callStartTime ? Math.floor((endTime - callStartTime) / 1000) : 0;
 
                                     try {
-                                        // تحويل التسجيل الفعلي لصيغة MP3 حقيقية (المتصفح مابيسجلش MP3
-                                        // مباشرة، فمحتاجين نحوّل العينات الصوتية الخام بمكتبة lamejs)
                                         const mp3Blob = await convertWebmBlobToMp3(webmBlob);
 
                                         const safeClientName = (activeClientOriginalName || 'unknown').replace(/[.#$\[\]\/\s]+/g, '_');
@@ -625,25 +636,16 @@
                                         push(ref(db, 'call_logs/'), {
                                             clientName: activeClientOriginalName,
                                             employeeName: loggedUser || 'موظف',
-                                            startTime: callStartTime ? new Date(callStartTime).toLocaleString('ar-EG') : '',
-                                            endTime: new Date(endTime).toLocaleString('ar-EG'),
-                                            duration: durationSeconds + ' ثانية',
-                                            recordingUrl: downloadUrl,
-                                            timestamp: endTime
+                                            recordingUrl: downloadUrl
                                         });
 
-                                        sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientOriginalName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}\n⏱️ المدة: ${durationSeconds} ثانية`);
+                                        sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientOriginalName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}`);
                                     } catch (uploadErr) {
                                         console.error("خطأ أثناء تحويل/رفع تسجيل المكالمة:", uploadErr);
-                                        // حتى لو فشل التسجيل الصوتي، نحفظ سجل المكالمة نفسه من غير رابط تسجيل
                                         push(ref(db, 'call_logs/'), {
                                             clientName: activeClientOriginalName,
                                             employeeName: loggedUser || 'موظف',
-                                            startTime: callStartTime ? new Date(callStartTime).toLocaleString('ar-EG') : '',
-                                            endTime: new Date(endTime).toLocaleString('ar-EG'),
-                                            duration: durationSeconds + ' ثانية',
-                                            recordingUrl: null,
-                                            timestamp: endTime
+                                            recordingUrl: null
                                         });
                                     } finally {
                                         if (mixAudioContext) {
@@ -673,20 +675,13 @@
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.stop();
             } else if (activeClientOriginalName) {
-                const endTime = Date.now();
-                const durationSeconds = callStartTime ? Math.floor((endTime - callStartTime) / 1000) : 0;
-                
                 push(ref(db, 'call_logs/'), {
                     clientName: activeClientOriginalName,
                     employeeName: loggedUser || 'موظف',
-                    startTime: callStartTime ? new Date(callStartTime).toLocaleString('ar-EG') : '',
-                    endTime: new Date(endTime).toLocaleString('ar-EG'),
-                    duration: durationSeconds + ' ثانية',
-                    recordingUrl: null,
-                    timestamp: endTime
+                    recordingUrl: null
                 });
 
-                sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientOriginalName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}\n⏱️ المدة: ${durationSeconds} ثانية`);
+                sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientOriginalName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}`);
             }
 
             if (activeClientOriginalName) {
@@ -699,7 +694,6 @@
             stopStandardRinging();
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             document.getElementById('messengerCallScreen').style.display = 'none';
-            callStartTime = null;
             mediaRecorder = null;
             recordedAudioChunks = [];
             if (callObject) {
@@ -748,18 +742,6 @@
             } catch (e) {}
         }
 
-        function formatTime(timestamp) {
-            if (!timestamp) return '';
-            const date = new Date(timestamp);
-            let hours = date.getHours();
-            let minutes = date.getMinutes();
-            let ampm = hours >= 12 ? 'م' : 'ص';
-            hours = hours % 12; hours = hours ? hours : 12;
-            minutes = minutes < 10 ? '0' + minutes : minutes;
-            return hours + ':' + minutes + ' ' + ampm;
-        }
-
-        // الاستماع لجذر الـ chats لكشف جميع المحادثات وتحديث القائمة الجانبية بشكل صحيح ودقيق
         onValue(chatsRootRef, (snapshot) => {
             const allChatsData = snapshot.val();
             const clientsListEl = document.getElementById('clientsListContainer');
@@ -773,12 +755,11 @@
 
             let clientsMap = {};
             
-            // التعامل مع الهيكل الذي يرسل فيه العميل رسائله تحت كل مسار باسم العميل `chats/اسم_العميل`
             Object.keys(allChatsData).forEach(clientKey => {
                 let clientMessagesObj = allChatsData[clientKey];
                 if (clientMessagesObj && typeof clientMessagesObj === 'object') {
                     let messagesArray = [];
-                    let realClientName = clientKey.replace(/_/g, ' '); // محاولة استعادة الاسم الأصلي
+                    let realClientName = clientKey.replace(/_/g, ' ');
                     
                     Object.keys(clientMessagesObj).forEach(msgKey => {
                         let msg = clientMessagesObj[msgKey];
@@ -794,12 +775,10 @@
                     });
 
                     if (messagesArray.length > 0) {
-                        messagesArray.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
                         clientsMap[realClientName] = {
                             safeKeyName: clientKey,
                             messages: messagesArray,
-                            lastMsg: messagesArray[messagesArray.length - 1],
-                            lastTimestamp: messagesArray[messagesArray.length - 1].timestamp || 0
+                            lastMsg: messagesArray[messagesArray.length - 1]
                         };
                     }
                 }
@@ -811,8 +790,6 @@
                     ...clientsMap[cName]
                 };
             });
-
-            clientsArray.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
 
             let allKeysSet = new Set();
             clientsArray.forEach(item => {
@@ -841,15 +818,24 @@
                 let lastMsg = item.lastMsg;
                 
                 let lastSeen = clientLastSeenMap[cName] || 0;
-                let unreadCount = clientMsgs.filter(m => m.sender === 'client' && (m.timestamp || 0) > lastSeen).length;
+                let unreadCount = clientMsgs.filter(m => m.sender === 'client' && (m.firebaseKey > lastSeen)).length;
+
+                // التحقق مما إذا كان العميل أونلاين حالياً
+                let info = latestPresenceData[item.safeKeyName];
+                let isOnline = info && info.status === 'online';
 
                 let cardDiv = document.createElement('div');
                 cardDiv.classList.add('client-card');
+                cardDiv.setAttribute('data-client-name', cName);
+                if (isOnline) cardDiv.classList.add('online');
                 if (activeClientOriginalName === cName) cardDiv.classList.add('active');
                 if (unreadCount > 0) cardDiv.classList.add('unread');
 
                 cardDiv.innerHTML = `
-                    <img src="https://i.pravatar.cc/150?img=${cName.length + 10}" alt="avatar">
+                    <div class="client-avatar-container">
+                        <img src="https://i.pravatar.cc/150?img=${cName.length + 10}" alt="avatar">
+                        <span class="client-status-dot"></span>
+                    </div>
                     <div class="client-card-info">
                         <h4>${cName} ${unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : ''}</h4>
                         <p>${lastMsg.text || ''}</p>
@@ -868,8 +854,10 @@
             activeClientOriginalName = cName;
             activeClientName = safeKeyName;
             
-            clientLastSeenMap[cName] = Date.now();
-            localStorage.setItem('clientLastSeenMap', JSON.stringify(clientLastSeenMap));
+            if (messages.length > 0) {
+                clientLastSeenMap[cName] = messages[messages.length - 1].firebaseKey;
+                localStorage.setItem('clientLastSeenMap', JSON.stringify(clientLastSeenMap));
+            }
             
             if(element) {
                 element.classList.remove('unread');
@@ -910,20 +898,10 @@
                 const wrapperDiv = document.createElement('div');
                 wrapperDiv.classList.add('message-wrapper', msg.sender === 'client' ? 'client' : 'support');
                 if (isFirstInGroup) wrapperDiv.classList.add('group-start');
-                if (!isFirstInGroup) wrapperDiv.classList.add('grouped-top');
-                if (!isLastInGroup) wrapperDiv.classList.add('grouped-bottom');
 
                 const msgDiv = document.createElement('div');
                 msgDiv.classList.add('message', msg.sender === 'client' ? 'client' : 'support');
                 msgDiv.innerHTML = `<p>${msg.text}</p>`;
-
-                // الوقت بيظهر بس تحت آخر رسالة في المجموعة المتتالية (زي الماسنجر بالظبط)
-                let timeSpan = null;
-                if (isLastInGroup) {
-                    timeSpan = document.createElement('span');
-                    timeSpan.classList.add('msg-timestamp');
-                    timeSpan.innerText = formatTime(msg.timestamp);
-                }
 
                 if (msg.sender === 'client') {
                     const row = document.createElement('div');
@@ -932,7 +910,6 @@
                     const bubbleCol = document.createElement('div');
                     bubbleCol.classList.add('client-bubble-col');
                     bubbleCol.appendChild(msgDiv);
-                    if (timeSpan) bubbleCol.appendChild(timeSpan);
 
                     const avatar = document.createElement('div');
                     avatar.classList.add('client-avatar');
@@ -947,7 +924,6 @@
                     wrapperDiv.appendChild(row);
                 } else {
                     wrapperDiv.appendChild(msgDiv);
-                    if (timeSpan) wrapperDiv.appendChild(timeSpan);
                 }
 
                 chatBody.appendChild(wrapperDiv);
@@ -961,16 +937,12 @@
             const input = document.getElementById('supportReplyInput');
             const text = input.value.trim();
             if (text === "" || !activeClientOriginalName) return;
-            const now = new Date();
             
             const clientChatRef = ref(db, 'chats/' + safeKey(activeClientOriginalName));
             push(clientChatRef, {
                 sender: 'support', 
                 clientName: activeClientOriginalName,
-                text: text, 
-                timestamp: now.getTime(), 
-                dateString: now.toLocaleDateString('ar-EG'), 
-                timeString: formatTime(now.getTime())
+                text: text
             });
             
             sendPushToClient(activeClientOriginalName, '💬 رسالة جديدة من خدمة العملاء', text);
