@@ -28,7 +28,6 @@
         .client-card { display: flex; align-items: center; padding: 15px 20px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #f9f9f9; position: relative; }
         .client-card:hover, .client-card.active { background: #f0f2f5; }
         
-        /* حاوية الصورة مع نقطة الحالة */
         .client-avatar-container { position: relative; margin-left: 15px; flex-shrink: 0; }
         .client-card img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; display: block; }
         .client-status-dot { position: absolute; bottom: 2px; left: 2px; width: 12px; height: 12px; background-color: #31a24c; border: 2px solid #fff; border-radius: 50%; display: none; }
@@ -124,7 +123,6 @@
 <noscript><img height="1" width="1" style="display:none"
   src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
 /></noscript>
-<!-- End Meta Pixel Code -->
 </head>
 <body>
     <script>
@@ -218,7 +216,7 @@
     <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onValue, off } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onValue, off, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
         import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-storage.js";
 
         const firebaseConfig = {
@@ -291,7 +289,6 @@
         onValue(presenceRootRef, (snapshot) => {
             latestPresenceData = snapshot.val() || {};
             updatePresenceIndicatorUI();
-            // تحديث حالة الأونلاين/الأوفلاين مباشرة في القائمة الجانبية أيضاً
             updateSidebarPresenceClasses();
         });
 
@@ -820,7 +817,6 @@
                 let lastSeen = clientLastSeenMap[cName] || 0;
                 let unreadCount = clientMsgs.filter(m => m.sender === 'client' && (m.firebaseKey > lastSeen)).length;
 
-                // التحقق مما إذا كان العميل أونلاين حالياً
                 let info = latestPresenceData[item.safeKeyName];
                 let isOnline = info && info.status === 'online';
 
@@ -895,13 +891,25 @@
                 const isFirstInGroup = !prevMsg || prevMsg.sender !== msg.sender;
                 const isLastInGroup = !nextMsg || nextMsg.sender !== msg.sender;
 
+                // تنسيق وقت السيرفر المخزن
+                let timeString = '';
+                if (msg.timestamp) {
+                    let date = new Date(msg.timestamp);
+                    timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+
                 const wrapperDiv = document.createElement('div');
                 wrapperDiv.classList.add('message-wrapper', msg.sender === 'client' ? 'client' : 'support');
                 if (isFirstInGroup) wrapperDiv.classList.add('group-start');
 
                 const msgDiv = document.createElement('div');
                 msgDiv.classList.add('message', msg.sender === 'client' ? 'client' : 'support');
-                msgDiv.innerHTML = `<p>${msg.text}</p>`;
+                
+                // عرض النص وتحته الوقت المستمد من السيرفر
+                msgDiv.innerHTML = `
+                    <p>${msg.text}</p>
+                    ${timeString ? `<span style="font-size: 10px; opacity: 0.7; display: block; text-align: left; margin-top: 2px;">${timeString}</span>` : ''}
+                `;
 
                 if (msg.sender === 'client') {
                     const row = document.createElement('div');
@@ -942,7 +950,8 @@
             push(clientChatRef, {
                 sender: 'support', 
                 clientName: activeClientOriginalName,
-                text: text
+                text: text,
+                timestamp: serverTimestamp() // <-- اعتماد وقت السيرفر عند الإرسال
             });
             
             sendPushToClient(activeClientOriginalName, '💬 رسالة جديدة من خدمة العملاء', text);
@@ -957,7 +966,7 @@
         document.getElementById('supportReplyInput').addEventListener('input', function() {
             if (!activeClientOriginalName) return;
             const typingRef = ref(db, 'typing/' + safeKey(activeClientOriginalName) + '/support');
-            set(typingRef, Date.now());
+            set(typingRef, serverTimestamp());
             clearTimeout(supportTypingTimeout);
             supportTypingTimeout = setTimeout(() => set(typingRef, null), 2000);
         });
