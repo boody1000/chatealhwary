@@ -132,6 +132,21 @@
   'https://connect.facebook.net/en_US/fbevents.js');
   fbq('init', '2500843507000877');
   fbq('track', 'PageView');
+
+  // دالة إرسال الحدث لفيسبوك
+  function sendMetaEvent(eventName, eventValue) {
+    if (typeof fbq !== 'undefined') {
+      fbq('track', eventName, {
+        value: eventValue,
+        currency: 'EGP'
+      }, {
+        eventID: 'event_' + Date.now()
+      });
+      console.log('تم إرسال حدث ' + eventName + ' بنجاح');
+    } else {
+      console.log('فيسبوك بيكسل مش متحمّل');
+    }
+  }
 </script>
 <noscript><img height="1" width="1" style="display:none"
   src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
