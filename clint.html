@@ -229,7 +229,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onChildAdded, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, push, set, serverTimestamp, onChildAdded, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -329,12 +329,12 @@
                 name: clientName,
                 phone: clientPhone,
                 status: 'online',
-                lastActive: Date.now()
+                lastActive: serverTimestamp()
             });
 
             onDisconnect(presenceRef).update({
                 status: 'offline',
-                lastActive: Date.now()
+                lastActive: serverTimestamp()
             });
 
             onDisconnect(ref(db, 'typing/' + safeId + '/client')).set(null);
@@ -385,7 +385,7 @@
             set(ref(db, 'calls/' + safeKey(clientName)), {
                 sender: 'client',
                 status: 'calling',
-                timestamp: Date.now()
+                timestamp: serverTimestamp()
             });
 
             document.getElementById('callStatusText').innerText = "جاري الاتصال الصوتي...";
@@ -480,7 +480,6 @@
             document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
 
             // حفظ بيانات النموذج الفوري في قاعدة البيانات في نفس مسار الشات وعرضها في الشات
-            const now = new Date();
             const clientMessagesRef = ref(db, 'chats/' + safeKey(nameInput));
             const formDetailsText = `📋 بيانات العميل المنضم:\n👤 الاسم: ${nameInput}\n📞 الهاتف: ${phoneInput ? phoneInput : 'غير متوفر'}`;
             
@@ -488,9 +487,7 @@
                 sender: 'client', 
                 clientName: nameInput, 
                 text: formDetailsText,
-                timestamp: now.getTime(), 
-                dateString: now.toLocaleDateString('ar-EG'), 
-                timeString: formatTime(now)
+                timestamp: serverTimestamp()
             });
 
             initClientChat(nameInput);
@@ -506,7 +503,8 @@
             }
         };
 
-        function formatTime(date) {
+        function formatTime(timestamp) {
+            const date = timestamp ? new Date(timestamp) : new Date();
             let hours = date.getHours();
             let minutes = date.getMinutes();
             let ampm = hours >= 12 ? 'م' : 'ص';
@@ -536,7 +534,7 @@
                 msgDiv.classList.add('message');
                 const timeSpan = document.createElement('span');
                 timeSpan.classList.add('msg-timestamp');
-                timeSpan.innerText = formatTime(new Date(data.timestamp || Date.now()));
+                timeSpan.innerText = formatTime(data.timestamp);
 
                 if (data.sender === 'client') {
                     wrapperDiv.classList.add('client'); msgDiv.classList.add('client');
@@ -556,12 +554,13 @@
             const text = input.value.trim();
             const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
             if (text === "") return;
-            const now = new Date();
 
             const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
             push(clientMessagesRef, {
-                sender: 'client', clientName: clientName, text: text,
-                timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now)
+                sender: 'client', 
+                clientName: clientName, 
+                text: text,
+                timestamp: serverTimestamp()
             });
 
             sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n✉️ النص: ${text}`);
@@ -577,7 +576,7 @@
             const clientName = sessionStorage.getItem('chatClientName');
             if (!clientName) return;
             const typingRef = ref(db, 'typing/' + safeKey(clientName) + '/client');
-            set(typingRef, Date.now());
+            set(typingRef, serverTimestamp());
             clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => set(typingRef, null), 2000);
         });
