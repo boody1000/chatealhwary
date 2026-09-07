@@ -64,6 +64,7 @@
         .message.client { background: #0084ff; color: #fff; }
         .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
 
+        /* مؤشر "بيكتب الآن..." بنقط متحركة زي الماسنجر */
         .typing-dots { display: flex !important; align-items: center; gap: 4px; padding: 12px 16px !important; }
         .typing-dots span { width: 7px; height: 7px; background: #8a8d91; border-radius: 50%; display: inline-block; animation: typingBlink 1.2s infinite ease-in-out; }
         .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
@@ -74,6 +75,7 @@
         .chat-footer input { flex: 1; padding: 10px 15px; border: 1px solid #ccd0d5; border-radius: 20px; outline: none; font-size: 14px; }
         .chat-footer button { background: #0084ff; color: #fff; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; }
 
+        /* شاشة المكالمة الصوتية */
         #messengerCallScreen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #1c1e21; display: none; flex-direction: column; justify-content: space-between; align-items: center; z-index: 9999; padding: 50px 0;
@@ -97,13 +99,59 @@
         .m-btn-accept { background: #31a24c; }
         .m-btn:hover { opacity: 0.85; }
 
+        /* قواعد التجاوب مع الشاشات الصغيرة والهواتف */
         @media (max-width: 480px) {
-            body { align-items: flex-end; height: 100dvh; }
-            .client-chat-container { width: 100%; height: 100dvh; border-radius: 0; }
-            .name-modal { padding: 10px; }
-            .name-box { max-width: 100%; padding: 22px 18px; border-radius: 14px; }
+            body {
+                align-items: flex-end;
+                height: 100dvh;
+            }
+            .client-chat-container {
+                width: 100%;
+                height: 100dvh;
+                border-radius: 0;
+            }
+            .name-modal {
+                padding: 10px;
+            }
+            .name-box {
+                max-width: 100%;
+                padding: 22px 18px;
+                border-radius: 14px;
+            }
         }
     </style>
+    <!-- Meta Pixel Code -->
+<script>
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)n.push;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '2500843507000877');
+  fbq('track', 'PageView');
+
+  // دالة إرسال الحدث لفيسبوك
+  function sendMetaEvent(eventName, eventValue) {
+    if (typeof fbq !== 'undefined') {
+      fbq('track', eventName, {
+        value: eventValue,
+        currency: 'EGP'
+      }, {
+        eventID: 'event_' + Date.now()
+      });
+      console.log('تم إرسال حدث ' + eventName + ' بنجاح');
+    } else {
+      console.log('فيسبوك بيكسل مش متحمّل');
+    }
+  }
+</script>
+<noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 </head>
 <body>
 
@@ -131,14 +179,16 @@
         </div>
     </div>
 
+    <!-- شاشة المكالمة الصوتية -->
     <div id="messengerCallScreen">
         <div class="messenger-header">
             <img src="22.jpg" alt="User">
             <h2 id="callStatusText">جاري الاتصال...</h2>
             <p id="callSubText">مكالمة صوتية - خدمة العملاء</p>
         </div>
+        
         <div id="messengerControlsBar" class="messenger-controls">
-            <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
+            <button class="m-btn m-btn-hangup" onclick="endCallCompletely()" title="إنهاء المكالمة"><i class="fa-solid fa-phone-slash"></i></button>
         </div>
     </div>
 
@@ -179,7 +229,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onChildAdded, onValue, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onChildAdded, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCVZQ3DTRr_7c5q3CmPRzt3ai1KX80F0C0",
@@ -201,6 +251,7 @@
         const ranAudio = document.getElementById('ranSound');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
+        // بيانات بوت التليجرام المدمجة
         const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
         const TELEGRAM_CHAT_ID = "7594072203";
 
@@ -209,17 +260,58 @@
             fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: text, parse_mode: 'HTML' })
+                body: JSON.stringify({
+                    chat_id: TELEGRAM_CHAT_ID,
+                    text: text,
+                    parse_mode: 'HTML'
+                })
             }).catch(err => console.log("Telegram Error:", err));
         }
 
-        function safeKey(name) {
-            return name ? name.replace(/[.#$\[\]\/\s]+/g, '_') : '';
+        // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => {
+                        console.log('ServiceWorker registered:', reg.scope);
+                        if ('Notification' in window && Notification.permission !== 'granted') {
+                            Notification.requestPermission();
+                        }
+                    })
+                    .catch(err => console.log('ServiceWorker registration failed:', err));
+            });
+        }
+
+        // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل
+        function showPushNotification(title, body) {
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title: title,
+                    body: body,
+                    url: window.location.href
+                });
+            } else if (Notification.permission === 'granted') {
+                try {
+                    new Notification(title, {
+                        body: body,
+                        icon: './22.jpg',
+                        badge: './22.jpg',
+                        vibrate: [300, 100, 300, 100, 300]
+                    });
+                } catch(e) {}
+            }
         }
 
         let callObject = null;
         let isMuted = false;
 
+        // اسم آمن للاستخدام كمفتاح مسار في Firebase (بيشيل المسافات والرموز الممنوعة)
+        function safeKey(name) {
+            return name.replace(/[.#$\[\]\/\s]+/g, '_');
+        }
+
+        // ربط وتشغيل محادثة العميل بعد إدخال الاسم
         function initClientChat(clientName) {
             setupPresence(clientName);
             listenToCalls(clientName);
@@ -227,6 +319,7 @@
             loadClientMessages(clientName);
         }
 
+        // نظام الحضور (Online/Offline) لكل عميل على حدة
         function setupPresence(clientName) {
             const safeId = safeKey(clientName);
             const presenceRef = ref(db, 'online_clients/' + safeId);
@@ -236,17 +329,18 @@
                 name: clientName,
                 phone: clientPhone,
                 status: 'online',
-                lastActive: serverTimestamp()
+                lastActive: Date.now()
             });
 
             onDisconnect(presenceRef).update({
                 status: 'offline',
-                lastActive: serverTimestamp()
+                lastActive: Date.now()
             });
 
             onDisconnect(ref(db, 'typing/' + safeId + '/client')).set(null);
         }
 
+        // مؤشر "بيكتب الآن..." الخاص بالدعم الفني لكل عميل
         function listenToSupportTyping(clientName) {
             const typingRef = ref(db, 'typing/' + safeKey(clientName) + '/support');
             onValue(typingRef, (snapshot) => {
@@ -263,6 +357,7 @@
             });
         }
 
+        // الاستماع لمكالمات هذا العميل فقط
         function listenToCalls(clientName) {
             const callRef = ref(db, 'calls/' + safeKey(clientName));
             onValue(callRef, (snapshot) => {
@@ -272,6 +367,7 @@
                 if (data.status === 'calling' && data.sender === 'support') {
                     document.getElementById('callStatusText').innerText = "مكالمة صوتية واردة...";
                     document.getElementById('messengerCallScreen').style.display = 'flex';
+                    
                     document.getElementById('messengerControlsBar').innerHTML = `
                         <button class="m-btn m-btn-accept" onclick="acceptCall()"><i class="fa-solid fa-phone"></i></button>
                         <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
@@ -289,7 +385,7 @@
             set(ref(db, 'calls/' + safeKey(clientName)), {
                 sender: 'client',
                 status: 'calling',
-                timestamp: serverTimestamp()
+                timestamp: Date.now()
             });
 
             document.getElementById('callStatusText').innerText = "جاري الاتصال الصوتي...";
@@ -299,6 +395,7 @@
             `;
             if (ringAudio) { ringAudio.currentTime = 0; ringAudio.play().catch(e=>{}); }
             if (ranAudio) { ranAudio.currentTime = 0; ranAudio.play().catch(e=>{}); }
+
             startDailyAudioFrame();
         };
 
@@ -318,19 +415,30 @@
 
         function startDailyAudioFrame() {
             if (!callObject) {
-                callObject = window.DailyIframe.createCallObject({ audioSource: true, videoSource: false });
-                callObject.on('joined-meeting', () => { callObject.setLocalAudio(true); });
+                callObject = window.DailyIframe.createCallObject({
+                    audioSource: true,
+                    videoSource: false
+                });
+
+                callObject.on('joined-meeting', () => {
+                    console.log("تم الانضمام للمكالمة الصوتية بنجاح");
+                    callObject.setLocalAudio(true);
+                });
+
                 callObject.on('track-started', (e) => {
                     if (e.track.kind === 'audio' && !e.participant.local) {
                         const audioEl = document.getElementById('remoteAudio');
                         if (audioEl) {
                             audioEl.srcObject = new MediaStream([e.track]);
-                            audioEl.play().catch(err => {});
+                            audioEl.play().catch(err => console.log("خطأ في تشغيل الصوت:", err));
                         }
                     }
                 });
             }
-            callObject.join({ url: DAILY_ROOM_URL }).catch(err => {});
+
+            callObject.join({ url: DAILY_ROOM_URL }).catch(err => {
+                console.error("خطأ في الانضمام للمكالمة الصوتية:", err);
+            });
         }
 
         window.endCallCompletely = function() {
@@ -347,7 +455,9 @@
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             if (ranAudio) { ranAudio.pause(); ranAudio.currentTime = 0; }
             document.getElementById('messengerCallScreen').style.display = 'none';
-            if (callObject) { callObject.leave(); }
+            if (callObject) {
+                callObject.leave();
+            }
         }
 
         window.toggleMute = function() {
@@ -369,6 +479,8 @@
             document.getElementById('chatContainer').style.display = 'flex';
             document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
 
+            // حفظ بيانات النموذج الفوري في قاعدة البيانات في نفس مسار الشات وعرضها في الشات
+            const now = new Date();
             const clientMessagesRef = ref(db, 'chats/' + safeKey(nameInput));
             const formDetailsText = `📋 بيانات العميل المنضم:\n👤 الاسم: ${nameInput}\n📞 الهاتف: ${phoneInput ? phoneInput : 'غير متوفر'}`;
             
@@ -376,7 +488,9 @@
                 sender: 'client', 
                 clientName: nameInput, 
                 text: formDetailsText,
-                timestamp: serverTimestamp()
+                timestamp: now.getTime(), 
+                dateString: now.toLocaleDateString('ar-EG'), 
+                timeString: formatTime(now)
             });
 
             initClientChat(nameInput);
@@ -392,8 +506,7 @@
             }
         };
 
-        function formatTime(timestamp) {
-            let date = timestamp ? new Date(timestamp) : new Date();
+        function formatTime(date) {
             let hours = date.getHours();
             let minutes = date.getMinutes();
             let ampm = hours >= 12 ? 'م' : 'ص';
@@ -402,6 +515,7 @@
             return hours + ':' + minutes + ' ' + ampm;
         }
 
+        // تحميل رسائل هذا العميل فقط من مساره الخاص في قاعدة البيانات
         function loadClientMessages(clientName) {
             const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
             
@@ -411,6 +525,7 @@
 
                 if (data.sender === 'support') {
                     sendTelegramNotification(`💬 <b>رد جديد من الدعم الفني</b>\n👤 إلى العميل: ${clientName}\n✉️ النص: ${data.text}`);
+                    showPushNotification(`رسالة جديدة من خدمة العملاء`, data.text);
                     if (msgAudio) { msgAudio.currentTime = 0; msgAudio.play().catch(e => {}); }
                     if (ranAudio) { ranAudio.currentTime = 0; ranAudio.play().catch(e => {}); }
                 }
@@ -421,7 +536,7 @@
                 msgDiv.classList.add('message');
                 const timeSpan = document.createElement('span');
                 timeSpan.classList.add('msg-timestamp');
-                timeSpan.innerText = formatTime(data.timestamp);
+                timeSpan.innerText = formatTime(new Date(data.timestamp || Date.now()));
 
                 if (data.sender === 'client') {
                     wrapperDiv.classList.add('client'); msgDiv.classList.add('client');
@@ -441,19 +556,19 @@
             const text = input.value.trim();
             const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
             if (text === "") return;
+            const now = new Date();
 
             const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
             push(clientMessagesRef, {
-                sender: 'client', 
-                clientName: clientName, 
-                text: text,
-                timestamp: serverTimestamp()
+                sender: 'client', clientName: clientName, text: text,
+                timestamp: now.getTime(), dateString: now.toLocaleDateString('ar-EG'), timeString: formatTime(now)
             });
 
             sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n✉️ النص: ${text}`);
 
             clearTimeout(typingTimeout);
             set(ref(db, 'typing/' + safeKey(clientName) + '/client'), null);
+
             input.value = "";
         };
 
