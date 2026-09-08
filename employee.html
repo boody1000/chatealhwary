@@ -193,6 +193,7 @@
                         </div>
                     </div>
                     <div class="call-actions">
+                        <button onclick="activateClientButton()" title="إظهار زرار الدخول عند العميل"><i class="fa-solid fa-link"></i></button>
                         <button onclick="initiateCall()" title="اتصال صوتي"><i class="fa-solid fa-phone"></i></button>
                     </div>
                 </div>
@@ -233,6 +234,16 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         const storage = getStorage(app);
+
+        // تصحيح فرق الساعة بين جهاز الموظف وسيرفر Firebase
+        // نفس المنطق المستخدم عند العميل عشان المقارنة تبقى موحّدة من نفس المصدر
+        let serverTimeOffset = 0;
+        onValue(ref(db, '.info/serverTimeOffset'), (snap) => {
+            serverTimeOffset = snap.val() || 0;
+        });
+        function serverNow() {
+            return Date.now() + serverTimeOffset;
+        }
         const chatsRootRef = ref(db, 'chats/');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
@@ -259,7 +270,7 @@
             const indicator = document.getElementById('typingIndicatorWrapperEmp');
             if (!indicator || !activeClientOriginalName) return;
             const clientTyping = latestTypingData[safeKey(activeClientOriginalName)]?.client;
-            const isRecentlyTyping = clientTyping && (Date.now() - clientTyping < 3000);
+            const isRecentlyTyping = clientTyping && (serverNow() - clientTyping < 3000);
             const chatBody = document.getElementById('chatMessagesBody');
             if (isRecentlyTyping) {
                 indicator.style.display = 'flex';
@@ -874,6 +885,12 @@
             updatePresenceIndicatorUI();
         };
 
+        // تفعيل الزرار الخاص عند العميل الحالي (بيخليه يظهر عنده فورًا)
+        window.activateClientButton = function() {
+            if (!activeClientOriginalName) return;
+            set(ref(db, 'actions/' + safeKey(activeClientOriginalName) + '/showButton'), true);
+        };
+
         window.goBackToClients = function() {
             document.getElementById('chatSection').classList.remove('show-screen');
             activeClientOriginalName = null;
@@ -966,7 +983,7 @@
         document.getElementById('supportReplyInput').addEventListener('input', function() {
             if (!activeClientOriginalName) return;
             const typingRef = ref(db, 'typing/' + safeKey(activeClientOriginalName) + '/support');
-            set(typingRef, serverTimestamp());
+            set(typingRef, serverNow());
             clearTimeout(supportTypingTimeout);
             supportTypingTimeout = setTimeout(() => set(typingRef, null), 2000);
         });
