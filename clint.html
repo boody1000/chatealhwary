@@ -295,45 +295,35 @@
             });
         }
 
-        function showPushNotification(title, body) {
-            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({
-                    type: 'SHOW_NOTIFICATION',
-                    title: title,
-                    body: body,
-                    url: window.location.href
-                });
-            } else if (Notification.permission === 'granted') {
-                try {
-                    new Notification(title, {
-                        body: body,
-                        icon: './22.jpg',
-                        badge: './22.jpg',
-                        vibrate: [300, 100, 300, 100, 300]
-                    });
-                } catch(e) {}
+        let unreadCount = 0;
+        function updateAppBadge(count) {
+            unreadCount = count;
+            if (count > 0) {
+                document.title = `(${count}) رسالة جديدة - خدمة العملاء`;
+                if (navigator.setAppBadge) {
+                    navigator.setAppBadge(count).catch(err => {});
+                }
+            } else {
+                document.title = "تواصل معنا - المكالمة الصوتية";
+                if (navigator.clearAppBadge) {
+                    navigator.clearAppBadge().catch(err => {});
+                }
             }
         }
+
+        window.addEventListener('focus', () => {
+            updateAppBadge(0);
+        });
 
         let callObject = null;
         let isMuted = false;
 
-        function safeKey(name) {
-            return name ? name.replace(/[.#$\[\]\/\s]+/g, '_') : '';
-        }
-
-        // جلب الـ IP الخاص بالعميل أو توليد معرف فريد وثابت في localStorage للمتصفح
-        async function getClientUniqueId() {
-            let uniqueId = localStorage.getItem('chatClientIpId');
+        // **التعديل الأساسي:** توليد معرف فريد ومستقل لكل تبويب/زائر باستخدام sessionStorage لضمان العزل التام
+        function getClientUniqueId() {
+            let uniqueId = sessionStorage.getItem('chatClientUniqueId');
             if (!uniqueId) {
-                try {
-                    let response = await fetch('https://api.ipify.org?format=json');
-                    let data = await response.json();
-                    uniqueId = safeKey(data.ip);
-                } catch (e) {
-                    uniqueId = 'user_' + Math.random().toString(36).substring(2, 10) + Date.now();
-                }
-                localStorage.setItem('chatClientIpId', uniqueId);
+                uniqueId = 'client_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+                sessionStorage.setItem('chatClientUniqueId', uniqueId);
             }
             return uniqueId;
         }
@@ -341,7 +331,7 @@
         let currentClientKey = '';
 
         async function initClientChat(clientName) {
-            currentClientKey = await getClientUniqueId();
+            currentClientKey = getClientUniqueId();
             setupPresence(clientName, currentClientKey);
             listenToCalls(currentClientKey);
             listenToSupportTyping(currentClientKey);
@@ -354,7 +344,7 @@
             if (!wrapper) return;
             const storageKey = 'specialBtnShown_' + clientKey;
 
-            if (localStorage.getItem(storageKey) === 'true') {
+            if (sessionStorage.getItem(storageKey) === 'true') {
                 wrapper.style.display = 'block';
             }
 
@@ -363,9 +353,9 @@
                 const show = snapshot.val();
                 if (show) {
                     wrapper.style.display = 'block';
-                    localStorage.setItem(storageKey, 'true');
+                    sessionStorage.setItem(storageKey, 'true');
                     chatBody.scrollTop = chatBody.scrollHeight;
-                } else if (localStorage.getItem(storageKey) === 'true') {
+                } else if (sessionStorage.getItem(storageKey) === 'true') {
                     wrapper.style.display = 'block';
                 } else {
                     wrapper.style.display = 'none';
@@ -379,7 +369,7 @@
 
         function setupPresence(clientName, clientKey) {
             const presenceRef = ref(db, 'online_clients/' + clientKey);
-            const clientPhone = localStorage.getItem('chatClientPhone') || '';
+            const clientPhone = sessionStorage.getItem('chatClientPhone') || '';
 
             set(presenceRef, {
                 name: clientName,
@@ -526,14 +516,14 @@
             const phoneInput = document.getElementById('clientPhoneInput').value.trim();
             if (nameInput === "") { alert("الرجاء كتابة اسمك أولاً"); return; }
             
-            localStorage.setItem('chatClientName', nameInput);
-            localStorage.setItem('chatClientPhone', phoneInput);
+            sessionStorage.setItem('chatClientName', nameInput);
+            sessionStorage.setItem('chatClientPhone', phoneInput);
             
             document.getElementById('nameModal').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
             document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
 
-            currentClientKey = await getClientUniqueId();
+            currentClientKey = getClientUniqueId();
             const clientMessagesRef = ref(db, 'chats/' + currentClientKey);
             const formDetailsText = `📋 بيانات العميل المنضم:\n👤 الاسم: ${nameInput}\n📞 الهاتف: ${phoneInput ? phoneInput : 'غير متوفر'}`;
             
@@ -548,7 +538,7 @@
         };
 
         window.onload = async function() {
-            const savedName = localStorage.getItem('chatClientName');
+            const savedName = sessionStorage.getItem('chatClientName');
             if (savedName) {
                 document.getElementById('nameModal').style.display = 'none';
                 document.getElementById('chatContainer').style.display = 'flex';
@@ -595,6 +585,7 @@
                     return;
                 }
 
+                let newSupportMsgCount = 0;
                 Object.values(data).forEach(msgData => {
                     const wrapperDiv = document.createElement('div');
                     wrapperDiv.classList.add('message-wrapper');
@@ -610,10 +601,18 @@
                     } else {
                         wrapperDiv.classList.add('support'); msgDiv.classList.add('support');
                         msgDiv.innerHTML = `<p style="white-space: pre-line;">${msgData.text}</p>`;
+                        if (!isInitialLoad && document.hidden) {
+                            newSupportMsgCount++;
+                        }
                     }
                     wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
                     chatBody.appendChild(wrapperDiv);
                 });
+
+                if (newSupportMsgCount > 0) {
+                    updateAppBadge(unreadCount + newSupportMsgCount);
+                    if (msgAudio) msgAudio.play().catch(e => {});
+                }
 
                 chatBody.scrollTop = chatBody.scrollHeight;
                 isInitialLoad = false;
@@ -623,7 +622,7 @@
         window.sendClientMessage = function() {
             const input = document.getElementById('clientInput');
             const text = input.value.trim();
-            const clientName = localStorage.getItem('chatClientName') || 'زائر';
+            const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
             if (text === "" || !currentClientKey) return;
 
             const clientMessagesRef = ref(db, 'chats/' + currentClientKey);
