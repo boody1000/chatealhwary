@@ -108,7 +108,7 @@
         .m-btn-accept { background: #31a24c; }
         .m-btn:hover { opacity: 0.85; }
     </style>
-    <script>
+<script>
   !function(f,b,e,v,n,t,s)
   {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
   n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -235,8 +235,6 @@
         const db = getDatabase(app);
         const storage = getStorage(app);
 
-        // تصحيح فرق الساعة بين جهاز الموظف وسيرفر Firebase
-        // نفس المنطق المستخدم عند العميل عشان المقارنة تبقى موحّدة من نفس المصدر
         let serverTimeOffset = 0;
         onValue(ref(db, '.info/serverTimeOffset'), (snap) => {
             serverTimeOffset = snap.val() || 0;
@@ -260,7 +258,6 @@
         let callObject = null;
         let isMuted = false;
         const ringAudio = document.getElementById('ringSound');
-        let callStartTime = null;
         let mediaRecorder = null;
         let recordedAudioChunks = [];
         let mixAudioContext = null;
@@ -476,8 +473,9 @@
                     let callObj = callsData[cName];
                     if (callObj.status === 'calling' && callObj.sender === 'client') {
                         hasActiveIncomingCall = true;
-                        activeClientOriginalName = cName;
-                        document.getElementById('callStatusText').innerText = `مكالمة واردة من: ${cName}`;
+                        let realName = cName.replace(/_/g, ' ');
+                        activeClientOriginalName = realName;
+                        document.getElementById('callStatusText').innerText = `مكالمة واردة من: ${realName}`;
                         document.getElementById('messengerCallScreen').style.display = 'flex';
                         document.getElementById('messengerControlsBar').innerHTML = `
                             <button class="m-btn m-btn-accept" onclick="acceptCall()"><i class="fa-solid fa-phone"></i></button>
@@ -485,21 +483,15 @@
                         `;
                         if (!standardRingInterval) {
                             startStandardRinging();
-                            showPushNotification(`📞 مكالمة واردة من: ${cName}`, 'اضغط للرد على المكالمة', { tag: 'incoming-call', requireInteraction: true });
-                        }
-                        if (ringAudio && ringAudio.src && !ringAudio.src.endsWith(window.location.href) && ringAudio.paused) { 
-                            ringAudio.currentTime = 0; 
-                            ringAudio.play().catch(e=>{}); 
+                            showPushNotification(`📞 مكالمة واردة من: ${realName}`, 'اضغط للرد على المكالمة', { tag: 'incoming-call', requireInteraction: true });
                         }
                     } else if (callObj.status === 'accepted' || callObj.status === 'ended') {
-                        if (activeClientOriginalName === cName && callObj.status === 'ended') {
+                        let realName = cName.replace(/_/g, ' ');
+                        if (activeClientOriginalName === realName && callObj.status === 'ended') {
                             closeCallScreenUI();
                         } else if (callObj.status === 'accepted') {
                             stopStandardRinging();
                             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
-                            if (document.getElementById('messengerCallScreen').style.display === 'flex' && callObj.sender !== loggedUser) {
-                                document.getElementById('messengerCallScreen').style.display = 'none';
-                            }
                         }
                     }
                 });
@@ -512,7 +504,7 @@
 
         window.initiateCall = function() {
             if (!activeClientOriginalName) { alert("اختر عميلاً أولاً"); return; }
-            set(ref(db, 'calls/' + activeClientOriginalName), {
+            set(ref(db, 'calls/' + safeKey(activeClientOriginalName)), {
                 sender: 'support',
                 status: 'calling'
             });
@@ -525,10 +517,6 @@
                 <button class="m-btn m-btn-hangup" onclick="endCallCompletely()"><i class="fa-solid fa-phone-slash"></i></button>
             `;
             startStandardRinging();
-            if (ringAudio && ringAudio.src && !ringAudio.src.endsWith(window.location.href)) { 
-                ringAudio.currentTime = 0; 
-                ringAudio.play().catch(e=>{}); 
-            }
 
             startDailyAudioFrame();
         };
@@ -537,7 +525,7 @@
             stopStandardRinging();
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             if (activeClientOriginalName) {
-                set(ref(db, 'calls/' + activeClientOriginalName), {
+                set(ref(db, 'calls/' + safeKey(activeClientOriginalName)), {
                     sender: loggedUser || 'support',
                     status: 'accepted'
                 });
@@ -596,7 +584,6 @@
                 });
 
                 callObject.on('joined-meeting', () => {
-                    console.log("تم الانضمام للمكالمة الصوتية بنجاح");
                     callObject.setLocalAudio(true);
                 });
 
@@ -633,7 +620,6 @@
 
                                     try {
                                         const mp3Blob = await convertWebmBlobToMp3(webmBlob);
-
                                         const safeClientName = (activeClientOriginalName || 'unknown').replace(/[.#$\[\]\/\s]+/g, '_');
                                         const fileName = `call_recordings/${safeClientName}_${endTime}.mp3`;
                                         const fileRef = storageRef(storage, fileName);
@@ -649,7 +635,6 @@
 
                                         sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientOriginalName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}`);
                                     } catch (uploadErr) {
-                                        console.error("خطأ أثناء تحويل/رفع تسجيل المكالمة:", uploadErr);
                                         push(ref(db, 'call_logs/'), {
                                             clientName: activeClientOriginalName,
                                             employeeName: loggedUser || 'موظف',
@@ -663,9 +648,7 @@
                                     }
                                 };
                                 mediaRecorder.start();
-                            } catch (err) {
-                                console.log("خطأ في بدء تسجيل المكالمة:", err);
-                            }
+                            } catch (err) {}
                         }
                     }
                 });
@@ -693,7 +676,7 @@
             }
 
             if (activeClientOriginalName) {
-                set(ref(db, 'calls/' + activeClientOriginalName + '/status'), 'ended');
+                set(ref(db, 'calls/' + safeKey(activeClientOriginalName) + '/status'), 'ended');
             }
             closeCallScreenUI();
         };
@@ -783,6 +766,14 @@
                     });
 
                     if (messagesArray.length > 0) {
+                        // ترتيب الرسائل داخل محادثة العميل تصاعدياً بالوقت
+                        messagesArray.sort((a, b) => {
+                            let timeA = typeof a.timestamp === 'number' ? a.timestamp : 0;
+                            let timeB = typeof b.timestamp === 'number' ? b.timestamp : 0;
+                            if (timeA !== timeB) return timeA - timeB;
+                            return String(a.firebaseKey).localeCompare(String(b.firebaseKey));
+                        });
+
                         clientsMap[realClientName] = {
                             safeKeyName: clientKey,
                             messages: messagesArray,
@@ -799,15 +790,19 @@
                 };
             });
 
-            // ترتيب العملاء حسب وقت آخر رسالة - اللي بعت آخر رسالة يطلع فوق زي الماسنجر
+            // ترتيب قائمة العملاء مثل الماسنجر تماماً: الأحدث رسالة (سواء من العميل أو الدعم) يصعد للأعلى فوراً
             clientsArray.sort((a, b) => {
-                const ta = (a.lastMsg && a.lastMsg.timestamp) || 0;
-                const tb = (b.lastMsg && b.lastMsg.timestamp) || 0;
-                if (tb !== ta) return tb - ta;
-                // لو الوقت متساوي أو لسه معلق (server timestamp لسه بيتأكد)، رجّع للترتيب حسب مفتاح الرسالة نفسه
-                const ka = (a.lastMsg && a.lastMsg.firebaseKey) || '';
-                const kb = (b.lastMsg && b.lastMsg.firebaseKey) || '';
-                return kb.localeCompare(ka);
+                let timeA = (a.lastMsg && typeof a.lastMsg.timestamp === 'number') ? a.lastMsg.timestamp : 0;
+                let timeB = (b.lastMsg && typeof b.lastMsg.timestamp === 'number') ? b.lastMsg.timestamp : 0;
+                
+                if (timeA !== timeB) {
+                    return timeB - timeA; // الأحدث زمنياً في الأعلى
+                }
+                
+                // في حالة تساوي الوقت الرقمي، يتم استخدام معرف الفايربيز كمعيار دقيق جداً
+                let keyA = (a.lastMsg && a.lastMsg.firebaseKey) || '';
+                let keyB = (b.lastMsg && b.lastMsg.firebaseKey) || '';
+                return keyB.localeCompare(keyA);
             });
 
             let allKeysSet = new Set();
@@ -837,6 +832,7 @@
                 let lastMsg = item.lastMsg;
                 
                 let lastSeen = clientLastSeenMap[cName] || 0;
+                // عداد الرسائل الواردة غير المقروءة من العميل
                 let unreadCount = clientMsgs.filter(m => m.sender === 'client' && (m.firebaseKey > lastSeen)).length;
 
                 let info = latestPresenceData[item.safeKeyName];
@@ -896,7 +892,6 @@
             updatePresenceIndicatorUI();
         };
 
-        // تفعيل الزرار الخاص عند العميل الحالي (بيخليه يظهر عنده فورًا)
         window.activateClientButton = function() {
             if (!activeClientOriginalName) return;
             set(ref(db, 'actions/' + safeKey(activeClientOriginalName) + '/showButton'), true);
@@ -919,7 +914,6 @@
                 const isFirstInGroup = !prevMsg || prevMsg.sender !== msg.sender;
                 const isLastInGroup = !nextMsg || nextMsg.sender !== msg.sender;
 
-                // تنسيق وقت السيرفر المخزن
                 let timeString = '';
                 if (msg.timestamp) {
                     let date = new Date(msg.timestamp);
@@ -933,7 +927,6 @@
                 const msgDiv = document.createElement('div');
                 msgDiv.classList.add('message', msg.sender === 'client' ? 'client' : 'support');
                 
-                // عرض النص وتحته الوقت المستمد من السيرفر
                 msgDiv.innerHTML = `
                     <p>${msg.text}</p>
                     ${timeString ? `<span style="font-size: 10px; opacity: 0.7; display: block; text-align: left; margin-top: 2px;">${timeString}</span>` : ''}
@@ -979,7 +972,7 @@
                 sender: 'support', 
                 clientName: activeClientOriginalName,
                 text: text,
-                timestamp: serverTimestamp() // <-- اعتماد وقت السيرفر عند الإرسال
+                timestamp: serverTimestamp()
             });
             
             sendPushToClient(activeClientOriginalName, '💬 رسالة جديدة من خدمة العملاء', text);
