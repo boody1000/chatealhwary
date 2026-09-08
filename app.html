@@ -3,44 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عرض صفحة العملاء - شركة الهواري</title>
-    <!-- استخدام Tailwind CSS للتنسيق العام للصفحة -->
+    <title>جاري الانتقال - شركة الهواري</title>
+    <!-- استخدام Tailwind CSS للتنسيق -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-        }
-    </style>
 </head>
-<body class="bg-slate-900 text-white flex flex-col min-h-screen">
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-6 text-center">
 
-    <!-- هيدر الصفحة -->
-    <header class="bg-slate-800 shadow-md p-4 border-b border-slate-700 text-center">
-        <h1 class="text-xl font-bold text-amber-500">الهواري للتعارف والزواج</h1>
-    </header>
-
-    <!-- منطقة عرض المحتوى المستورد تلقائياً -->
-    <main class="flex-grow w-full p-4" id="content-container">
-        <div class="flex items-center justify-center h-full text-slate-400">
-            <p>جاري تحميل البيانات...</p>
+    <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 max-w-sm w-full">
+        <!-- أيقونة تحميل متحركة -->
+        <div class="flex justify-center mb-4">
+            <svg class="animate-spin h-10 w-10 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
         </div>
-    </main>
 
-    <!-- جافاسكريبت لجلب محتوى الموقع الآخر وعرضه مباشرة -->
+        <h1 class="text-xl font-bold text-amber-400 mb-2">شركة الهواري للتعارف والزواج</h1>
+        <p class="text-slate-300 text-sm mb-6">جاري نقلك إلى التطبيق الرئيسي...</p>
+
+        <!-- زر احتياطي يظهر لو التحويل التلقائي أخذ ثواني -->
+        <a href="https://alhwary.wuaze.com" id="fallback-btn" class="hidden bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-4 rounded-xl transition duration-300 block shadow-lg text-sm">
+            اضغط هنا إذا لم يتم النقل تلقائياً
+        </a>
+    </div>
+
+    <!-- كود الجافاسكريبت للتحويل التلقائي الفوري -->
     <script>
-        fetch('https://alhwary.wuaze.com')
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById('content-container').innerHTML = html;
-            })
-            .catch(error => {
-                document.getElementById('content-container').innerHTML = `
-                    <div class="text-center text-red-400 p-8">
-                        <p class="font-bold text-lg">عذراً، تعذر جلب المحتوى مباشرة.</p>
-                        <p class="text-sm text-slate-400 mt-2">تأكد من إضافة ترويسة السماح (CORS) في ملف الاستضافة الرئيسي الخاص بك.</p>
-                    </div>`;
-            });
+        // تنفيذ التحويل فور فتح الصفحة
+        window.location.href = "https://alhwary.wuaze.com";
+
+        // في حال كان المتصفح بطيء أو منع التحويل التلقائي، سيظهر الزر الاحتياطي بعد ثانيتين
+        setTimeout(function() {
+            document.getElementById('fallback-btn').classList.remove('hidden');
+        }, 2000);
     </script>
 
 </body>
