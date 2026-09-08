@@ -322,30 +322,22 @@
             return name ? name.replace(/[.#$\[\]\/\s]+/g, '_') : '';
         }
 
-        // **التثبيت بالـ IP واسم العميل في الـ storage:** جلب الـ IP ودمجه مع اسم العميل وحفظه كمعرف أساسي في localStorage
-        async function getClientUniqueId(clientInputName = '') {
-            let uniqueId = localStorage.getItem('chatClientIpId');
-            if (!uniqueId) {
-                try {
-                    let response = await fetch('https://api.ipify.org?format=json');
-                    let data = await response.json();
-                    uniqueId = safeKey(data.ip);
-                } catch (e) {
-                    uniqueId = 'user_' + Math.random().toString(36).substring(2, 10) + Date.now();
-                }
+        // **تثبيت مفتاح المحادثة نهائياً (مثل الماسنجر):** عدم توليد معرف جديد أبداً إذا كان العميل مسجلاً مسبقاً في الـ localStorage
+        function getClientPersistentKey(clientName = '') {
+            let persistentKey = localStorage.getItem('chatClientPersistentKey');
+            if (!persistentKey) {
+                // إنشاء بصمة فريدة وثابتة للعميل أول مرة فقط وحفظها للأبد
+                const randomId = Math.random().toString(36).substring(2, 10) + Date.now();
+                persistentKey = 'client_' + safeKey(clientName) + '_' + randomId;
+                localStorage.setItem('chatClientPersistentKey', persistentKey);
             }
-            // ربط الـ IP باسم العميل لضمان عدم ضياع الداتا أو تداخلها وتثبيتها نهائياً
-            if (clientInputName) {
-                uniqueId = uniqueId + '_' + safeKey(clientInputName);
-            }
-            localStorage.setItem('chatClientIpId', uniqueId);
-            return uniqueId;
+            return persistentKey;
         }
 
         let currentClientKey = '';
 
         async function initClientChat(clientName) {
-            currentClientKey = await getClientUniqueId(clientName);
+            currentClientKey = getClientPersistentKey(clientName);
             setupPresence(clientName, currentClientKey);
             listenToCalls(currentClientKey);
             listenToSupportTyping(currentClientKey);
@@ -537,11 +529,9 @@
             document.getElementById('chatContainer').style.display = 'flex';
             document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
 
-            currentClientKey = await getClientUniqueId(nameInput);
+            currentClientKey = getClientPersistentKey(nameInput);
             const clientMessagesRef = ref(db, 'chats/' + currentClientKey);
             
-            // التأكد من عدم تكرار رسالة الترحيب الأولى للبيانات إذا كانت موجودة مسبقاً
-            // (بما أننا نعتمد على استرجاع الشات القديم تلقائياً من الـ database عبر الـ key الثابت)
             initClientChat(nameInput);
         };
 
