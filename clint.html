@@ -322,8 +322,8 @@
             return name ? name.replace(/[.#$\[\]\/\s]+/g, '_') : '';
         }
 
-        // **التثبيت بالـ IP:** جلب وحفظ معرف الـ IP في localStorage لكي يظل الشات ثابتاً ومحفوظاً للعميل حتى لو أغلق التبويب أو الصفحة تماماً
-        async function getClientUniqueId() {
+        // **التثبيت بالـ IP واسم العميل في الـ storage:** جلب الـ IP ودمجه مع اسم العميل وحفظه كمعرف أساسي في localStorage
+        async function getClientUniqueId(clientInputName = '') {
             let uniqueId = localStorage.getItem('chatClientIpId');
             if (!uniqueId) {
                 try {
@@ -333,15 +333,19 @@
                 } catch (e) {
                     uniqueId = 'user_' + Math.random().toString(36).substring(2, 10) + Date.now();
                 }
-                localStorage.setItem('chatClientIpId', uniqueId);
             }
+            // ربط الـ IP باسم العميل لضمان عدم ضياع الداتا أو تداخلها وتثبيتها نهائياً
+            if (clientInputName) {
+                uniqueId = uniqueId + '_' + safeKey(clientInputName);
+            }
+            localStorage.setItem('chatClientIpId', uniqueId);
             return uniqueId;
         }
 
         let currentClientKey = '';
 
         async function initClientChat(clientName) {
-            currentClientKey = await getClientUniqueId();
+            currentClientKey = await getClientUniqueId(clientName);
             setupPresence(clientName, currentClientKey);
             listenToCalls(currentClientKey);
             listenToSupportTyping(currentClientKey);
@@ -533,17 +537,11 @@
             document.getElementById('chatContainer').style.display = 'flex';
             document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
 
-            currentClientKey = await getClientUniqueId();
+            currentClientKey = await getClientUniqueId(nameInput);
             const clientMessagesRef = ref(db, 'chats/' + currentClientKey);
-            const formDetailsText = `📋 بيانات العميل المنضم:\n👤 الاسم: ${nameInput}\n📞 الهاتف: ${phoneInput ? phoneInput : 'غير متوفر'}`;
             
-            push(clientMessagesRef, {
-                sender: 'client', 
-                clientName: nameInput, 
-                text: formDetailsText,
-                timestamp: serverTimestamp()
-            });
-
+            // التأكد من عدم تكرار رسالة الترحيب الأولى للبيانات إذا كانت موجودة مسبقاً
+            // (بما أننا نعتمد على استرجاع الشات القديم تلقائياً من الـ database عبر الـ key الثابت)
             initClientChat(nameInput);
         };
 
