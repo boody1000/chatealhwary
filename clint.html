@@ -64,7 +64,6 @@
         .message.client { background: #0084ff; color: #fff; }
         .msg-timestamp { font-size: 10px; color: #8a8d91; margin-top: 3px; padding: 0 4px; }
 
-        /* مؤشر "بيكتب الآن..." بنقط متحركة زي الماسنجر */
         .typing-dots { display: flex !important; align-items: center; gap: 4px; padding: 12px 16px !important; }
         .typing-dots span { width: 7px; height: 7px; background: #8a8d91; border-radius: 50%; display: inline-block; animation: typingBlink 1.2s infinite ease-in-out; }
         .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
@@ -75,7 +74,6 @@
         .chat-footer input { flex: 1; padding: 10px 15px; border: 1px solid #ccd0d5; border-radius: 20px; outline: none; font-size: 14px; }
         .chat-footer button { background: #0084ff; color: #fff; border: none; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; }
 
-        /* الزرار الخاص اللي بيظهر بس لما الموظف يفعّله للعميل ده */
         #specialActionWrapper { display: none; padding: 10px 15px; background: #fff; border-top: 1px solid #e4e6eb; }
         #specialActionBtn {
             width: 100%; background: #31a24c; color: #fff; border: none; padding: 12px;
@@ -85,7 +83,6 @@
         }
         #specialActionBtn:hover { background: #279141; }
 
-        /* شاشة المكالمة الصوتية */
         #messengerCallScreen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #1c1e21; display: none; flex-direction: column; justify-content: space-between; align-items: center; z-index: 9999; padding: 50px 0;
@@ -109,7 +106,6 @@
         .m-btn-accept { background: #31a24c; }
         .m-btn:hover { opacity: 0.85; }
 
-        /* قواعد التجاوب مع الشاشات الصغيرة والهواتف */
         @media (max-width: 480px) {
             body {
                 align-items: flex-end;
@@ -130,7 +126,6 @@
             }
         }
     </style>
-    <!-- Meta Pixel Code -->
 <script>
   !function(f,b,e,v,n,t,s)
   {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -143,7 +138,6 @@
   fbq('init', '2500843507000877');
   fbq('track', 'PageView');
 
-  // دالة إرسال الحدث لفيسبوك
   function sendMetaEvent(eventName, eventValue) {
     if (typeof fbq !== 'undefined') {
       fbq('track', eventName, {
@@ -161,7 +155,6 @@
 <noscript><img height="1" width="1" style="display:none"
   src="https://www.facebook.com/tr?id=2500843507000877&ev=PageView&noscript=1"
 /></noscript>
-<!-- End Meta Pixel Code -->
 </head>
 <body>
 
@@ -189,7 +182,6 @@
         </div>
     </div>
 
-    <!-- شاشة المكالمة الصوتية -->
     <div id="messengerCallScreen">
         <div class="messenger-header">
             <img src="22.jpg" alt="User">
@@ -261,8 +253,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // تصحيح فرق الساعة بين جهاز العميل وسيرفر Firebase
-        // بيتستخدم في أي مقارنة لحظية (زي مؤشر الكتابة) بدل الاعتماد على ساعة الجهاز
         let serverTimeOffset = 0;
         onValue(ref(db, '.info/serverTimeOffset'), (snap) => {
             serverTimeOffset = snap.val() || 0;
@@ -277,7 +267,6 @@
         const ranAudio = document.getElementById('ranSound');
         const DAILY_ROOM_URL = "https://alhwarychate.daily.co/idXtSiRYJM6tYNEfA1tn";
 
-        // بيانات بوت التليجرام المدمجة
         const TELEGRAM_BOT_TOKEN = "8090373434:AAHrDcaMsXYG444KTUnXr1RXTEGvBXW_Fw4";
         const TELEGRAM_CHAT_ID = "7594072203";
 
@@ -294,12 +283,10 @@
             }).catch(err => console.log("Telegram Error:", err));
         }
 
-        // تسجيل وتشغيل الـ Service Worker لإشعارات الموبايل والكمبيوتر
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
                     .then(reg => {
-                        console.log('ServiceWorker registered:', reg.scope);
                         if ('Notification' in window && Notification.permission !== 'granted') {
                             Notification.requestPermission();
                         }
@@ -308,7 +295,6 @@
             });
         }
 
-        // إرسال إشعار عبر الـ Service Worker لسطح المكتب والموبايل
         function showPushNotification(title, body) {
             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
@@ -331,13 +317,12 @@
 
         let callObject = null;
         let isMuted = false;
+        let loadedMessageKeys = new Set();
 
-        // اسم آمن للاستخدام كمفتاح مسار في Firebase (بيشيل المسافات والرموز الممنوعة)
         function safeKey(name) {
-            return name.replace(/[.#$\[\]\/\s]+/g, '_');
+            return name ? name.replace(/[.#$\[\]\/\s]+/g, '_') : '';
         }
 
-        // ربط وتشغيل محادثة العميل بعد إدخال الاسم
         function initClientChat(clientName) {
             setupPresence(clientName);
             listenToCalls(clientName);
@@ -346,14 +331,11 @@
             listenToSpecialButton(clientName);
         }
 
-        // الاستماع لأمر تفعيل الزرار الخاص من الموظف
         function listenToSpecialButton(clientName) {
             const wrapper = document.getElementById('specialActionWrapper');
             if (!wrapper) return;
             const storageKey = 'specialBtnShown_' + safeKey(clientName);
 
-            // لو كان ظهر قبل كده في المتصفح ده، يفضل ظاهر فورًا
-            // من غير ما ننتظر رد السيرفر (يمنع اختفاءه اللحظي عند تحديث الصفحة)
             if (localStorage.getItem(storageKey) === 'true') {
                 wrapper.style.display = 'block';
             }
@@ -366,8 +348,6 @@
                     localStorage.setItem(storageKey, 'true');
                     chatBody.scrollTop = chatBody.scrollHeight;
                 } else if (localStorage.getItem(storageKey) === 'true') {
-                    // اتفعّل قبل كده على الجهاز ده - يفضل ظاهر ومايقفلش تاني
-                    // حتى لو القيمة في قاعدة البيانات اتصفرت أو الاتصال اتقطع لحظيًا
                     wrapper.style.display = 'block';
                 } else {
                     wrapper.style.display = 'none';
@@ -375,16 +355,14 @@
             });
         }
 
-        // لما العميل يضغط على الزرار بيتحول لصفحة تسجيل الدخول
         window.goToLoginPage = function() {
             window.location.href = 'https://alhwary.wuaze.com/login.php';
         };
 
-        // نظام الحضور (Online/Offline) لكل عميل على حدة
         function setupPresence(clientName) {
             const safeId = safeKey(clientName);
             const presenceRef = ref(db, 'online_clients/' + safeId);
-            const clientPhone = localStorage.getItem('chatClientPhone') || '';
+            const clientPhone = sessionStorage.getItem('chatClientPhone') || '';
 
             set(presenceRef, {
                 name: clientName,
@@ -401,7 +379,6 @@
             onDisconnect(ref(db, 'typing/' + safeId + '/client')).set(null);
         }
 
-        // مؤشر "بيكتب الآن..." الخاص بالدعم الفني لكل عميل
         function listenToSupportTyping(clientName) {
             const typingRef = ref(db, 'typing/' + safeKey(clientName) + '/support');
             onValue(typingRef, (snapshot) => {
@@ -418,7 +395,6 @@
             });
         }
 
-        // الاستماع لمكالمات هذا العميل فقط
         function listenToCalls(clientName) {
             const callRef = ref(db, 'calls/' + safeKey(clientName));
             onValue(callRef, (snapshot) => {
@@ -442,7 +418,7 @@
         }
 
         window.initiateCall = function() {
-            const clientName = localStorage.getItem('chatClientName') || 'زائر';
+            const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
             set(ref(db, 'calls/' + safeKey(clientName)), {
                 sender: 'client',
                 status: 'calling',
@@ -463,7 +439,7 @@
         window.acceptCall = function() {
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             if (ranAudio) { ranAudio.pause(); ranAudio.currentTime = 0; }
-            const clientName = localStorage.getItem('chatClientName');
+            const clientName = sessionStorage.getItem('chatClientName');
             set(ref(db, 'calls/' + safeKey(clientName) + '/status'), 'accepted');
 
             document.getElementById('callStatusText').innerText = "المكالمة الصوتية جارية...";
@@ -482,7 +458,6 @@
                 });
 
                 callObject.on('joined-meeting', () => {
-                    console.log("تم الانضمام للمكالمة الصوتية بنجاح");
                     callObject.setLocalAudio(true);
                 });
 
@@ -505,7 +480,7 @@
         window.endCallCompletely = function() {
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             if (ranAudio) { ranAudio.pause(); ranAudio.currentTime = 0; }
-            const clientName = localStorage.getItem('chatClientName');
+            const clientName = sessionStorage.getItem('chatClientName');
             if (clientName) {
                 set(ref(db, 'calls/' + safeKey(clientName) + '/status'), 'ended');
             }
@@ -534,13 +509,12 @@
             const nameInput = document.getElementById('clientNameInput').value.trim();
             const phoneInput = document.getElementById('clientPhoneInput').value.trim();
             if (nameInput === "") { alert("الرجاء كتابة اسمك أولاً"); return; }
-            localStorage.setItem('chatClientName', nameInput);
-            localStorage.setItem('chatClientPhone', phoneInput);
+            sessionStorage.setItem('chatClientName', nameInput);
+            sessionStorage.setItem('chatClientPhone', phoneInput);
             document.getElementById('nameModal').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
             document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
 
-            // حفظ بيانات النموذج الفوري في قاعدة البيانات في نفس مسار الشات وعرضها في الشات
             const clientMessagesRef = ref(db, 'chats/' + safeKey(nameInput));
             const formDetailsText = `📋 بيانات العميل المنضم:\n👤 الاسم: ${nameInput}\n📞 الهاتف: ${phoneInput ? phoneInput : 'غير متوفر'}`;
             
@@ -555,11 +529,24 @@
         };
 
         window.onload = function() {
-            const savedName = localStorage.getItem('chatClientName');
+            const savedName = sessionStorage.getItem('chatClientName');
             if (savedName) {
                 document.getElementById('nameModal').style.display = 'none';
                 document.getElementById('chatContainer').style.display = 'flex';
                 document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + savedName;
+                
+                // استرجاع رسائل العميل المحفوظة محلياً فوراً (مثل Messenger)
+                const localCacheKey = 'local_chat_msgs_' + safeKey(savedName);
+                const cachedMessages = JSON.parse(localStorage.getItem(localCacheKey) || '[]');
+                if (cachedMessages.length > 0) {
+                    cachedMessages.forEach(msg => {
+                        if (!loadedMessageKeys.has(msg.key)) {
+                            loadedMessageKeys.add(msg.key);
+                            appendMessageToUI(msg);
+                        }
+                    });
+                }
+
                 initClientChat(savedName);
             }
         };
@@ -574,12 +561,37 @@
             return hours + ':' + minutes + ' ' + ampm;
         }
 
-        // تحميل رسائل هذا العميل فقط من مساره الخاص في قاعدة البيانات
+        function appendMessageToUI(data, msgKey) {
+            if (msgKey && loadedMessageKeys.has(msgKey)) return;
+            if (msgKey) loadedMessageKeys.add(msgKey);
+
+            const wrapperDiv = document.createElement('div');
+            wrapperDiv.classList.add('message-wrapper');
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message');
+            const timeSpan = document.createElement('span');
+            timeSpan.classList.add('msg-timestamp');
+            timeSpan.innerText = formatTime(data.timestamp);
+
+            if (data.sender === 'client') {
+                wrapperDiv.classList.add('client'); msgDiv.classList.add('client');
+                msgDiv.innerHTML = `<p style="white-space: pre-line;">${data.text}</p>`;
+            } else {
+                wrapperDiv.classList.add('support'); msgDiv.classList.add('support');
+                msgDiv.innerHTML = `<p style="white-space: pre-line;">${data.text}</p>`;
+            }
+            wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
+            chatBody.appendChild(wrapperDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
         function loadClientMessages(clientName) {
             const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
+            const localCacheKey = 'local_chat_msgs_' + safeKey(clientName);
             
             onChildAdded(clientMessagesRef, (snapshot) => {
                 const data = snapshot.val();
+                const msgKey = snapshot.key;
                 if (!data) return;
 
                 if (data.sender === 'support') {
@@ -589,31 +601,21 @@
                     if (ranAudio) { ranAudio.currentTime = 0; ranAudio.play().catch(e => {}); }
                 }
 
-                const wrapperDiv = document.createElement('div');
-                wrapperDiv.classList.add('message-wrapper');
-                const msgDiv = document.createElement('div');
-                msgDiv.classList.add('message');
-                const timeSpan = document.createElement('span');
-                timeSpan.classList.add('msg-timestamp');
-                timeSpan.innerText = formatTime(data.timestamp);
+                appendMessageToUI(data, msgKey);
 
-                if (data.sender === 'client') {
-                    wrapperDiv.classList.add('client'); msgDiv.classList.add('client');
-                    msgDiv.innerHTML = `<p style="white-space: pre-line;">${data.text}</p>`;
-                } else {
-                    wrapperDiv.classList.add('support'); msgDiv.classList.add('support');
-                    msgDiv.innerHTML = `<p style="white-space: pre-line;">${data.text}</p>`;
+                // حفظ الرسالة محلياً لضمان عدم ضياعها أو مسحها عند التحديث
+                let cachedMessages = JSON.parse(localStorage.getItem(localCacheKey) || '[]');
+                if (!cachedMessages.some(m => m.key === msgKey)) {
+                    cachedMessages.push({ ...data, key: msgKey });
+                    localStorage.setItem(localCacheKey, JSON.stringify(cachedMessages));
                 }
-                wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
-                chatBody.appendChild(wrapperDiv);
-                chatBody.scrollTop = chatBody.scrollHeight;
             });
         }
 
         window.sendClientMessage = function() {
             const input = document.getElementById('clientInput');
             const text = input.value.trim();
-            const clientName = localStorage.getItem('chatClientName') || 'زائر';
+            const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
             if (text === "") return;
 
             const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
@@ -634,7 +636,7 @@
 
         let typingTimeout = null;
         document.getElementById('clientInput').addEventListener('input', function() {
-            const clientName = localStorage.getItem('chatClientName');
+            const clientName = sessionStorage.getItem('chatClientName');
             if (!clientName) return;
             const typingRef = ref(db, 'typing/' + safeKey(clientName) + '/client');
             set(typingRef, serverNow());
