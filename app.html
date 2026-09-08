@@ -4,33 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>عرض صفحة العملاء - شركة الهواري</title>
-    <!-- استخدام Tailwind CSS للتنسيق العام للصفحة الحاضنة -->
+    <!-- استخدام Tailwind CSS للتنسيق العام للصفحة -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* إزالة الهوامش وجعل الإطار يملأ الشاشة أو المساحة المخصصة */
         html, body {
             height: 100%;
             margin: 0;
         }
     </style>
 </head>
-<body class="bg-slate-900 text-white flex flex-col h-full">
+<body class="bg-slate-900 text-white flex flex-col min-h-screen">
 
-    <!-- هيدر بسيط للصفحة -->
-    <header class="bg-slate-800 shadow-md p-4 border-b border-slate-700 flex justify-between items-center">
-        <h1 class="text-xl font-bold text-amber-500"> الهواري للتعارف والزواج   </h1>
-       
+    <!-- هيدر الصفحة -->
+    <header class="bg-slate-800 shadow-md p-4 border-b border-slate-700 text-center">
+        <h1 class="text-xl font-bold text-amber-500">الهواري للتعارف والزواج</h1>
     </header>
 
-<main class="flex-grow w-full h-full flex flex-col items-center justify-center p-6 text-center">
-    <div class="bg-slate-800 p-8 rounded-xl shadow-xl border border-slate-700 max-w-md">
-        <h2 class="text-2xl font-bold text-amber-400 mb-4">الانتقال إلى منصة شركة الهواري</h2>
-        <p class="text-slate-300 mb-6">عذراً، لا يمكن عرض المحتوى مباشرة هنا لأسباب أمنية خاصة بالاستضافة، يمكنك الانتقال للموقع مباشرة:</p>
-        <a href="https://alhwary.wuaze.com" target="_blank" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 block shadow-lg">
-            فتح موقع شركة الهواري ↗
-        </a>
-    </div>
-</main>
+    <!-- منطقة عرض المحتوى المستورد تلقائياً -->
+    <main class="flex-grow w-full p-4" id="content-container">
+        <div class="flex items-center justify-center h-full text-slate-400">
+            <p>جاري تحميل البيانات...</p>
+        </div>
+    </main>
+
+    <!-- جافاسكريبت لجلب محتوى الموقع الآخر وعرضه مباشرة -->
+    <script>
+        fetch('https://alhwary.wuaze.com')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('content-container').innerHTML = html;
+            })
+            .catch(error => {
+                document.getElementById('content-container').innerHTML = `
+                    <div class="text-center text-red-400 p-8">
+                        <p class="font-bold text-lg">عذراً، تعذر جلب المحتوى مباشرة.</p>
+                        <p class="text-sm text-slate-400 mt-2">تأكد من إضافة ترويسة السماح (CORS) في ملف الاستضافة الرئيسي الخاص بك.</p>
+                    </div>`;
+            });
+    </script>
 
 </body>
 </html>
