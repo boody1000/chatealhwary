@@ -235,6 +235,10 @@
         </div>
     </div>
 
+    <!-- مكتبات Firebase Messaging للـ Web Push -->
+    <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js"></script>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, push, set, serverTimestamp, onChildAdded, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
@@ -252,6 +256,24 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
+
+        // تفعيل الإشعارات وتخزين التوكن في قاعدة البيانات للعميل
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then((registration) => {
+                const messaging = firebase.messaging();
+                messaging.useServiceWorker(registration);
+
+                Notification.requestPermission().then((permission) => {
+                    if (permission === 'granted') {
+                        messaging.getToken({ vapidKey: 'BOH1w_J4S4Qn5zH2... ضع مفتاح vapid الخاص بك هنا لو متوفر أو اتركه كما هو ليعمل التوكن الافتراضي' }).then((currentToken) => {
+                            if (currentToken && localStorage.getItem('chatClientPersistentKey')) {
+                                set(ref(db, 'fcm_tokens/' + localStorage.getItem('chatClientPersistentKey')), currentToken);
+                            }
+                        }).catch((err) => console.log('An error occurred while retrieving token. ', err));
+                    }
+                });
+            });
+        }
 
         let serverTimeOffset = 0;
         onValue(ref(db, '.info/serverTimeOffset'), (snap) => {
@@ -343,6 +365,18 @@
             listenToSupportTyping(currentClientKey);
             loadClientMessages(currentClientKey);
             listenToSpecialButton(currentClientKey);
+            
+            // تحديث التوكن في قاعدة البيانات بعد تسجيل المفتاح
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then((registration) => {
+                    const messaging = firebase.messaging();
+                    messaging.getToken().then((currentToken) => {
+                        if (currentToken) {
+                            set(ref(db, 'fcm_tokens/' + currentClientKey), currentToken);
+                        }
+                    }).catch(err => {});
+                });
+            }
         }
 
         function listenToSpecialButton(clientKey) {
@@ -601,6 +635,15 @@
                         msgDiv.innerHTML = `<p style="white-space: pre-line;">${msgData.text}</p>`;
                         if (!isInitialLoad && document.hidden) {
                             newSupportMsgCount++;
+                            // إرسال تنبيه للخدمة ليعمل الـ postMessage في الـ Service Worker
+                            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                                navigator.serviceWorker.controller.postMessage({
+                                    type: 'SHOW_NOTIFICATION',
+                                    title: 'رسالة جديدة من خدمة العملاء',
+                                    body: msgData.text,
+                                    url: './clint.html'
+                                });
+                            }
                         }
                     }
                     wrapperDiv.appendChild(msgDiv); wrapperDiv.appendChild(timeSpan);
