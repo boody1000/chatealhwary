@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عرض صفحة العملاء - شركة الهواري</title>
+    <!-- استخدام Tailwind CSS للتنسيق العام للصفحة الحاضنة -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* إزالة الهوامش وجعل الإطار يملأ الشاشة أو المساحة المخصصة */
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white flex flex-col h-full">
+
+    <!-- هيدر بسيط للصفحة -->
+    <header class="bg-slate-800 shadow-md p-4 border-b border-slate-700 flex justify-between items-center">
+        <h1 class="text-xl font-bold text-amber-500"> الهواري للتعارف والزواج   </h1>
+       
+    </header>
+
+    <!-- منطقة عرض الصفحة المطلوبة -->
+    <main class="flex-grow w-full h-full">
+        <iframe src="https://alhwary.wuaze.com" 
+                class="w-full h-full border-none" 
+                title="صفحة العملاء">
+        </iframe>
+    </main>
+
+</body>
+</html>
