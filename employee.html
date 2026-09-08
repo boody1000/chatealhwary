@@ -265,8 +265,8 @@
         let latestTypingData = {};
         function updateTypingIndicatorUI() {
             const indicator = document.getElementById('typingIndicatorWrapperEmp');
-            if (!indicator || !activeClientOriginalName) return;
-            const clientTyping = latestTypingData[safeKey(activeClientOriginalName)]?.client;
+            if (!indicator || !activeClientName) return;
+            const clientTyping = latestTypingData[activeClientName]?.client;
             const isRecentlyTyping = clientTyping && (serverNow() - clientTyping < 3000);
             const chatBody = document.getElementById('chatMessagesBody');
             if (isRecentlyTyping) {
@@ -286,8 +286,8 @@
         let latestPresenceData = {};
         function updatePresenceIndicatorUI() {
             const statusEl = document.getElementById('currentChatStatus');
-            if (!statusEl || !activeClientOriginalName) return;
-            const info = latestPresenceData[safeKey(activeClientOriginalName)];
+            if (!statusEl || !activeClientName) return;
+            const info = latestPresenceData[activeClientName];
             const isOnline = info && info.status === 'online';
             statusEl.classList.toggle('offline', !isOnline);
             statusEl.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 8px;"></i> ${isOnline ? 'متصل الآن' : 'غير متصل'}`;
@@ -302,8 +302,8 @@
 
         function updateSidebarPresenceClasses() {
             document.querySelectorAll('.client-card').forEach(card => {
-                const cName = card.getAttribute('data-client-name');
-                const info = latestPresenceData[safeKey(cName)];
+                const cKey = card.getAttribute('data-client-key');
+                const info = latestPresenceData[cKey];
                 const isOnline = info && info.status === 'online';
                 if (isOnline) {
                     card.classList.add('online');
@@ -399,8 +399,8 @@
             });
         }
 
-        async function sendPushToClient(clientName, title, body) {
-            if (!clientName) return;
+        async function sendPushToClient(clientKey, title, body) {
+            if (!clientKey) return;
             try {
                 await fetch('https://api.onesignal.com/notifications?c=push', {
                     method: 'POST',
@@ -411,7 +411,7 @@
                     body: JSON.stringify({
                         app_id: ONESIGNAL_APP_ID,
                         target_channel: 'push',
-                        include_aliases: { external_id: [clientName] },
+                        include_aliases: { external_id: [clientKey] },
                         headings: { en: title },
                         contents: { en: body }
                     })
@@ -469,11 +469,12 @@
                 }
                 
                 let hasActiveIncomingCall = false;
-                Object.keys(callsData).forEach(cName => {
-                    let callObj = callsData[cName];
+                Object.keys(callsData).forEach(cKey => {
+                    let callObj = callsData[cKey];
                     if (callObj.status === 'calling' && callObj.sender === 'client') {
                         hasActiveIncomingCall = true;
-                        let realName = cName.replace(/_/g, ' ');
+                        activeClientName = cKey;
+                        let realName = latestPresenceData[cKey]?.name || cKey.replace(/_/g, ' ');
                         activeClientOriginalName = realName;
                         document.getElementById('callStatusText').innerText = `مكالمة واردة من: ${realName}`;
                         document.getElementById('messengerCallScreen').style.display = 'flex';
@@ -486,8 +487,7 @@
                             showPushNotification(`📞 مكالمة واردة من: ${realName}`, 'اضغط للرد على المكالمة', { tag: 'incoming-call', requireInteraction: true });
                         }
                     } else if (callObj.status === 'accepted' || callObj.status === 'ended') {
-                        let realName = cName.replace(/_/g, ' ');
-                        if (activeClientOriginalName === realName && callObj.status === 'ended') {
+                        if (activeClientName === cKey && callObj.status === 'ended') {
                             closeCallScreenUI();
                         } else if (callObj.status === 'accepted') {
                             stopStandardRinging();
@@ -503,13 +503,13 @@
         }
 
         window.initiateCall = function() {
-            if (!activeClientOriginalName) { alert("اختر عميلاً أولاً"); return; }
-            set(ref(db, 'calls/' + safeKey(activeClientOriginalName)), {
+            if (!activeClientName) { alert("اختر عميلاً أولاً"); return; }
+            set(ref(db, 'calls/' + activeClientName), {
                 sender: 'support',
                 status: 'calling'
             });
 
-            sendPushToClient(activeClientOriginalName, '📞 مكالمة واردة', 'خدمة العملاء بتتصل بيك الآن');
+            sendPushToClient(activeClientName, '📞 مكالمة واردة', 'خدمة العملاء بتتصل بيك الآن');
 
             document.getElementById('callStatusText').innerText = "جاري الاتصال الصوتي...";
             document.getElementById('messengerCallScreen').style.display = 'flex';
@@ -524,8 +524,8 @@
         window.acceptCall = function() {
             stopStandardRinging();
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
-            if (activeClientOriginalName) {
-                set(ref(db, 'calls/' + safeKey(activeClientOriginalName)), {
+            if (activeClientName) {
+                set(ref(db, 'calls/' + activeClientName), {
                     sender: loggedUser || 'support',
                     status: 'accepted'
                 });
@@ -620,7 +620,7 @@
 
                                     try {
                                         const mp3Blob = await convertWebmBlobToMp3(webmBlob);
-                                        const safeClientName = (activeClientOriginalName || 'unknown').replace(/[.#$\[\]\/\s]+/g, '_');
+                                        const safeClientName = (activeClientName || 'unknown');
                                         const fileName = `call_recordings/${safeClientName}_${endTime}.mp3`;
                                         const fileRef = storageRef(storage, fileName);
 
@@ -628,15 +628,15 @@
                                         const downloadUrl = await getDownloadURL(fileRef);
 
                                         push(ref(db, 'call_logs/'), {
-                                            clientName: activeClientOriginalName,
+                                            clientName: activeClientOriginalName || activeClientName,
                                             employeeName: loggedUser || 'موظف',
                                             recordingUrl: downloadUrl
                                         });
 
-                                        sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientOriginalName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}`);
+                                        sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientOriginalName || activeClientName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}`);
                                     } catch (uploadErr) {
                                         push(ref(db, 'call_logs/'), {
-                                            clientName: activeClientOriginalName,
+                                            clientName: activeClientOriginalName || activeClientName,
                                             employeeName: loggedUser || 'موظف',
                                             recordingUrl: null
                                         });
@@ -665,18 +665,18 @@
             
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.stop();
-            } else if (activeClientOriginalName) {
+            } else if (activeClientName) {
                 push(ref(db, 'call_logs/'), {
-                    clientName: activeClientOriginalName,
+                    clientName: activeClientOriginalName || activeClientName,
                     employeeName: loggedUser || 'موظف',
                     recordingUrl: null
                 });
 
-                sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientOriginalName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}`);
+                sendTelegramNotification(`📞 <b>تم تسجيل مكالمة جديدة</b>\n👤 العميل: ${activeClientOriginalName || activeClientName}\n👨‍💼 الموظف: ${loggedUser || 'موظف'}`);
             }
 
-            if (activeClientOriginalName) {
-                set(ref(db, 'calls/' + safeKey(activeClientOriginalName) + '/status'), 'ended');
+            if (activeClientName) {
+                set(ref(db, 'calls/' + activeClientName + '/status'), 'ended');
             }
             closeCallScreenUI();
         };
@@ -750,7 +750,7 @@
                 let clientMessagesObj = allChatsData[clientKey];
                 if (clientMessagesObj && typeof clientMessagesObj === 'object') {
                     let messagesArray = [];
-                    let realClientName = clientKey.replace(/_/g, ' ');
+                    let realClientName = latestPresenceData[clientKey]?.name || clientKey.replace(/_/g, ' ');
                     
                     Object.keys(clientMessagesObj).forEach(msgKey => {
                         let msg = clientMessagesObj[msgKey];
@@ -766,7 +766,6 @@
                     });
 
                     if (messagesArray.length > 0) {
-                        // ترتيب الرسائل داخل محادثة العميل تصاعدياً بالوقت
                         messagesArray.sort((a, b) => {
                             let timeA = typeof a.timestamp === 'number' ? a.timestamp : 0;
                             let timeB = typeof b.timestamp === 'number' ? b.timestamp : 0;
@@ -774,8 +773,9 @@
                             return String(a.firebaseKey).localeCompare(String(b.firebaseKey));
                         });
 
-                        clientsMap[realClientName] = {
-                            safeKeyName: clientKey,
+                        clientsMap[clientKey] = {
+                            clientKey: clientKey,
+                            displayName: realClientName,
                             messages: messagesArray,
                             lastMsg: messagesArray[messagesArray.length - 1]
                         };
@@ -783,23 +783,16 @@
                 }
             });
 
-            let clientsArray = Object.keys(clientsMap).map(cName => {
-                return {
-                    cName: cName,
-                    ...clientsMap[cName]
-                };
-            });
+            let clientsArray = Object.keys(clientsMap).map(k => clientsMap[k]);
 
-            // ترتيب قائمة العملاء مثل الماسنجر تماماً: الأحدث رسالة (سواء من العميل أو الدعم) يصعد للأعلى فوراً
             clientsArray.sort((a, b) => {
                 let timeA = (a.lastMsg && typeof a.lastMsg.timestamp === 'number') ? a.lastMsg.timestamp : 0;
                 let timeB = (b.lastMsg && typeof b.lastMsg.timestamp === 'number') ? b.lastMsg.timestamp : 0;
                 
                 if (timeA !== timeB) {
-                    return timeB - timeA; // الأحدث زمنياً في الأعلى
+                    return timeB - timeA;
                 }
                 
-                // في حالة تساوي الوقت الرقمي، يتم استخدام معرف الفايربيز كمعيار دقيق جداً
                 let keyA = (a.lastMsg && a.lastMsg.firebaseKey) || '';
                 let keyB = (b.lastMsg && b.lastMsg.firebaseKey) || '';
                 return keyB.localeCompare(keyA);
@@ -816,8 +809,8 @@
                         if (!knownMessagesKeys.has(newMsg.firebaseKey)) {
                             if (newMsg.sender === 'client') {
                                 playNotificationSound();
-                                sendTelegramNotification(`💬 <b>رسالة جديدة من عميل</b>\n👤 الاسم: ${item.cName}\n✉️ النص: ${newMsg.text}`);
-                                showPushNotification(`رسالة جديدة من: ${item.cName}`, newMsg.text);
+                                sendTelegramNotification(`💬 <b>رسالة جديدة من عميل</b>\n👤 الاسم: ${item.displayName}\n✉️ النص: ${newMsg.text}`);
+                                showPushNotification(`رسالة جديدة من: ${item.displayName}`, newMsg.text);
                             }
                         }
                     });
@@ -827,22 +820,22 @@
             isInitialLoad = false;
 
             clientsArray.forEach(item => {
-                let cName = item.cName;
+                let cKey = item.clientKey;
+                let cName = item.displayName;
                 let clientMsgs = item.messages;
                 let lastMsg = item.lastMsg;
                 
-                let lastSeen = clientLastSeenMap[cName] || 0;
-                // عداد الرسائل الواردة غير المقروءة من العميل
+                let lastSeen = clientLastSeenMap[cKey] || 0;
                 let unreadCount = clientMsgs.filter(m => m.sender === 'client' && (m.firebaseKey > lastSeen)).length;
 
-                let info = latestPresenceData[item.safeKeyName];
+                let info = latestPresenceData[cKey];
                 let isOnline = info && info.status === 'online';
 
                 let cardDiv = document.createElement('div');
                 cardDiv.classList.add('client-card');
-                cardDiv.setAttribute('data-client-name', cName);
+                cardDiv.setAttribute('data-client-key', cKey);
                 if (isOnline) cardDiv.classList.add('online');
-                if (activeClientOriginalName === cName) cardDiv.classList.add('active');
+                if (activeClientName === cKey) cardDiv.classList.add('active');
                 if (unreadCount > 0) cardDiv.classList.add('unread');
 
                 cardDiv.innerHTML = `
@@ -855,21 +848,21 @@
                         <p>${lastMsg.text || ''}</p>
                     </div>
                 `;
-                cardDiv.onclick = (e) => openClientChat(cName, item.safeKeyName, clientMsgs, e.currentTarget);
+                cardDiv.onclick = (e) => openClientChat(cKey, cName, clientMsgs, e.currentTarget);
                 clientsListEl.appendChild(cardDiv);
             });
 
-            if (activeClientOriginalName && clientsMap[activeClientOriginalName]) {
-                renderChatMessages(clientsMap[activeClientOriginalName].messages);
+            if (activeClientName && clientsMap[activeClientName]) {
+                renderChatMessages(clientsMap[activeClientName].messages);
             }
         });
 
-        window.openClientChat = function(cName, safeKeyName, messages, element) {
+        window.openClientChat = function(cKey, cName, messages, element) {
+            activeClientName = cKey;
             activeClientOriginalName = cName;
-            activeClientName = safeKeyName;
             
             if (messages.length > 0) {
-                clientLastSeenMap[cName] = messages[messages.length - 1].firebaseKey;
+                clientLastSeenMap[cKey] = messages[messages.length - 1].firebaseKey;
                 localStorage.setItem('clientLastSeenMap', JSON.stringify(clientLastSeenMap));
             }
             
@@ -893,14 +886,14 @@
         };
 
         window.activateClientButton = function() {
-            if (!activeClientOriginalName) return;
-            set(ref(db, 'actions/' + safeKey(activeClientOriginalName) + '/showButton'), true);
+            if (!activeClientName) return;
+            set(ref(db, 'actions/' + activeClientName + '/showButton'), true);
         };
 
         window.goBackToClients = function() {
             document.getElementById('chatSection').classList.remove('show-screen');
-            activeClientOriginalName = null;
             activeClientName = null;
+            activeClientOriginalName = null;
         };
 
         function renderChatMessages(messages) {
@@ -943,7 +936,7 @@
                     const avatar = document.createElement('div');
                     avatar.classList.add('client-avatar');
                     if (isLastInGroup) {
-                        avatar.innerText = (msg.clientName || activeClientName || '?').trim().charAt(0).toUpperCase();
+                        avatar.innerText = (msg.clientName || activeClientOriginalName || '?').trim().charAt(0).toUpperCase();
                     } else {
                         avatar.classList.add('spacer');
                     }
@@ -965,28 +958,28 @@
         window.sendSupportReply = function() {
             const input = document.getElementById('supportReplyInput');
             const text = input.value.trim();
-            if (text === "" || !activeClientOriginalName) return;
+            if (text === "" || !activeClientName) return;
             
-            const clientChatRef = ref(db, 'chats/' + safeKey(activeClientOriginalName));
+            const clientChatRef = ref(db, 'chats/' + activeClientName);
             push(clientChatRef, {
                 sender: 'support', 
-                clientName: activeClientOriginalName,
+                clientName: activeClientOriginalName || 'موظف',
                 text: text,
                 timestamp: serverTimestamp()
             });
             
-            sendPushToClient(activeClientOriginalName, '💬 رسالة جديدة من خدمة العملاء', text);
+            sendPushToClient(activeClientName, '💬 رسالة جديدة من خدمة العملاء', text);
 
             clearTimeout(supportTypingTimeout);
-            set(ref(db, 'typing/' + safeKey(activeClientOriginalName) + '/support'), null);
+            set(ref(db, 'typing/' + activeClientName + '/support'), null);
 
             input.value = "";
         };
 
         let supportTypingTimeout = null;
         document.getElementById('supportReplyInput').addEventListener('input', function() {
-            if (!activeClientOriginalName) return;
-            const typingRef = ref(db, 'typing/' + safeKey(activeClientOriginalName) + '/support');
+            if (!activeClientName) return;
+            const typingRef = ref(db, 'typing/' + activeClientName + '/support');
             set(typingRef, serverNow());
             clearTimeout(supportTypingTimeout);
             supportTypingTimeout = setTimeout(() => set(typingRef, null), 2000);
