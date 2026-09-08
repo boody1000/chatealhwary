@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>عرض صفحة العملاء - شركة الهواري</title>
-    <!-- استخدام Tailwind CSS للتنسيق العام للصفحة الحاضنة -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* إزالة الهوامش وجعل الإطار يملأ الشاشة أو المساحة المخصصة */
         html, body {
             height: 100%;
             margin: 0;
@@ -16,29 +14,26 @@
 </head>
 <body class="bg-slate-900 text-white flex flex-col h-full">
 
-    <!-- هيدر بسيط للصفحة -->
     <header class="bg-slate-800 shadow-md p-4 border-b border-slate-700 flex justify-between items-center">
         <h1 class="text-xl font-bold text-amber-500">الهواري للتعارف والزواج</h1>
     </header>
 
-    <!-- منطقة عرض الصفحة المطلوبة -->
     <main class="flex-grow w-full h-full">
+        <!-- إضافة sandbox لمنح الإطار صلاحيات تنفيذ النماذج والجافاسكريبت وملفات تعريف الارتباط -->
         <iframe src="https://alhwary.wuaze.com" 
                 class="w-full h-full border-none" 
-                title="صفحة العملاء">
+                title="صفحة العملاء"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
         </iframe>
     </main>
 
-    <!-- كود تفعيل وتسجيل الإشعارات (Service Worker) في ملف app -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // تأكد أن ملف الـ sw.js موجود في نفس المجلد
                 navigator.serviceWorker.register('sw.js')
                     .then(reg => {
                         console.log('ServiceWorker registered successfully with scope:', reg.scope);
                         
-                        // طلب إذن الإشعارات من المستخدم فور فتح التطبيق
                         if ('Notification' in window && Notification.permission !== 'granted') {
                             Notification.requestPermission().then(permission => {
                                 if (permission === 'granted') {
