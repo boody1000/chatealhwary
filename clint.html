@@ -384,7 +384,7 @@
         function setupPresence(clientName) {
             const safeId = safeKey(clientName);
             const presenceRef = ref(db, 'online_clients/' + safeId);
-            const clientPhone = sessionStorage.getItem('chatClientPhone') || '';
+            const clientPhone = localStorage.getItem('chatClientPhone') || '';
 
             set(presenceRef, {
                 name: clientName,
@@ -442,7 +442,7 @@
         }
 
         window.initiateCall = function() {
-            const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
+            const clientName = localStorage.getItem('chatClientName') || 'زائر';
             set(ref(db, 'calls/' + safeKey(clientName)), {
                 sender: 'client',
                 status: 'calling',
@@ -463,7 +463,7 @@
         window.acceptCall = function() {
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             if (ranAudio) { ranAudio.pause(); ranAudio.currentTime = 0; }
-            const clientName = sessionStorage.getItem('chatClientName');
+            const clientName = localStorage.getItem('chatClientName');
             set(ref(db, 'calls/' + safeKey(clientName) + '/status'), 'accepted');
 
             document.getElementById('callStatusText').innerText = "المكالمة الصوتية جارية...";
@@ -505,7 +505,7 @@
         window.endCallCompletely = function() {
             if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; }
             if (ranAudio) { ranAudio.pause(); ranAudio.currentTime = 0; }
-            const clientName = sessionStorage.getItem('chatClientName');
+            const clientName = localStorage.getItem('chatClientName');
             if (clientName) {
                 set(ref(db, 'calls/' + safeKey(clientName) + '/status'), 'ended');
             }
@@ -534,8 +534,8 @@
             const nameInput = document.getElementById('clientNameInput').value.trim();
             const phoneInput = document.getElementById('clientPhoneInput').value.trim();
             if (nameInput === "") { alert("الرجاء كتابة اسمك أولاً"); return; }
-            sessionStorage.setItem('chatClientName', nameInput);
-            sessionStorage.setItem('chatClientPhone', phoneInput);
+            localStorage.setItem('chatClientName', nameInput);
+            localStorage.setItem('chatClientPhone', phoneInput);
             document.getElementById('nameModal').style.display = 'none';
             document.getElementById('chatContainer').style.display = 'flex';
             document.getElementById('welcomeUserTitle').innerText = 'أهلاً بك، ' + nameInput;
@@ -555,7 +555,7 @@
         };
 
         window.onload = function() {
-            const savedName = sessionStorage.getItem('chatClientName');
+            const savedName = localStorage.getItem('chatClientName');
             if (savedName) {
                 document.getElementById('nameModal').style.display = 'none';
                 document.getElementById('chatContainer').style.display = 'flex';
@@ -613,7 +613,7 @@
         window.sendClientMessage = function() {
             const input = document.getElementById('clientInput');
             const text = input.value.trim();
-            const clientName = sessionStorage.getItem('chatClientName') || 'زائر';
+            const clientName = localStorage.getItem('chatClientName') || 'زائر';
             if (text === "") return;
 
             const clientMessagesRef = ref(db, 'chats/' + safeKey(clientName));
@@ -634,7 +634,7 @@
 
         let typingTimeout = null;
         document.getElementById('clientInput').addEventListener('input', function() {
-            const clientName = sessionStorage.getItem('chatClientName');
+            const clientName = localStorage.getItem('chatClientName');
             if (!clientName) return;
             const typingRef = ref(db, 'typing/' + safeKey(clientName) + '/client');
             set(typingRef, serverNow());
