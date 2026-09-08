@@ -799,6 +799,17 @@
                 };
             });
 
+            // ترتيب العملاء حسب وقت آخر رسالة - اللي بعت آخر رسالة يطلع فوق زي الماسنجر
+            clientsArray.sort((a, b) => {
+                const ta = (a.lastMsg && a.lastMsg.timestamp) || 0;
+                const tb = (b.lastMsg && b.lastMsg.timestamp) || 0;
+                if (tb !== ta) return tb - ta;
+                // لو الوقت متساوي أو لسه معلق (server timestamp لسه بيتأكد)، رجّع للترتيب حسب مفتاح الرسالة نفسه
+                const ka = (a.lastMsg && a.lastMsg.firebaseKey) || '';
+                const kb = (b.lastMsg && b.lastMsg.firebaseKey) || '';
+                return kb.localeCompare(ka);
+            });
+
             let allKeysSet = new Set();
             clientsArray.forEach(item => {
                 item.messages.forEach(m => allKeysSet.add(m.firebaseKey));
