@@ -2,41 +2,12 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جاري الانتقال - شركة الهواري</title>
-    <!-- استخدام Tailwind CSS للتنسيق -->
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-6 text-center">
-
-    <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 max-w-sm w-full">
-        <!-- أيقونة تحميل متحركة -->
-        <div class="flex justify-center mb-4">
-            <svg class="animate-spin h-10 w-10 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-        </div>
-
-        <h1 class="text-xl font-bold text-amber-400 mb-2">شركة الهواري للتعارف والزواج</h1>
-        <p class="text-slate-300 text-sm mb-6">جاري نقلك إلى التطبيق الرئيسي...</p>
-
-        <!-- زر احتياطي يظهر لو التحويل التلقائي أخذ ثواني -->
-        <a href="https://alhwary.wuaze.com" id="fallback-btn" class="hidden bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-4 rounded-xl transition duration-300 block shadow-lg text-sm">
-            اضغط هنا إذا لم يتم النقل تلقائياً
-        </a>
-    </div>
-
-    <!-- كود الجافاسكريبت للتحويل التلقائي الفوري -->
+    <title>شركة الهواري</title>
+    <!-- تحويل فوري ولحظي قبل تحميل الصفحة -->
     <script>
-        // تنفيذ التحويل فور فتح الصفحة
-        window.location.href = "https://alhwary.wuaze.com";
-
-        // في حال كان المتصفح بطيء أو منع التحويل التلقائي، سيظهر الزر الاحتياطي بعد ثانيتين
-        setTimeout(function() {
-            document.getElementById('fallback-btn').classList.remove('hidden');
-        }, 2000);
+        window.location.replace("https://alhwary.wuaze.com");
     </script>
-
+</head>
+<body>
 </body>
 </html>
