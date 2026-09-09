@@ -555,6 +555,15 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
             });
             
             initClientChat(nameInput);
+            window.startChat = async function() {
+    const nameInput = document.getElementById('clientNameInput').value.trim();
+    const phoneInput = document.getElementById('clientPhoneInput').value.trim();
+    if (nameInput === "") { alert("الرجاء كتابة اسمك أولاً"); return; }
+    
+    // **حط السطر ده هنا بس في ملفك:**
+    fbq('track', 'Lead');
+
+    // ... باقي الكود عندك زي ما هو بدون أي تغيير أو حذف ...
         };
 
         window.onload = async function() {
