@@ -686,25 +686,14 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
                 timestamp: serverTimestamp()
             });
 
-            sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n✉️ النص: ${text}`);
-
-            clearTimeout(typingTimeout);
-            set(ref(db, 'typing/' + currentClientKey + '/client'), null);
-
-            input.value = "";
+            sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n✉️ الرسالة: ${text}`);
+            input.value = '';
         };
 
-        let typingTimeout = null;
-        document.getElementById('clientInput').addEventListener('input', function() {
-            if (!currentClientKey) return;
-            const typingRef = ref(db, 'typing/' + currentClientKey + '/client');
-            set(typingRef, serverNow());
-            clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => set(typingRef, null), 2000);
-        });
-
         document.getElementById('clientInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') sendClientMessage();
+            if (e.key === 'Enter') {
+                sendClientMessage();
+            }
         });
     </script>
 </body>
