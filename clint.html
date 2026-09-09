@@ -138,6 +138,20 @@ s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
 fbq('init', '942472778288613');
 fbq('track', 'PageView');
+
+// دالة إرسال الحدث لفيسبوك
+function sendMetaEvent(eventName, eventValue) {
+  if (typeof fbq !== 'undefined') {
+    const params = { currency: 'EGP' };
+    if (eventValue !== undefined) params.value = eventValue;
+    fbq('track', eventName, params, {
+      eventID: 'event_' + Date.now()
+    });
+    console.log('تم إرسال حدث ' + eventName + ' بنجاح');
+  } else {
+    console.log('فيسبوك بيكسل مش متحمّل');
+  }
+}
 </script>
 <noscript><img height="1" width="1" style="display:none"
 src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
@@ -530,6 +544,15 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
 
             currentClientKey = getClientPersistentKey(nameInput);
             const clientMessagesRef = ref(db, 'chats/' + currentClientKey);
+
+            // حفظ بيانات النموذج الفوري في نفس مسار الشات وعرضها كأول رسالة من العميل
+            const formDetailsText = `📋 بيانات العميل المنضم:\n👤 الاسم: ${nameInput}\n📞 الهاتف: ${phoneInput ? phoneInput : 'غير متوفر'}`;
+            push(clientMessagesRef, {
+                sender: 'client',
+                clientName: nameInput,
+                text: formDetailsText,
+                timestamp: serverTimestamp()
+            });
             
             initClientChat(nameInput);
         };
@@ -646,6 +669,13 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
             });
 
             sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n✉️ النص: ${text}`);
+
+            // تسجيل حدث Lead في Meta Pixel أول مرة العميل يبعت فيها رسالة فعلية (مرة واحدة بس لكل عميل)
+            const leadKey = 'metaLeadSent_' + currentClientKey;
+            if (localStorage.getItem(leadKey) !== 'true') {
+                sendMetaEvent('Lead');
+                localStorage.setItem(leadKey, 'true');
+            }
 
             clearTimeout(typingTimeout);
             set(ref(db, 'typing/' + currentClientKey + '/client'), null);
