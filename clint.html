@@ -554,9 +554,9 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
                 timestamp: serverTimestamp()
             });
             
-            // تسجيل حدث Lead في Meta Pixel عند بدء المحادثة
-            sendMetaEvent('Lead');
-            
+          // استبدل السطر القديم داخل دالة startChat بالسطرين دول:
+console.log('تم الضغط على بدء المحادثة، جاري إرسال البيكسل...');
+sendMetaEvent('Lead');
             initClientChat(nameInput);
      
         };
@@ -695,4 +695,4 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
     </script>
 </body>
 </html>
-```[cite: 2]
+
