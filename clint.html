@@ -139,15 +139,37 @@ s.parentNode.insertBefore(t,s)}(window, document,'script',
 fbq('init', '942472778288613');
 fbq('track', 'PageView');
 
-// دالة إرسال الحدث لفيسبوك
+// دالة إرسال الحدث لفيسبوك (مع دعم هيكل Conversions API والبيانات المطلوبة)
 function sendMetaEvent(eventName, eventValue) {
   if (typeof fbq !== 'undefined') {
     const params = { currency: 'EGP' };
     if (eventValue !== undefined) params.value = eventValue;
+    
+    // إرسال الحدث عبر البيكسل مع معرف حدث فريد ليتوافق مع المعايير
     fbq('track', eventName, params, {
       eventID: 'event_' + Date.now()
     });
-    console.log('تم إرسال حدث ' + eventName + ' بنجاح');
+    console.log('تم إرسال حدث ' + eventName + ' بنجاح عبر البيكسل');
+
+    // الهيكل البرمجي الخاص بـ Conversions API (CRM Integration Payload) المطابق تماماً لمتطلبات ميتا:
+    const crmPayload = {
+      "data": [
+        {
+          "action_source": "system_generated",
+          "custom_data": {
+            "event_source": "crm",
+            "lead_event_source": "Your CRM"
+          },
+          "event_name": eventName,
+          "event_time": Math.floor(Date.now() / 1000),
+          "user_data": {
+            "em": [], // يمكن وضع الايميل المجزأ هنا عند توفره
+            "ph": []  // يمكن وضع الهاتف المجزأ هنا عند توفره
+          }
+        }
+      ]
+    };
+    console.log('Conversions API Payload Ready:', crmPayload);
   } else {
     console.log('فيسبوك بيكسل مش متحمّل');
   }
@@ -324,11 +346,9 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
             return name ? name.replace(/[.#$\[\]\/\s]+/g, '_') : '';
         }
 
-        // **تثبيت مفتاح المحادثة نهائياً (مثل الماسنجر):** عدم توليد معرف جديد أبداً إذا كان العميل مسجلاً مسبقاً في الـ localStorage
         function getClientPersistentKey(clientName = '') {
             let persistentKey = localStorage.getItem('chatClientPersistentKey');
             if (!persistentKey) {
-                // إنشاء بصمة فريدة وثابتة للعميل أول مرة فقط وحفظها للأبد
                 const randomId = Math.random().toString(36).substring(2, 10) + Date.now();
                 persistentKey = 'client_' + safeKey(clientName) + '_' + randomId;
                 localStorage.setItem('chatClientPersistentKey', persistentKey);
@@ -524,7 +544,6 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
             const phoneInput = document.getElementById('clientPhoneInput').value.trim();
             if (nameInput === "") { alert("الرجاء كتابة اسمك أولاً"); return; }
             
-            // فتح قفل تشغيل الصوت والإشعارات على الموبايل والكمبيوتر عند أول تفاعل
             if ('Notification' in window && Notification.permission !== 'granted') {
                 await Notification.requestPermission();
             }
@@ -545,7 +564,6 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
             currentClientKey = getClientPersistentKey(nameInput);
             const clientMessagesRef = ref(db, 'chats/' + currentClientKey);
 
-            // حفظ بيانات النموذج الفوري في نفس مسار الشات وعرضها كأول رسالة من العميل
             const formDetailsText = `📋 بيانات العميل المنضم:\n👤 الاسم: ${nameInput}\n📞 الهاتف: ${phoneInput ? phoneInput : 'غير متوفر'}`;
             push(clientMessagesRef, {
                 sender: 'client',
@@ -554,11 +572,9 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
                 timestamp: serverTimestamp()
             });
             
-          // استبدل السطر القديم داخل دالة startChat بالسطرين دول:
-console.log('تم الضغط على بدء المحادثة، جاري إرسال البيكسل...');
-sendMetaEvent('Lead');
+            console.log('تم الضغط على بدء المحادثة، جاري إرسال البيكسل وتجهيز واجهة التحويلات...');
+            sendMetaEvent('Lead');
             initClientChat(nameInput);
-     
         };
 
         window.onload = async function() {
@@ -628,13 +644,11 @@ sendMetaEvent('Lead');
                         if (!isInitialLoad) {
                             newSupportMsgCount++;
                             
-                            // تشغيل الصوت عند وصول رسالة جديدة
                             if (msgAudio) {
                                 msgAudio.currentTime = 0;
                                 msgAudio.play().catch(e => {});
                             }
 
-                            // إرسال إشعار للنظام عبر الـ Service Worker ليعمل على الموبايل والكمبيوتر
                             if (document.hidden && navigator.serviceWorker && navigator.serviceWorker.controller) {
                                 navigator.serviceWorker.controller.postMessage({
                                     type: 'SHOW_NOTIFICATION',
@@ -695,4 +709,3 @@ sendMetaEvent('Lead');
     </script>
 </body>
 </html>
-
