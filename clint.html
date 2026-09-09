@@ -554,6 +554,9 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
                 timestamp: serverTimestamp()
             });
             
+            // تسجيل حدث Lead في Meta Pixel عند بدء المحادثة
+            sendMetaEvent('Lead');
+            
             initClientChat(nameInput);
      
         };
@@ -671,13 +674,6 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
 
             sendTelegramNotification(`💬 <b>رسالة جديدة من العميل</b>\n👤 الاسم: ${clientName}\n✉️ النص: ${text}`);
 
-            // تسجيل حدث Lead في Meta Pixel أول مرة العميل يبعت فيها رسالة فعلية (مرة واحدة بس لكل عميل)
-            const leadKey = 'metaLeadSent_' + currentClientKey;
-            if (localStorage.getItem(leadKey) !== 'true') {
-                sendMetaEvent('Lead');
-                localStorage.setItem(leadKey, 'true');
-            }
-
             clearTimeout(typingTimeout);
             set(ref(db, 'typing/' + currentClientKey + '/client'), null);
 
@@ -699,3 +695,4 @@ src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
     </script>
 </body>
 </html>
+```[cite: 2]
