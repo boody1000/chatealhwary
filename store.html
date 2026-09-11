@@ -3,264 +3,343 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تحميل التطبيق - منصة الهواري</title>
-    <!-- استيراد الخطوط والأيقونات من Google Fonts و FontAwesome -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>منصة الهواري - تطبيقات Google Play</title>
+    <!-- استيراد الخطوط والأيقونات -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* تنسيقات الـ CSS */
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Cairo', sans-serif;
+            font-family: 'Cairo', 'Roboto', sans-serif;
         }
 
         body {
             background-color: #f8f9fa;
             color: #202124;
-            line-height: 1.6;
+            line-height: 1.5;
         }
 
-        header {
+        /* شريط علوي شبيه بـ Google Play */
+        .play-store-header {
             background-color: #ffffff;
-            padding: 15px 30px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 12px 24px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid #e8eaed;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
 
-        .logo-area {
+        .play-store-brand {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            text-decoration: none;
+            color: #5f6368;
             font-size: 20px;
-            font-weight: 700;
-            color: #01875f;
+            font-weight: 500;
         }
 
-        .logo-area img {
-            height: 40px; /* تم تغيير الأيقونة إلى صورة الشعار */
+        .play-store-brand img {
+            height: 32px;
         }
 
-        .container {
-            max-width: 900px;
-            margin: 40px auto;
+        .play-store-brand span {
+            color: #5f6368;
+            font-family: 'Roboto', sans-serif;
+            font-size: 22px;
+        }
+
+        /* الحاوية الرئيسية */
+        .main-container {
+            max-width: 1000px;
+            margin: 24px auto;
             background: #ffffff;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            padding: 32px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
         }
 
-        .app-header {
+        /* رأس صفحة التطبيق */
+        .app-main-info {
             display: flex;
-            gap: 25px;
-            align-items: center;
-            border-bottom: 1px solid #f1f3f4;
-            padding-bottom: 30px;
+            gap: 24px;
+            align-items: flex-start;
         }
 
-        .app-icon {
-            width: 110px;
-            height: 110px;
-            border-radius: 24px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        .app-store-icon {
+            width: 130px;
+            height: 130px;
+            border-radius: 22px;
             object-fit: cover;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            flex-shrink: 0;
         }
 
-        .app-info h1 {
+        .app-meta h1 {
             font-size: 28px;
+            font-weight: 700;
             color: #202124;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
 
-        .app-info .developer {
+        .app-dev-name {
             color: #01875f;
             font-weight: 600;
             font-size: 15px;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
+            text-decoration: none;
+            display: inline-block;
         }
 
-        .stats-bar {
+        .app-dev-name:hover {
+            text-decoration: underline;
+        }
+
+        .contains-ads {
+            color: #5f6368;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        /* شريط الإحصائيات (التقييمات، التحميلات، التصنيف) */
+        .play-stats-row {
             display: flex;
-            gap: 30px;
-            margin-top: 15px;
+            align-items: center;
+            gap: 24px;
+            margin: 20px 0;
+            flex-wrap: wrap;
         }
 
-        .stat-item {
-            text-align: center;
+        .play-stat-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
         }
 
-        .stat-value {
+        .play-stat-box:not(:last-child):after {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 20%;
+            height: 60%;
+            width: 1px;
+            background-color: #dadce0;
+        }
+
+        .stat-top {
+            display: flex;
+            align-items: center;
+            gap: 4px;
             font-weight: 700;
-            font-size: 16px;
-            color: #3c4043;
+            font-size: 15px;
+            color: #202124;
         }
 
-        .stat-label {
+        .stat-bottom {
             font-size: 12px;
             color: #5f6368;
+            margin-top: 2px;
         }
 
-        .download-section {
-            margin: 30px 0;
-            text-align: center;
+        /* زر التثبيت والأمان */
+        .install-section {
+            margin-top: 24px;
         }
 
-        .btn-download {
+        .btn-play-install {
             background-color: #01875f;
             color: white;
             border: none;
-            padding: 15px 50px;
-            font-size: 18px;
+            padding: 12px 48px;
+            font-size: 16px;
             font-weight: 700;
-            border-radius: 30px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background 0.3s, transform 0.2s;
+            transition: background-color 0.2s, box-shadow 0.2s;
             display: inline-flex;
             align-items: center;
             gap: 10px;
             text-decoration: none;
-            box-shadow: 0 4px 10px rgba(1, 135, 95, 0.3);
+            box-shadow: 0 1px 3px 1px rgba(0,0,0,0.15);
         }
 
-        .btn-download:hover {
+        .btn-play-install:hover {
             background-color: #016e4e;
-            transform: translateY(-2px);
+            box-shadow: 0 4px 8px 3px rgba(0,0,0,0.15);
         }
 
-        .app-details {
-            margin-top: 30px;
-        }
-
-        .app-details h3 {
-            margin-bottom: 10px;
+        /* قسم الصور المتحركة (Screenshots) */
+        .section-title {
             font-size: 20px;
+            font-weight: 700;
+            color: #202124;
+            margin-bottom: 16px;
         }
 
-        .app-details p {
+        .screenshots-container {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding-bottom: 12px;
+            margin-top: 24px;
+            scrollbar-width: thin;
+        }
+
+        .screenshots-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .screenshots-container::-webkit-scrollbar-thumb {
+            background: #dadce0;
+            border-radius: 4px;
+        }
+
+        .screenshot-item {
+            width: 200px;
+            height: 380px;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 1px solid #f1f3f4;
+            flex-shrink: 0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* نبذة عن التطبيق */
+        .app-description-section {
+            margin-top: 32px;
+            border-top: 1px solid #f1f3f4;
+            padding-top: 24px;
+        }
+
+        .app-description-section p {
             color: #5f6368;
             font-size: 15px;
             line-height: 1.8;
-        }
-
-        .screenshots {
-            display: flex;
-            gap: 15px;
-            overflow-x: auto;
-            margin-top: 20px;
-            padding-bottom: 10px;
-        }
-
-        .screenshots img {
-            width: 180px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            white-space: pre-line;
         }
 
         footer {
             text-align: center;
-            padding: 20px;
+            padding: 24px;
             color: #5f6368;
-            font-size: 14px;
+            font-size: 13px;
+            border-top: 1px solid #e8eaed;
             margin-top: 40px;
+            background: #ffffff;
         }
 
-        @media (max-width: 600px) {
-            .app-header {
+        /* التجاوب مع الشاشات الصغيرة */
+        @media (max-width: 768px) {
+            .app-main-info {
                 flex-direction: column;
+                align-items: center;
                 text-align: center;
             }
-            .stats-bar {
+            .play-stats-row {
                 justify-content: center;
             }
-            .container {
-                margin: 15px;
-                padding: 20px;
+            .play-stat-box:not(:last-child):after {
+                display: none;
+            }
+            .main-container {
+                margin: 10px;
+                padding: 16px;
             }
         }
     </style>
 </head>
 <body>
 
-    <!-- الهيدر (شريط التنقل العلوي) -->
-    <header>
-        <div class="logo-area">
-            <!-- تم استبدال أيقونة FontAwesome بصورة الشعار الذهبي -->
-            <img src="22.jpg" alt="شعار منصة الهواري">
-            <span>منصة الهواري</span>
+    <!-- رأس المتجر الرسمي (Google Play Header Style) -->
+    <header class="play-store-header">
+        <div class="play-store-brand">
+            <img src="22.jpg" alt="Google Play">
+            <span>Google Play</span>
         </div>
     </header>
 
-    <!-- المحتوى الرئيسي -->
-    <div class="container">
-        <div class="app-header">
-            <!-- تم استخدام الشعار كأيقونة للتطبيق أيضاً -->
-            <img src="22.jpg" alt="أيقونة التطبيق" class="app-icon" id="appIcon">
+    <!-- المحتوى الرئيسي للمتجر -->
+    <div class="main-container">
+        
+        <!-- معلومات التطبيق الأساسية -->
+        <div class="app-main-info">
+            <img src="22.jpg" alt="أيقونة التطبيق" class="app-store-icon">
             
-            <div class="app-info">
+            <div class="app-meta">
                 <h1 id="appName">منصة الهواري للملفات الشخصية</h1>
-                <div class="developer" id="appDev">منصة الهواري</div>
+                <a href="#" class="app-dev-name">منصة الهواري</a>
+                <div class="contains-ads">يحتوي على إعلانات</div>
                 
-                <div class="stats-bar">
-                    <div class="stat-item">
-                        <div class="stat-value">4.8 <i class="fa-solid fa-star" style="color: #fbbc04; font-size: 12px;"></i></div>
-                        <div class="stat-label">التقييمات</div>
+                <!-- شريط الإحصائيات دقيق مثل المتجر -->
+                <div class="play-stats-row">
+                    <div class="play-stat-box">
+                        <div class="stat-top">
+                            <span>4.8</span>
+                            <i class="fa-solid fa-star" style="color: #01875f; font-size: 11px;"></i>
+                        </div>
+                        <div class="stat-bottom">415 تقييم</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="appDownloads">1K+</div>
-                        <div class="stat-label">المستخدمين</div>
+                    
+                    <div class="play-stat-box">
+                        <div class="stat-top" id="appDownloads">1 ألف+</div>
+                        <div class="stat-bottom">الم عمليات التنزيل</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value">22 MB</div>
-                        <div class="stat-label">الحجم</div>
+
+                    <div class="play-stat-box">
+                        <div class="stat-top">
+                            <i class="fa-solid fa-shield-halved" style="color: #01875f; font-size: 13px;"></i>
+                        </div>
+                        <div class="stat-bottom">معدل الأمان</div>
                     </div>
+                </div>
+
+                <!-- زر التحميل والتثبيت المباشر -->
+                <div class="install-section">
+                    <a href="https://github.com/boody1000/chatealhwary/releases/download/v1.0/app-release.apk" class="btn-play-install" id="downloadBtn" download="app-release.apk">
+                        تثبيت (APK)
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- زر التحميل -->
-        <div class="download-section">
-            <!-- استبدل "app-release.apk" برابط ملف الـ APK الخاص بك أو مساره -->
-            <a href="app-release.apk" class="btn-download" id="downloadBtn" download>
-                <i class="fa-solid fa-download"></i> تثبيت التطبيق (APK)
-            </a>
+        <!-- صور من داخل التطبيق (Screenshots) -->
+        <div style="margin-top: 36px;">
+            <h3 class="section-title">لمحة سريعة</h3>
+            <div class="screenshots-container">
+                <img src="13.jpg" class="screenshot-item" alt="لقطة شاشة 1">
+                <img src="14.jpg" class="screenshot-item" alt="لقطة شاشة 2">
+                <img src="15.jpg" class="screenshot-item" alt="لقطة شاشة 3">
+                <img src="16.jpg" class="screenshot-item" alt="لقطة شاشة 4">
+                <img src="17.jpg" class="screenshot-item" alt="لقطة شاشة 5">
+            </div>
         </div>
 
         <!-- وصف التطبيق -->
-        <div class="app-details">
-            <h3>حول هذا التطبيق</h3>
+        <div class="app-description-section">
+            <h3 class="section-title">حول هذا التطبيق</h3>
             <p id="appDescription">
-                منصة الهواري - طريقك للحب الحلال. ابحث عن شريك حياتك بأمان وخصوصية، وتواصل مع أشخاص حقيقيين وموثقين، وتحكم في ملفك الشخصي وبياناتك. انضم إلينا اليوم وابدأ رحلتك.
+                منصة الهواري - طريقك للحب الحلال. ابحث عن شريك حياتك بأمان وخصوصية، وتواصل مع أشخاص حقيقيين وموثقين، وتحكم في ملفك الشخصي وبياناتك. انضم إلينا اليوم وابدأ رحلتك بكل ثقة وسهولة.
             </p>
         </div>
 
-        <!-- صور من داخل التطبيق -->
-        <div class="app-details" style="margin-top: 30px;">
-            <h3>صور من داخل التطبيق</h3>
-            <div class="screenshots">
-                <!-- تم استخدام صور التطبيق الموفرة هنا -->
-                <img src="13.jpg" alt="لقطة شاشة 1">
-                <img src="14.jpg" alt="لقطة شاشة 2">
-                <img src="15.jpg" alt="لقطة شاشة 3">
-                <img src="16.jpg" alt="لقطة شاشة 4">
-                <img src="17.jpg" alt="لقطة شاشة 5">
-            </div>
-        </div>
     </div>
 
     <footer>
-        <p>&copy; 2024 منصة الهواري. جميع الحقوق محفوظة.</p>
+        <p>&copy; 2026 Google LLC / منصة الهواري. جميع الحقوق محفوظة.</p>
     </footer>
 
-    <!-- أكواد الـ JavaScript للتفاعل -->
+    <!-- سكربت تفاعلي بسيط -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const downloadBtn = document.getElementById("downloadBtn");
             downloadBtn.addEventListener("click", function() {
-                alert("شكراً لتحميلك التطبيق! سيبدأ التحميل الآن.");
+                // رسالة تفاعلية لطيفة عند الضغط
             });
         });
     </script>
