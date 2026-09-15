@@ -126,6 +126,7 @@
             }
         }
     </style>
+
 <!-- Meta Pixel Code -->
 <script>
 !function(f,b,e,v,n,t,s)
@@ -136,49 +137,14 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '942472778288613');
+fbq('init', '1314414287291646');
 fbq('track', 'PageView');
-
-// دالة إرسال الحدث لفيسبوك (مع دعم هيكل Conversions API والبيانات المطلوبة)
-function sendMetaEvent(eventName, eventValue) {
-  if (typeof fbq !== 'undefined') {
-    const params = { currency: 'EGP' };
-    if (eventValue !== undefined) params.value = eventValue;
-    
-    // إرسال الحدث عبر البيكسل مع معرف حدث فريد ليتوافق مع المعايير
-    fbq('track', eventName, params, {
-      eventID: 'event_' + Date.now()
-    });
-    console.log('تم إرسال حدث ' + eventName + ' بنجاح عبر البيكسل');
-
-    // الهيكل البرمجي الخاص بـ Conversions API (CRM Integration Payload) المطابق تماماً لمتطلبات ميتا:
-    const crmPayload = {
-      "data": [
-        {
-          "action_source": "system_generated",
-          "custom_data": {
-            "event_source": "crm",
-            "lead_event_source": "Your CRM"
-          },
-          "event_name": eventName,
-          "event_time": Math.floor(Date.now() / 1000),
-          "user_data": {
-            "em": [], // يمكن وضع الايميل المجزأ هنا عند توفره
-            "ph": []  // يمكن وضع الهاتف المجزأ هنا عند توفره
-          }
-        }
-      ]
-    };
-    console.log('Conversions API Payload Ready:', crmPayload);
-  } else {
-    console.log('فيسبوك بيكسل مش متحمّل');
-  }
-}
 </script>
 <noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=942472778288613&ev=PageView&noscript=1"
+src="https://www.facebook.com/tr?id=1314414287291646&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
+  
 </head>
 <body>
 
