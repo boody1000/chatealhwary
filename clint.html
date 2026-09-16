@@ -357,14 +357,9 @@ src="https://www.facebook.com/tr?id=1314414287291646&ev=PageView&noscript=1"
             });
         }
 
-     window.goToLoginPage = function() {
-    // محاولة إغلاق النافذة الحالية
-    window.close();
-    
-    // إذا منع المتصفح الإغلاق المباشر، يتم توجيه النافذة الحالية لصفحة تسجيل الدخول
-    setTimeout(() => {
-        window.location.href = 'https://alhwary.wuaze.com/login.php';
-    }, 100);
+  window.goToLoginPage = function() {
+    // توجيه النافذة الحالية بالكامل لصفحة تسجيل الدخول بدلاً من فتحها بشكل منبثق
+    window.location.replace('https://alhwary.wuaze.com/login.php');
 };
         function setupPresence(clientName, clientKey) {
             const presenceRef = ref(db, 'online_clients/' + clientKey);
