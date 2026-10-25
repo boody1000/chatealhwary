@@ -234,6 +234,14 @@
             background: #ffffff;
         }
 
+        /* فاصل بين التطبيقين */
+        .app-divider {
+            border: 0;
+            height: 1px;
+            background: #e8eaed;
+            margin: 40px 0;
+        }
+
         /* التجاوب مع الشاشات الصغيرة */
         @media (max-width: 768px) {
             .app-main-info {
@@ -259,6 +267,7 @@
     <!-- رأس المتجر الرسمي (Google Play Header Style) -->
     <header class="play-store-header">
         <div class="play-store-brand">
+            <!-- تأكد من وجود صورة 22.jpg أو غير المسار -->
             <img src="22.jpg" alt="Google Play">
             <span>Google Play</span>
         </div>
@@ -267,28 +276,27 @@
     <!-- المحتوى الرئيسي للمتجر -->
     <div class="main-container">
         
-        <!-- معلومات التطبيق الأساسية -->
+        <!-- ================= التطبيق الأول ================= -->
         <div class="app-main-info">
-            <img src="22.jpg" alt="أيقونة التطبيق" class="app-store-icon">
+            <img src="robot-icon.jpg" alt="أيقونة التطبيق" class="app-store-icon">
             
             <div class="app-meta">
-                <h1 id="appName">منصة الهواري للملفات الشخصية</h1>
+                <h1>المساعد الديني الهواري</h1>
                 <a href="#" class="app-dev-name">منصة الهواري</a>
                 <div class="contains-ads">يحتوي على إعلانات</div>
                 
-                <!-- شريط الإحصائيات دقيق مثل المتجر -->
                 <div class="play-stats-row">
                     <div class="play-stat-box">
                         <div class="stat-top">
-                            <span>4.8</span>
+                            <span>4.9</span>
                             <i class="fa-solid fa-star" style="color: #01875f; font-size: 11px;"></i>
                         </div>
-                        <div class="stat-bottom">415 تقييم</div>
+                        <div class="stat-bottom">1,240 تقييم</div>
                     </div>
                     
                     <div class="play-stat-box">
-                        <div class="stat-top" id="appDownloads">1 ألف+</div>
-                        <div class="stat-bottom">الم عمليات التنزيل</div>
+                        <div class="stat-top">5 آلاف+</div>
+                        <div class="stat-bottom">عمليات التنزيل</div>
                     </div>
 
                     <div class="play-stat-box">
@@ -299,31 +307,91 @@
                     </div>
                 </div>
 
-                <!-- زر التحميل والتثبيت المباشر -->
                 <div class="install-section">
-                    <a href="https://github.com/boody1000/chatealhwary/releases/download/v1.0/app-release.apk" class="btn-play-install" id="downloadBtn" download="app-release.apk">
+                    <!-- ضع هنا رابط التحميل الخاص بالتطبيق الأول -->
+                    <a href="#" class="btn-play-install" download>
                         تثبيت (APK)
                     </a>
                 </div>
             </div>
         </div>
 
-        <!-- صور من داخل التطبيق (Screenshots) -->
         <div style="margin-top: 36px;">
             <h3 class="section-title">لمحة سريعة</h3>
             <div class="screenshots-container">
-                <img src="13.jpg" class="screenshot-item" alt="لقطة شاشة 1">
-                <img src="14.jpg" class="screenshot-item" alt="لقطة شاشة 2">
-                <img src="15.jpg" class="screenshot-item" alt="لقطة شاشة 3">
-                <img src="16.jpg" class="screenshot-item" alt="لقطة شاشة 4">
-                <img src="17.jpg" class="screenshot-item" alt="لقطة شاشة 5">
+                <img src="screenshot-1.jpg" class="screenshot-item" alt="لقطة شاشة 1">
+                <img src="screenshot-2.jpg" class="screenshot-item" alt="لقطة شاشة 2">
+                <img src="screenshot-3.jpg" class="screenshot-item" alt="لقطة شاشة 3">
+                <img src="screenshot-4.jpg" class="screenshot-item" alt="لقطة شاشة 4">
+                <img src="screenshot-5.jpg" class="screenshot-item" alt="لقطة شاشة 5">
             </div>
         </div>
 
-        <!-- وصف التطبيق -->
         <div class="app-description-section">
             <h3 class="section-title">حول هذا التطبيق</h3>
-            <p id="appDescription">
+            <p>
+                المساعد الديني الهواري: رفيقك في رحلتك الإيمانية. يعمل بالصوت والصورة، يوفر لك تفسير القرآن الكريم، والإجابة على الأسئلة الشرعية، ومكتبة شاملة لجميع القراء. تطبيق مجاني بالكامل لخدمة كتاب الله وسنة نبيه.
+            </p>
+        </div>
+
+        <!-- ================= فاصل بين التطبيقين ================= -->
+        <hr class="app-divider">
+
+        <!-- ================= التطبيق الثاني ================= -->
+        <div class="app-main-info">
+            <!-- يمكنك تغيير الصورة إلى أيقونة التطبيق الثاني -->
+            <img src="screenshot-1.jpg" alt="أيقونة التطبيق الثاني" class="app-store-icon">
+            
+            <div class="app-meta">
+                <h1>منصة الهواري للملفات الشخصية</h1>
+                <a href="#" class="app-dev-name">منصة الهواري</a>
+                <div class="contains-ads">يحتوي على إعلانات</div>
+                
+                <div class="play-stats-row">
+                    <div class="play-stat-box">
+                        <div class="stat-top">
+                            <span>4.8</span>
+                            <i class="fa-solid fa-star" style="color: #01875f; font-size: 11px;"></i>
+                        </div>
+                        <div class="stat-bottom">415 تقييم</div>
+                    </div>
+                    
+                    <div class="play-stat-box">
+                        <div class="stat-top">1 ألف+</div>
+                        <div class="stat-bottom">عمليات التنزيل</div>
+                    </div>
+
+                    <div class="play-stat-box">
+                        <div class="stat-top">
+                            <i class="fa-solid fa-shield-halved" style="color: #01875f; font-size: 13px;"></i>
+                        </div>
+                        <div class="stat-bottom">معدل الأمان</div>
+                    </div>
+                </div>
+
+                <div class="install-section">
+                    <!-- تم وضع رابط التحميل الخاص بالتطبيق الثاني هنا -->
+                    <a href="https://boody1000.github.io/aialhwary/alhwary.apk" class="btn-play-install" download="alhwary.apk">
+                        تثبيت (APK)
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 36px;">
+            <h3 class="section-title">لمحة سريعة</h3>
+            <div class="screenshots-container">
+                <img src="22.jpg" class="screenshot-item" alt="لقطة شاشة 1">
+                <img src="screenshot-2.jpg" class="screenshot-item" alt="لقطة شاشة 2">
+                <img src="screenshot-3.jpg" class="screenshot-item" alt="لقطة شاشة 3">
+                <img src="screenshot-4.jpg" class="screenshot-item" alt="لقطة شاشة 4">
+                <img src="screenshot-5.jpg" class="screenshot-item" alt="لقطة شاشة 5">
+            </div>
+        </div>
+
+        <div class="app-description-section">
+            <h3 class="section-title">حول هذا التطبيق</h3>
+            <p>
                 منصة الهواري - طريقك للحب الحلال. ابحث عن شريك حياتك بأمان وخصوصية، وتواصل مع أشخاص حقيقيين وموثقين، وتحكم في ملفك الشخصي وبياناتك. انضم إلينا اليوم وابدأ رحلتك بكل ثقة وسهولة.
             </p>
         </div>
@@ -333,16 +401,6 @@
     <footer>
         <p>&copy; 2026 Google LLC / منصة الهواري. جميع الحقوق محفوظة.</p>
     </footer>
-
-    <!-- سكربت تفاعلي بسيط -->
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const downloadBtn = document.getElementById("downloadBtn");
-            downloadBtn.addEventListener("click", function() {
-                // رسالة تفاعلية لطيفة عند الضغط
-            });
-        });
-    </script>
 
 </body>
 </html>
